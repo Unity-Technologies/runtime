@@ -17,8 +17,14 @@ commands:
     cmake --build .
   - ./build.sh -subset clr+libs+libs -a x64 -c release -ci -ninja
   - cp unity/unitygc/release/libunitygc.so artifacts/bin/microsoft.netcore.app.runtime.linux-x64/Release/runtimes/linux-x64/native
-  - artifacts/7za-linux-x64/7za a artifacts/unity/dotnet-runtime-unity-linux-x64.7z ./artifacts/bin/microsoft.netcore.app.runtime.linux-x64/Release/runtimes/linux-x64
+  - artifacts/7za-linux-x64/7za a artifacts/unity/dotnet-runtime-unity-linux-x64.7z ./artifacts/bin/microsoft.netcore.app.runtime.linux-x64/Release/runtimes/linux-x64/*
 # build/run tests
+#  - dotnet build unity/managed.sln -c Release
+#  - |
+#    cd unity/embed_api_tests
+#    cmake -DCMAKE_BUILD_TYPE=Release .
+#    cmake --build .
+#    ./mono_test_app
   - ./build.sh -subset libs.tests -test -a x64 -c release -ci -ninja
   - command: ./src/tests/build.sh x64 release ci
     retries: 1
