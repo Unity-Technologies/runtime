@@ -1051,7 +1051,6 @@ namespace System.Text.RegularExpressions
             // Skip the Capture node. We handle the implicit root capture specially.
             node = node.Child(0);
 
-
             // In some limited cases, FindFirstChar will only return true if it successfully matched the whole expression.
             // We can special case these to do essentially nothing in Go other than emit the capture.
             switch (node.Kind)
@@ -1126,8 +1125,13 @@ namespace System.Text.RegularExpressions
             int sliceStaticPos = 0;
             SliceInputSpan();
 
+            AnalysisResults analysis = RegexTreeAnalyzer.Analyze(_code);
+
+            // Check whether there are captures anywhere in the expression. If there isn't, we can skip all
+            // the boilerplate logic around uncapturing, as there won't be anything to uncapture.
+            bool expressionHasCaptures = analysis.MayContainCapture(node);
+
             // Emit the code for all nodes in the tree.
-            bool expressionHasCaptures = (node.Options & RegexNode.HasCapturesFlag) != 0;
             EmitNode(node);
 
             // Success:
@@ -1281,7 +1285,7 @@ namespace System.Text.RegularExpressions
                 // successfully prevent backtracking into this child node, we can emit better / cheaper code
                 // for an Alternate when it is atomic, so we still take it into account here.
                 Debug.Assert(node.Parent is not null);
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
 
                 // Label to jump to when any branch completes successfully.
                 Label matchLabel = DefineLabel();
@@ -1314,7 +1318,7 @@ namespace System.Text.RegularExpressions
                 // what they were at the start of the alternation.  Of course, if there are no captures
                 // anywhere in the regex, we don't have to do any of that.
                 LocalBuilder? startingCapturePos = null;
-                if (expressionHasCaptures && ((node.Options & RegexNode.HasCapturesFlag) != 0 || !isAtomic))
+                if (expressionHasCaptures && (analysis.MayContainCapture(node) || !isAtomic))
                 {
                     // startingCapturePos = base.Crawlpos();
                     startingCapturePos = DeclareInt32();
@@ -1541,7 +1545,7 @@ namespace System.Text.RegularExpressions
                 Debug.Assert(node.Kind is RegexNodeKind.BackreferenceConditional, $"Unexpected type: {node.Kind}");
                 Debug.Assert(node.ChildCount() == 2, $"Expected 2 children, found {node.ChildCount()}");
 
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
 
                 // We're branching in a complicated fashion.  Make sure sliceStaticPos is 0.
                 TransferSliceStaticPosToPos();
@@ -1687,7 +1691,7 @@ namespace System.Text.RegularExpressions
                 Debug.Assert(node.Kind is RegexNodeKind.ExpressionConditional, $"Unexpected type: {node.Kind}");
                 Debug.Assert(node.ChildCount() == 3, $"Expected 3 children, found {node.ChildCount()}");
 
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
 
                 // We're branching in a complicated fashion.  Make sure sliceStaticPos is 0.
                 TransferSliceStaticPosToPos();
@@ -1718,7 +1722,7 @@ namespace System.Text.RegularExpressions
 
                 // If the condition expression has captures, we'll need to uncapture them in the case of no match.
                 LocalBuilder? startingCapturePos = null;
-                if ((condition.Options & RegexNode.HasCapturesFlag) != 0)
+                if (analysis.MayContainCapture(condition))
                 {
                     // int startingCapturePos = base.Crawlpos();
                     startingCapturePos = DeclareInt32();
@@ -1869,7 +1873,7 @@ namespace System.Text.RegularExpressions
 
                 int capnum = RegexParser.MapCaptureNumber(node.M, _code!.Caps);
                 int uncapnum = RegexParser.MapCaptureNumber(node.N, _code.Caps);
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
 
                 // pos += sliceStaticPos;
                 // slice = slice.Slice(sliceStaticPos);
@@ -1920,8 +1924,21 @@ namespace System.Text.RegularExpressions
                     Call(s_transferCaptureMethod);
                 }
 
-                if (!isAtomic && (childBacktracks || node.IsInLoop()))
+                if (isAtomic || !childBacktracks)
                 {
+                    // If the capture is atomic and nothing can backtrack into it, we're done.
+                    // Similarly, even if the capture isn't atomic, if the captured expression
+                    // doesn't do any backtracking, we're done.
+                    doneLabel = originalDoneLabel;
+                }
+                else
+                {
+                    // We're not atomic and the child node backtracks.  When it does, we need
+                    // to ensure that the starting position for the capture is appropriately
+                    // reset to what it was initially (it could have changed as part of being
+                    // in a loop or similar).  So, we emit a backtracking section that
+                    // pushes/pops the starting position before falling through.
+
                     // if (stackpos + 1 >= base.runstack.Length) Array.Resize(ref base.runstack, base.runstack.Length * 2);
                     // base.runstack[stackpos++] = startingPos;
                     EmitStackResizeIfNeeded(1);
@@ -1950,10 +1967,6 @@ namespace System.Text.RegularExpressions
 
                     doneLabel = backtrack;
                     MarkLabel(backtrackingEnd);
-                }
-                else
-                {
-                    doneLabel = originalDoneLabel;
                 }
             }
 
@@ -2428,99 +2441,47 @@ namespace System.Text.RegularExpressions
             }
 
             // Emits the code to handle a multiple-character match.
-            void EmitMultiChar(RegexNode node, bool emitLengthCheck = true)
+            void EmitMultiChar(RegexNode node, bool emitLengthCheck)
             {
                 Debug.Assert(node.Kind is RegexNodeKind.Multi, $"Unexpected type: {node.Kind}");
+                EmitMultiCharString(node.Str!, IsCaseInsensitive(node), emitLengthCheck);
+            }
 
-                bool caseInsensitive = IsCaseInsensitive(node);
+            void EmitMultiCharString(string str, bool caseInsensitive, bool emitLengthCheck)
+            {
+                Debug.Assert(str.Length >= 2);
 
-                // If the multi string's length exceeds the maximum length we want to unroll, instead generate a call to StartsWith.
-                // Each character that we unroll results in code generation that increases the size of both the IL and the resulting asm,
-                // and with a large enough string, that can cause significant overhead as well as even risk stack overflow due to
-                // having an obscenely long method.  Such long string lengths in a pattern are generally quite rare.  However, we also
-                // want to unroll for shorter strings, because the overhead of invoking StartsWith instead of doing a few simple
-                // inline comparisons is very measurable, especially if we're doing a culture-sensitive comparison and StartsWith
-                // accesses CultureInfo.CurrentCulture on each call.  We need to be cognizant not only of the cost if the whole
-                // string matches, but also the cost when the comparison fails early on, and thus we pay for the call overhead
-                // but don't reap the benefits of all the vectorization StartsWith can do.
-                const int MaxUnrollLength = 64;
-                if (!caseInsensitive && // StartsWith(..., XxIgnoreCase) won't necessarily be the same as char-by-char comparison
-                    node.Str!.Length > MaxUnrollLength)
+                if (caseInsensitive) // StartsWith(..., XxIgnoreCase) won't necessarily be the same as char-by-char comparison
+                {
+                    // This case should be relatively rare.  It will only occur with IgnoreCase and a series of non-ASCII characters.
+
+                    if (emitLengthCheck)
+                    {
+                        EmitSpanLengthCheck(str.Length);
+                    }
+
+                    foreach (char c in str)
+                    {
+                        // if (c != slice[sliceStaticPos++]) goto doneLabel;
+                        EmitTextSpanOffset();
+                        sliceStaticPos++;
+                        LdindU2();
+                        CallToLower();
+                        Ldc(c);
+                        BneFar(doneLabel);
+                    }
+                }
+                else
                 {
                     // if (!slice.Slice(sliceStaticPos).StartsWith("...") goto doneLabel;
                     Ldloca(slice);
                     Ldc(sliceStaticPos);
                     Call(s_spanSliceIntMethod);
-                    Ldstr(node.Str);
+                    Ldstr(str);
                     Call(s_stringAsSpanMethod);
                     Call(s_spanStartsWith);
                     BrfalseFar(doneLabel);
-                    sliceStaticPos += node.Str.Length;
-                    return;
-                }
-
-                // Emit the length check for the whole string.  If the generated code gets past this point,
-                // we know the span is at least sliceStaticPos + s.Length long.
-                ReadOnlySpan<char> s = node.Str;
-                if (emitLengthCheck)
-                {
-                    EmitSpanLengthCheck(s.Length);
-                }
-
-                // If we're doing a case-insensitive comparison, we need to lower case each character,
-                // so we just go character-by-character.  But if we're not, we try to process multiple
-                // characters at a time; this is helpful not only for throughput but also in reducing
-                // the amount of IL and asm that results from this unrolling. This optimization
-                // is subject to endianness issues if the generated code is used on a machine with a
-                // different endianness, but that's not a concern when the code is emitted by the
-                // same process that then uses it.
-                if (!caseInsensitive)
-                {
-                    // On 64-bit, process 4 characters at a time until the string isn't at least 4 characters long.
-                    if (IntPtr.Size == 8)
-                    {
-                        const int CharsPerInt64 = 4;
-                        while (s.Length >= CharsPerInt64)
-                        {
-                            // if (Unsafe.ReadUnaligned<long>(ref Unsafe.Add(ref MemoryMarshal.GetReference(slice), sliceStaticPos)) != value) goto doneLabel;
-                            EmitTextSpanOffset();
-                            Unaligned(1);
-                            LdindI8();
-                            LdcI8(MemoryMarshal.Read<long>(MemoryMarshal.AsBytes(s)));
-                            BneFar(doneLabel);
-                            sliceStaticPos += CharsPerInt64;
-                            s = s.Slice(CharsPerInt64);
-                        }
-                    }
-
-                    // Of what remains, process 2 characters at a time until the string isn't at least 2 characters long.
-                    const int CharsPerInt32 = 2;
-                    while (s.Length >= CharsPerInt32)
-                    {
-                        // if (Unsafe.ReadUnaligned<int>(ref Unsafe.Add(ref MemoryMarshal.GetReference(slice), sliceStaticPos)) != value) goto doneLabel;
-                        EmitTextSpanOffset();
-                        Unaligned(1);
-                        LdindI4();
-                        Ldc(MemoryMarshal.Read<int>(MemoryMarshal.AsBytes(s)));
-                        BneFar(doneLabel);
-                        sliceStaticPos += CharsPerInt32;
-                        s = s.Slice(CharsPerInt32);
-                    }
-                }
-
-                // Finally, process all of the remaining characters one by one.
-                for (int i = 0; i < s.Length; i++)
-                {
-                    // if (s[i] != slice[sliceStaticPos++]) goto doneLabel;
-                    EmitTextSpanOffset();
-                    sliceStaticPos++;
-                    LdindU2();
-                    if (caseInsensitive)
-                    {
-                        CallToLower();
-                    }
-                    Ldc(s[i]);
-                    BneFar(doneLabel);
+                    sliceStaticPos += str.Length;
                 }
             }
 
@@ -2532,7 +2493,7 @@ namespace System.Text.RegularExpressions
                 // If this is actually a repeater, emit that instead; no backtracking necessary.
                 if (node.M == node.N)
                 {
-                    EmitSingleCharFixedRepeater(node, emitLengthChecksIfRequired);
+                    EmitSingleCharRepeater(node, emitLengthChecksIfRequired);
                     return;
                 }
 
@@ -2722,12 +2683,12 @@ namespace System.Text.RegularExpressions
                 // characters/iterations themselves.
                 if (node.M > 0)
                 {
-                    EmitSingleCharFixedRepeater(node, emitLengthChecksIfRequired);
+                    EmitSingleCharRepeater(node, emitLengthChecksIfRequired);
                 }
 
                 // If the whole thing was actually that repeater, we're done. Similarly, if this is actually an atomic
                 // lazy loop, nothing will ever backtrack into this node, so we never need to iterate more than the minimum.
-                if (node.M == node.N || node.IsAtomicByParent())
+                if (node.M == node.N || analysis.IsAtomicByAncestor(node))
                 {
                     return;
                 }
@@ -2954,7 +2915,7 @@ namespace System.Text.RegularExpressions
 
                 if (node.IsInLoop())
                 {
-                    // Store the capture's state
+                    // Store the loop's state
                     // base.runstack[stackpos++] = startingPos;
                     // base.runstack[stackpos++] = capturepos;
                     // base.runstack[stackpos++] = iterationCount;
@@ -2973,7 +2934,7 @@ namespace System.Text.RegularExpressions
                     Label backtrackingEnd = DefineLabel();
                     BrFar(backtrackingEnd);
 
-                    // Emit a backtracking section that restores the capture's state and then jumps to the previous done label
+                    // Emit a backtracking section that restores the loop's state and then jumps to the previous done label
                     Label backtrack = DefineLabel();
                     MarkLabel(backtrack);
 
@@ -3011,7 +2972,7 @@ namespace System.Text.RegularExpressions
                 int minIterations = node.M;
                 int maxIterations = node.N;
                 Label originalDoneLabel = doneLabel;
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
 
                 // If this is actually an atomic lazy loop, we need to output just the minimum number of iterations,
                 // as nothing will backtrack into the lazy loop to get it progress further.
@@ -3028,6 +2989,14 @@ namespace System.Text.RegularExpressions
                             EmitNode(node.Child(0));
                             return;
                     }
+                }
+
+                // If this is actually a repeater and the child doesn't have any backtracking in it that might
+                // cause us to need to unwind already taken iterations, just output it as a repeater loop.
+                if (minIterations == maxIterations && !analysis.MayBacktrack(node.Child(0)))
+                {
+                    EmitNonBacktrackingRepeater(node);
+                    return;
                 }
 
                 // We might loop any number of times.  In order to ensure this loop and subsequent code sees sliceStaticPos
@@ -3245,16 +3214,29 @@ namespace System.Text.RegularExpressions
             }
 
             // Emits the code to handle a loop (repeater) with a fixed number of iterations.
-            // RegexNode.M is used for the number of iterations; RegexNode.N is ignored.
-            void EmitSingleCharFixedRepeater(RegexNode node, bool emitLengthChecksIfRequired = true)
+            // RegexNode.M is used for the number of iterations (RegexNode.N is ignored), as this
+            // might be used to implement the required iterations of other kinds of loops.
+            void EmitSingleCharRepeater(RegexNode node, bool emitLengthChecksIfRequired = true)
             {
                 Debug.Assert(node.IsOneFamily || node.IsNotoneFamily || node.IsSetFamily, $"Unexpected type: {node.Kind}");
 
                 int iterations = node.M;
-                if (iterations == 0)
+                switch (iterations)
                 {
-                    // No iterations, nothing to do.
-                    return;
+                    case 0:
+                        // No iterations, nothing to do.
+                        return;
+
+                    case 1:
+                        // Just match the individual item
+                        EmitSingleChar(node, emitLengthChecksIfRequired);
+                        return;
+
+                    case <= RegexNode.MultiVsRepeaterLimit when node.IsOneFamily && !IsCaseInsensitive(node):
+                        // This is a repeated case-sensitive character; emit it as a multi in order to get all the optimizations
+                        // afforded to a multi, e.g. unrolling the loop with multi-char reads/comparisons at a time.
+                        EmitMultiCharString(new string(node.Ch, iterations), caseInsensitive: false, emitLengthChecksIfRequired);
+                        return;
                 }
 
                 // if ((uint)(sliceStaticPos + iterations - 1) >= (uint)slice.Length) goto doneLabel;
@@ -3337,7 +3319,7 @@ namespace System.Text.RegularExpressions
                 // If this is actually a repeater, emit that instead.
                 if (node.M == node.N)
                 {
-                    EmitSingleCharFixedRepeater(node);
+                    EmitSingleCharRepeater(node);
                     return;
                 }
 
@@ -3627,6 +3609,44 @@ namespace System.Text.RegularExpressions
                 MarkLabel(skipUpdatesLabel);
             }
 
+            void EmitNonBacktrackingRepeater(RegexNode node)
+            {
+                Debug.Assert(node.Kind is RegexNodeKind.Loop or RegexNodeKind.Lazyloop, $"Unexpected type: {node.Kind}");
+                Debug.Assert(node.M < int.MaxValue, $"Unexpected M={node.M}");
+                Debug.Assert(node.M == node.N, $"Unexpected M={node.M} == N={node.N}");
+                Debug.Assert(node.ChildCount() == 1, $"Expected 1 child, found {node.ChildCount()}");
+                Debug.Assert(!analysis.MayBacktrack(node.Child(0)), $"Expected non-backtracking node {node.Kind}");
+
+                // Ensure every iteration of the loop sees a consistent value.
+                TransferSliceStaticPosToPos();
+
+                // Loop M==N times to match the child exactly that numbers of times.
+                Label condition = DefineLabel();
+                Label body = DefineLabel();
+
+                // for (int i = 0; ...)
+                using RentedLocalBuilder i = RentInt32Local();
+                Ldc(0);
+                Stloc(i);
+                BrFar(condition);
+
+                MarkLabel(body);
+                EmitNode(node.Child(0));
+                TransferSliceStaticPosToPos(); // make sure static the static position remains at 0 for subsequent constructs
+
+                // for (...; ...; i++)
+                Ldloc(i);
+                Ldc(1);
+                Add();
+                Stloc(i);
+
+                // for (...; i < node.M; ...)
+                MarkLabel(condition);
+                Ldloc(i);
+                Ldc(node.M);
+                BltFar(body);
+            }
+
             void EmitLoop(RegexNode node)
             {
                 Debug.Assert(node.Kind is RegexNodeKind.Loop or RegexNodeKind.Lazyloop, $"Unexpected type: {node.Kind}");
@@ -3636,7 +3656,15 @@ namespace System.Text.RegularExpressions
 
                 int minIterations = node.M;
                 int maxIterations = node.N;
-                bool isAtomic = node.IsAtomicByParent();
+                bool isAtomic = analysis.IsAtomicByAncestor(node);
+
+                // If this is actually a repeater and the child doesn't have any backtracking in it that might
+                // cause us to need to unwind already taken iterations, just output it as a repeater loop.
+                if (minIterations == maxIterations && !analysis.MayBacktrack(node.Child(0)))
+                {
+                    EmitNonBacktrackingRepeater(node);
+                    return;
+                }
 
                 // We might loop any number of times.  In order to ensure this loop and subsequent code sees sliceStaticPos
                 // the same regardless, we always need it to contain the same value, and the easiest such value is 0.
@@ -3835,7 +3863,7 @@ namespace System.Text.RegularExpressions
 
                     if (node.IsInLoop())
                     {
-                        // Store the capture's state
+                        // Store the loop's state
                         EmitStackResizeIfNeeded(3);
                         EmitStackPush(() => Ldloc(startingPos));
                         EmitStackPush(() => Ldloc(iterationCount));
@@ -3845,7 +3873,7 @@ namespace System.Text.RegularExpressions
                         Label backtrackingEnd = DefineLabel();
                         BrFar(backtrackingEnd);
 
-                        // Emit a backtracking section that restores the capture's state and then jumps to the previous done label
+                        // Emit a backtracking section that restores the loop's state and then jumps to the previous done label
                         Label backtrack = DefineLabel();
                         MarkLabel(backtrack);
 
