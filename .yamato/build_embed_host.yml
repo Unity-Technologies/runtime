@@ -1,0 +1,18 @@
+{% metadata_file .yamato/Globals.metafile %}
+---
+name: Build Unity Embed Host
+
+agent:
+  type: Unity::VM
+  image: platform-foundation/windows-vs2019-il2cpp-bokken:v1.1.6-1025111
+  flavor: b1.xlarge
+
+commands:
+  - dotnet build unity\managed.sln -c Release
+  - powershell .yamato\scripts\download_7z.ps1
+  - artifacts\7za-win-x64\7za.exe a artifacts\unity\unity-embed-host .\artifacts\bin\unity-embed-host\Release\net6.0\*
+
+artifacts:
+  win-x64-7z:
+    paths:
+      - artifacts\unity\**
