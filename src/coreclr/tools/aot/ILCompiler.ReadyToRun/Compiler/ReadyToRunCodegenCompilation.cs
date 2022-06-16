@@ -411,9 +411,10 @@ namespace ILCompiler
                 copiedCorHeader,
                 debugDirectory,
                 win32Resources: new Win32Resources.ResourceData(inputModule),
-                flags);
+                flags,
+                _nodeFactory.ImageBase);
 
-            IComparer<DependencyNodeCore<NodeFactory>> comparer = new SortableDependencyNode.ObjectNodeComparer(new CompilerComparer());
+            IComparer<DependencyNodeCore<NodeFactory>> comparer = new SortableDependencyNode.ObjectNodeComparer(CompilerComparer.Instance);
             DependencyAnalyzerBase<NodeFactory> componentGraph = new DependencyAnalyzer<NoLogStrategy<NodeFactory>, NodeFactory>(componentFactory, comparer);
 
             componentGraph.AddRoot(componentFactory.Header, "Component module R2R header");
@@ -470,13 +471,6 @@ namespace ILCompiler
 
             if (!NodeFactory.CompilationModuleGroup.VersionsWithModule(defType.Module))
             {
-                if (!type.IsValueType)
-                {
-                    // Eventually, we may respect the non-versionable attribute for reference types too. For now, we are going
-                    // to play it safe and ignore it.
-                    return false;
-                }
-
                 // Valuetypes with non-versionable attribute are candidates for fixed layout. Reject the rest.
                 return type is MetadataType metadataType && metadataType.IsNonVersionable();
             }

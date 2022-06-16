@@ -292,7 +292,6 @@ inline void ClrRestoreNonvolatileContext(PCONTEXT ContextRecord)
 #include "gcenv.interlocked.inl"
 
 #include "util.hpp"
-#include "ibclogger.h"
 #include "eepolicy.h"
 
 #include "vars.hpp"
@@ -407,7 +406,6 @@ struct DummyGlobalContract
 extern DummyGlobalContract ___contract;
 
 #endif // defined(_DEBUG)
-
 
 // All files get to see all of these .inl files to make sure all files
 // get the benefit of inlining.

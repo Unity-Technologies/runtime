@@ -15,9 +15,11 @@ namespace System.Speech.Internal.ObjectTokens
     {
         #region Constructors
 
-        protected ObjectToken(ISpObjectToken sapiObjectToken!!, bool disposeSapiToken)
+        protected ObjectToken(ISpObjectToken sapiObjectToken, bool disposeSapiToken)
             : base(sapiObjectToken)
         {
+            ArgumentNullException.ThrowIfNull(sapiObjectToken);
+
             _sapiObjectToken = sapiObjectToken;
             _disposeSapiObjectToken = disposeSapiToken;
         }
@@ -108,7 +110,7 @@ namespace System.Speech.Internal.ObjectTokens
         {
             get
             {
-                return _attributes != null ? _attributes : (_attributes = OpenKey("Attributes"));
+                return _attributes ??= OpenKey("Attributes");
             }
         }
 

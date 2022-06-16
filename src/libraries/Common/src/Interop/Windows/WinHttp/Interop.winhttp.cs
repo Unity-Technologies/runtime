@@ -3,6 +3,9 @@
 
 using System;
 using System.Runtime.InteropServices;
+#if NET7_0_OR_GREATER
+using System.Runtime.InteropServices.Marshalling;
+#endif
 using System.Text;
 
 internal static partial class Interop
@@ -53,6 +56,7 @@ internal static partial class Interop
             uint modifiers);
 
 #if NET7_0_OR_GREATER
+        [CustomTypeMarshaller(typeof(StringBuilder), Direction = CustomTypeMarshallerDirection.In, Features = CustomTypeMarshallerFeatures.UnmanagedResources | CustomTypeMarshallerFeatures.TwoStageMarshalling)]
         private unsafe struct SimpleStringBufferMarshaller
         {
             public SimpleStringBufferMarshaller(StringBuilder builder)
@@ -64,7 +68,9 @@ internal static partial class Interop
                 builder.CopyTo(0, buffer, length - 1);
             }
 
-            public void* Value { get; }
+            private void* Value { get; }
+
+            public void* ToNativeValue() => Value;
 
             public void FreeNative()
             {

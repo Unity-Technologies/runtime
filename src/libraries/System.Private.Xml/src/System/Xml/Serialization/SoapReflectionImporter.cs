@@ -89,7 +89,7 @@ namespace System.Xml.Serialization
             element.IsSoap = true;
             element.Mapping = ImportTypeMapping(_modelScope.GetTypeModel(type), new RecursionLimiter());
             element.Name = element.Mapping.DefaultElementName;
-            element.Namespace = element.Mapping.Namespace == null ? defaultNamespace : element.Mapping.Namespace;
+            element.Namespace = element.Mapping.Namespace ?? defaultNamespace;
             element.Form = XmlSchemaForm.Qualified;
             XmlTypeMapping xmlMapping = new XmlTypeMapping(_typeScope, element);
             xmlMapping.SetKeyInternal(XmlMapping.GenerateKey(type, null, defaultNamespace));
@@ -125,7 +125,7 @@ namespace System.Xml.Serialization
 
             element.Mapping = ImportMembersMapping(members, ns, hasWrapperElement, writeAccessors, validate, new RecursionLimiter());
             element.Mapping.TypeName = elementName;
-            element.Namespace = element.Mapping.Namespace == null ? ns : element.Mapping.Namespace;
+            element.Namespace = element.Mapping.Namespace ?? ns;
             element.Form = XmlSchemaForm.Qualified;
             XmlMembersMapping xmlMapping = new XmlMembersMapping(_typeScope, element, access);
             xmlMapping.IsSoap = true;
@@ -133,7 +133,7 @@ namespace System.Xml.Serialization
             return xmlMapping;
         }
 
-        private Exception ReflectionException(string context, Exception e)
+        private static Exception ReflectionException(string context, Exception e)
         {
             return new InvalidOperationException(SR.Format(SR.XmlReflectionError, context), e);
         }
@@ -167,7 +167,7 @@ namespace System.Xml.Serialization
                 {
                     throw new InvalidOperationException(SR.Format(SR.XmlInvalidDataTypeUsage, dataType, "SoapElementAttribute.DataType"));
                 }
-                TypeDesc? td = _typeScope.GetTypeDesc(dataType!, XmlSchema.Namespace);
+                TypeDesc? td = TypeScope.GetTypeDesc(dataType!, XmlSchema.Namespace);
                 if (td == null)
                 {
                     throw new InvalidOperationException(SR.Format(SR.XmlInvalidXsdDataType, dataType, "SoapElementAttribute.DataType", new XmlQualifiedName(dataType, XmlSchema.Namespace).ToString()));
@@ -203,7 +203,7 @@ namespace System.Xml.Serialization
                         string typeNs = _defaultNs;
                         if (baseAttributes.SoapType != null && baseAttributes.SoapType.Namespace != null)
                             typeNs = baseAttributes.SoapType.Namespace;
-                        TypeDesc valueTypeDesc = string.IsNullOrEmpty(dataType) ? model.TypeDesc.BaseTypeDesc! : _typeScope.GetTypeDesc(dataType, XmlSchema.Namespace)!;
+                        TypeDesc valueTypeDesc = string.IsNullOrEmpty(dataType) ? model.TypeDesc.BaseTypeDesc! : TypeScope.GetTypeDesc(dataType, XmlSchema.Namespace)!;
                         string xsdTypeName = string.IsNullOrEmpty(dataType) ? model.TypeDesc.BaseTypeDesc!.Name : dataType;
                         TypeMapping? baseMapping = GetTypeMapping(xsdTypeName, typeNs, valueTypeDesc);
                         if (baseMapping == null)
@@ -525,17 +525,17 @@ namespace System.Xml.Serialization
             mapping.TypeName = uniqueName;
         }
 
-        private PrimitiveMapping ImportPrimitiveMapping(PrimitiveModel model, string dataType)
+        private static PrimitiveMapping ImportPrimitiveMapping(PrimitiveModel model, string dataType)
         {
             PrimitiveMapping mapping = new PrimitiveMapping();
             mapping.IsSoap = true;
             if (dataType.Length > 0)
             {
-                mapping.TypeDesc = _typeScope.GetTypeDesc(dataType, XmlSchema.Namespace);
+                mapping.TypeDesc = TypeScope.GetTypeDesc(dataType, XmlSchema.Namespace);
                 if (mapping.TypeDesc == null)
                 {
                     // try it as a non-Xsd type
-                    mapping.TypeDesc = _typeScope.GetTypeDesc(dataType, UrtTypes.Namespace);
+                    mapping.TypeDesc = TypeScope.GetTypeDesc(dataType, UrtTypes.Namespace);
                     if (mapping.TypeDesc == null)
                     {
                         throw new InvalidOperationException(SR.Format(SR.XmlUdeclaredXsdType, dataType));

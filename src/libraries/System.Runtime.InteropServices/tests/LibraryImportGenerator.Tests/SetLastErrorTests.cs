@@ -3,11 +3,13 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 using Xunit;
 
 namespace LibraryImportGenerator.IntegrationTests
 {
+    [CustomTypeMarshaller(typeof(int))]
     public struct SetLastErrorMarshaller
     {
         public int val;

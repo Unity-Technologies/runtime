@@ -170,7 +170,7 @@ namespace System.Xml.Schema
             return !HasErrors;
         }
 
-        private void Cleanup(XmlSchema schema)
+        private static void Cleanup(XmlSchema schema)
         {
             if (schema == Preprocessor.GetBuildInSchema())
             {
@@ -188,7 +188,7 @@ namespace System.Xml.Schema
             schema.IsCompiledBySet = false;
         }
 
-        private void CleanupRedefine(XmlSchemaExternal include)
+        private static void CleanupRedefine(XmlSchemaExternal include)
         {
             XmlSchemaRedefine rdef = (include as XmlSchemaRedefine)!;
             rdef.AttributeGroups.Clear();
@@ -313,7 +313,7 @@ namespace System.Xml.Schema
                 {
                     XmlSchemaImport import = (include as XmlSchemaImport)!;
                     Debug.Assert(import != null);
-                    string importNS = import.Namespace != null ? import.Namespace : string.Empty;
+                    string importNS = import.Namespace ?? string.Empty;
                     if (!schema.ImportedNamespaces.Contains(importNS))
                     {
                         schema.ImportedNamespaces.Add(importNS);
@@ -666,7 +666,7 @@ namespace System.Xml.Schema
             BuildRefNamespaces(schema);
             ValidateIdAttribute(schema);
 
-            _targetNamespace = targetNamespace == null ? string.Empty : targetNamespace;
+            _targetNamespace = targetNamespace ?? string.Empty;
 
             SetSchemaDefaults(schema);
 
@@ -709,7 +709,7 @@ namespace System.Xml.Schema
                             if (includedSchema != _rootSchema)
                             {
                                 XmlSchemaImport import = (external as XmlSchemaImport)!;
-                                string importNS = import.Namespace != null ? import.Namespace : string.Empty;
+                                string importNS = import.Namespace ?? string.Empty;
                                 if (!imports.Contains(includedSchema))
                                 {
                                     imports.Add(includedSchema);
@@ -854,7 +854,7 @@ namespace System.Xml.Schema
             XmlSchema schemaToUpdate = redefineEntry.schemaToUpdate;
             ArrayList includesOfRedefine = new ArrayList();
             GetIncludedSet(originalSchema, includesOfRedefine);
-            string targetNS = schemaToUpdate.TargetNamespace == null ? string.Empty : schemaToUpdate.TargetNamespace;
+            string targetNS = schemaToUpdate.TargetNamespace ?? string.Empty;
 
             XmlSchemaObjectCollection items = redefine.Items;
             for (int i = 0; i < items.Count; ++i)
@@ -1729,7 +1729,7 @@ namespace System.Xml.Schema
 
                 if (complexType.Particle != null || complexType.Attributes != null)
                 {
-                    // this is illigal
+                    // this is illegal
                 }
                 if (complexType.ContentModel is XmlSchemaSimpleContent)
                 {
@@ -2184,7 +2184,7 @@ namespace System.Xml.Schema
             return chameleonSchema;
         }
 
-        private void SetParent(XmlSchemaObject child, XmlSchemaObject parent)
+        private static void SetParent(XmlSchemaObject child, XmlSchemaObject parent)
         {
             child.Parent = parent;
         }

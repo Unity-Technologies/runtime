@@ -13,32 +13,10 @@
 
 #include "utilcode.h"
 #include "metadata.h"
-#include "holderinst.h"
 #include "clrdata.h"
 #include "xclrdata.h"
 #include "posterror.h"
 #include "clr_std/type_traits"
-
-
-// Prevent the use of UtilMessageBox and WszMessageBox from inside the EE.
-#undef UtilMessageBoxCatastrophic
-#undef UtilMessageBoxCatastrophicNonLocalized
-#undef UtilMessageBoxCatastrophic
-#undef UtilMessageBoxCatastrophicNonLocalizedVA
-#undef UtilMessageBox
-#undef UtilMessageBoxNonLocalized
-#undef UtilMessageBoxVA
-#undef UtilMessageBoxNonLocalizedVA
-#undef WszMessageBox
-#define UtilMessageBoxCatastrophic __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxCatastrophicNonLocalized __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxCatastrophicVA __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxCatastrophicNonLocalizedVA __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBox __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxNonLocalized __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxVA __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define UtilMessageBoxNonLocalizedVA __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
-#define WszMessageBox __error("Use one of the EEMessageBox APIs (defined in eemessagebox.h) from inside the EE")
 
 // Hot cache lines need to be aligned to cache line size to improve performance
 #if defined(TARGET_ARM64)
@@ -63,41 +41,6 @@ typedef unsigned __int64    U8;
 typedef float               R4;
 typedef double              R8;
 
-//
-// Forward the FastInterlock methods to the matching Win32 APIs. They are implemented
-// using compiler intrinsics so they are as fast as they can possibly be.
-//
-
-#define FastInterlockIncrement              InterlockedIncrement
-#define FastInterlockDecrement              InterlockedDecrement
-#define FastInterlockExchange               InterlockedExchange
-#define FastInterlockCompareExchange        InterlockedCompareExchange
-#define FastInterlockExchangeAdd            InterlockedExchangeAdd
-#define FastInterlockExchangeLong           InterlockedExchange64
-#define FastInterlockCompareExchangeLong    InterlockedCompareExchange64
-#define FastInterlockExchangeAddLong        InterlockedExchangeAdd64
-
-//
-// Forward FastInterlock[Compare]ExchangePointer to the
-// Utilcode Interlocked[Compare]ExchangeT.
-//
-#define FastInterlockExchangePointer        InterlockedExchangeT
-#define FastInterlockCompareExchangePointer InterlockedCompareExchangeT
-
-FORCEINLINE void FastInterlockOr(DWORD RAW_KEYWORD(volatile) *p, const int msk)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    InterlockedOr((LONG *)p, msk);
-}
-
-FORCEINLINE void FastInterlockAnd(DWORD RAW_KEYWORD(volatile) *p, const int msk)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    InterlockedAnd((LONG *)p, msk);
-}
-
 #ifndef TARGET_UNIX
 // Copied from malloc.h: don't want to bring in the whole header file.
 void * __cdecl _alloca(size_t);
@@ -107,8 +50,6 @@ void * __cdecl _alloca(size_t);
 // Suppress prefast warning #6255: alloca indicates failure by raising a stack overflow exception
 #pragma warning(disable:6255)
 #endif // _PREFAST_
-
-#define ISWWHITE(x) ((x)==W(' ') || (x)==W('\t') || (x)==W('\n') || (x)==W('\r') )
 
 BOOL inline FitsInI1(__int64 val)
 {
@@ -144,98 +85,6 @@ BOOL inline FitsInU4(unsigned __int64 val)
 {
     LIMITED_METHOD_DAC_CONTRACT;
     return val == (unsigned __int64)(unsigned __int32)val;
-}
-
-// returns FALSE if overflows 15 bits: otherwise, (*pa) is incremented by b
-BOOL inline SafeAddUINT15(UINT16 *pa, ULONG b)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    UINT16 a = *pa;
-    // first check if overflows 16 bits
-    if ( ((UINT16)b) != b )
-    {
-        return FALSE;
-    }
-    // now make sure that doesn't overflow 15 bits
-    if (((ULONG)a + b) > 0x00007FFF)
-    {
-        return FALSE;
-    }
-    (*pa) += (UINT16)b;
-    return TRUE;
-}
-
-
-// returns FALSE if overflows 16 bits: otherwise, (*pa) is incremented by b
-BOOL inline SafeAddUINT16(UINT16 *pa, ULONG b)
-{
-    UINT16 a = *pa;
-    if ( ((UINT16)b) != b )
-    {
-        return FALSE;
-    }
-    // now make sure that doesn't overflow 16 bits
-    if (((ULONG)a + b) > 0x0000FFFF)
-    {
-        return FALSE;
-    }
-    (*pa) += (UINT16)b;
-    return TRUE;
-}
-
-
-// returns FALSE if overflow: otherwise, (*pa) is incremented by b
-BOOL inline SafeAddUINT32(UINT32 *pa, UINT32 b)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    UINT32 a = *pa;
-    if ( ((UINT32)(a + b)) < a)
-    {
-        return FALSE;
-    }
-    (*pa) += b;
-    return TRUE;
-}
-
-// returns FALSE if overflow: otherwise, (*pa) is incremented by b
-BOOL inline SafeAddULONG(ULONG *pa, ULONG b)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    ULONG a = *pa;
-    if ( ((ULONG)(a + b)) < a)
-    {
-        return FALSE;
-    }
-    (*pa) += b;
-    return TRUE;
-}
-
-// returns FALSE if overflow: otherwise, (*pa) is multiplied by b
-BOOL inline SafeMulSIZE_T(SIZE_T *pa, SIZE_T b)
-{
-    LIMITED_METHOD_CONTRACT;
-
-#ifdef _DEBUG_IMPL
-    {
-        //Make sure SIZE_T is unsigned
-        SIZE_T m = ((SIZE_T)(-1));
-        SIZE_T z = 0;
-        _ASSERTE(m > z);
-    }
-#endif
-
-
-    SIZE_T a = *pa;
-    const SIZE_T m = ((SIZE_T)(-1));
-    if ( (m / b) < a )
-    {
-        return FALSE;
-    }
-    (*pa) *= b;
-    return TRUE;
 }
 
 
@@ -683,7 +532,7 @@ inline bool IsInCantStopRegion()
 }
 #endif // _DEBUG
 
-BOOL IsValidMethodCodeNotification(USHORT Notification);
+BOOL IsValidMethodCodeNotification(ULONG32 Notification);
 
 typedef DPTR(struct JITNotification) PTR_JITNotification;
 struct JITNotification
@@ -891,7 +740,7 @@ public:
     static BOOL ParseExceptionCatcherEnterNotification(TADDR Args[], TADDR& MethodDescPtr, DWORD& nativeOffset);
 };
 
-void DACNotifyCompilationFinished(MethodDesc *pMethodDesc);
+void DACNotifyCompilationFinished(MethodDesc *pMethodDesc, PCODE pCode);
 
 // These wrap the SString:L:CompareCaseInsenstive function in a way that makes it
 // easy to fix code that uses _stricmp. _stricmp should be avoided as it uses the current
@@ -915,7 +764,6 @@ class COMCharacter {
 public:
     //These are here for support from native code.  They are never called from our managed classes.
     static BOOL nativeIsWhiteSpace(WCHAR c);
-    static BOOL nativeIsDigit(WCHAR c);
 };
 
 // ======================================================================================
@@ -1005,6 +853,15 @@ public:
 // Extract the file version from an executable.
 HRESULT GetFileVersion(LPCWSTR wszFilePath, ULARGE_INTEGER* pFileVersion);
 #endif // !TARGET_UNIX
+
+#define ENUM_PAGE_SIZES \
+    ENUM_PAGE_SIZE(4096)  \
+    ENUM_PAGE_SIZE(8192)  \
+    ENUM_PAGE_SIZE(16384) \
+    ENUM_PAGE_SIZE(32768) \
+    ENUM_PAGE_SIZE(65536)
+
+void FillStubCodePage(BYTE* pageBase, const void* code, int codeSize, int pageSize);
 
 #ifdef TARGET_64BIT
 // We use modified Daniel Lemire's fastmod algorithm (https://github.com/dotnet/runtime/pull/406),

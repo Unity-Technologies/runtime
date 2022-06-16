@@ -441,6 +441,9 @@
   <data name="net_http_authconnectionfailure" xml:space="preserve">
     <value>Authentication failed because the connection could not be reused.</value>
   </data>
+  <data name="net_http_authvalidationfailure" xml:space="preserve">
+    <value>Authentication validation failed with error - {0}.</value>
+  </data>
   <data name="net_nego_server_not_supported" xml:space="preserve">
     <value>Server implementation is not supported</value>
   </data>
@@ -593,5 +596,8 @@
   </data>
   <data name="PlatformNotSupported_NetHttp" xml:space="preserve">
     <value>System.Net.Http is not supported on this platform.</value>
+  </data>
+  <data name="net_http_chunk_too_large" xml:space="preserve">
+    <value>The HTTP/1.1 response chunk was too large.</value>
   </data>
 </root>

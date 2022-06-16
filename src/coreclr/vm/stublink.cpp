@@ -1213,11 +1213,11 @@ VOID StubLinker::UnwindAllocStack (SHORT FrameSizeIncrement)
     else
     {
         USHORT FrameOffset = (USHORT)FrameSizeIncrement;
-        BOOL fNeedExtraSlot = ((ULONG)FrameOffset != (ULONG)FrameSizeIncrement);
+        bool fNeedExtraSlot = ((ULONG)FrameOffset != (ULONG)FrameSizeIncrement);
 
-        UNWIND_CODE *pUnwindCode = AllocUnwindInfo(UWOP_ALLOC_LARGE, fNeedExtraSlot);
+        UNWIND_CODE *pUnwindCode = AllocUnwindInfo(UWOP_ALLOC_LARGE, fNeedExtraSlot ? 1 : 0);
 
-        pUnwindCode->OpInfo = fNeedExtraSlot;
+        pUnwindCode->OpInfo = fNeedExtraSlot ? 1 : 0;
 
         pUnwindCode[1].FrameOffset = FrameOffset;
 
@@ -1918,7 +1918,7 @@ VOID Stub::IncRef()
     CONTRACTL_END;
 
     _ASSERTE(m_signature == kUsedStub);
-    FastInterlockIncrement((LONG*)&m_refcount);
+    InterlockedIncrement((LONG*)&m_refcount);
 }
 
 //-------------------------------------------------------------------
@@ -1934,7 +1934,7 @@ BOOL Stub::DecRef()
     CONTRACTL_END;
 
     _ASSERTE(m_signature == kUsedStub);
-    int count = FastInterlockDecrement((LONG*)&m_refcount);
+    int count = InterlockedDecrement((LONG*)&m_refcount);
     if (count <= 0) {
         DeleteStub();
         return TRUE;
@@ -2168,7 +2168,7 @@ Stub* Stub::NewStub(PTR_VOID pCode, DWORD flags)
     _ASSERTE((stubPayloadOffset % CODE_SIZE_ALIGN) == 0);
     Stub* pStubRX = (Stub*)(pBlock + stubPayloadOffset);
     Stub* pStubRW;
-    ExecutableWriterHolder<Stub> stubWriterHolder;
+    ExecutableWriterHolderNoLog<Stub> stubWriterHolder;
 
     if (pHeap == NULL)
     {
@@ -2176,7 +2176,7 @@ Stub* Stub::NewStub(PTR_VOID pCode, DWORD flags)
     }
     else
     {
-        stubWriterHolder = ExecutableWriterHolder<Stub>(pStubRX, sizeof(Stub));
+        stubWriterHolder.AssignExecutableWriterHolder(pStubRX, sizeof(Stub));
         pStubRW = stubWriterHolder.GetRW();
     }
     pStubRW->SetupStub(

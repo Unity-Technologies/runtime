@@ -123,6 +123,13 @@ namespace System.Net.Security.Tests
                     Assert.Contains("SSL_ERROR_SSL", e.InnerException.Message);
                     Assert.NotNull(e.InnerException.InnerException);
                     Assert.Contains("protocol", e.InnerException.InnerException.Message);
+
+                    e = await Assert.ThrowsAsync<AuthenticationException>(() => clientAuthenticationTask);
+
+                    Assert.NotNull(e.InnerException);
+                    Assert.Contains("SSL_ERROR_SSL", e.InnerException.Message);
+                    Assert.NotNull(e.InnerException.InnerException);
+                    Assert.Contains("protocol", e.InnerException.InnerException.Message);
                 }
             }
 
@@ -157,7 +164,7 @@ namespace System.Net.Security.Tests
                 Assert.True(ssl.IsEncrypted);
 
                 // Issue request that triggers regotiation from server.
-                byte[] message = Encoding.UTF8.GetBytes("GET /EchoClientCertificate.ashx HTTP/1.1\r\nHost: corefx-net-tls.azurewebsites.net\r\n\r\n");
+                byte[] message = "GET /EchoClientCertificate.ashx HTTP/1.1\r\nHost: corefx-net-tls.azurewebsites.net\r\n\r\n"u8.ToArray();
                 if (useSync)
                 {
                     ssl.Write(message, 0, message.Length);
@@ -485,17 +492,11 @@ namespace System.Net.Security.Tests
         }
 
         [ConditionalTheory(typeof(PlatformDetection), nameof(PlatformDetection.SupportsTls13))]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/58927", TestPlatforms.Windows)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task SslStream_NegotiateClientCertificateAsyncTls13_Succeeds(bool sendClientCertificate)
         {
-            if (PlatformDetection.IsWindows10Version22000OrGreater)
-            {
-                // [ActiveIssue("https://github.com/dotnet/runtime/issues/58927")]
-                throw new SkipTestException("Unstable on Windows 11");
-            }
-
             bool negotiateClientCertificateCalled = false;
             using CancellationTokenSource cts = new CancellationTokenSource();
             cts.CancelAfter(TestConfiguration.PassingTestTimeout);
@@ -684,6 +685,7 @@ namespace System.Net.Security.Tests
         [InlineData(false, true)]
         [InlineData(false, false)]
         [InlineData(true, true)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         public async Task SslStream_TargetHostName_Succeeds(bool useEmptyName, bool useCallback)
         {
             string targetName = useEmptyName ? string.Empty : Guid.NewGuid().ToString("N");
@@ -742,7 +744,7 @@ namespace System.Net.Security.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/46837", TestPlatforms.OSX)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         public async Task SslStream_UntrustedCaWithCustomCallback_OK(bool usePartialChain)
         {
             int split = Random.Shared.Next(0, certificates.serverChain.Count - 1);
@@ -805,7 +807,7 @@ namespace System.Net.Security.Tests
         [PlatformSpecific(TestPlatforms.AnyUnix)]
         [InlineData(true)]
         [InlineData(false)]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/46837", TestPlatforms.OSX)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         public async Task SslStream_UntrustedCaWithCustomCallback_Throws(bool customCallback)
         {
             string errorMessage;
@@ -852,12 +854,13 @@ namespace System.Net.Security.Tests
         }
 
         [ConditionalFact]
-        [ActiveIssue("https://github.com/dotnet/runtime/issues/46837", TestPlatforms.OSX)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         public async Task SslStream_ClientCertificate_SendsChain()
         {
             List<SslStream> streams = new List<SslStream>();
             TestHelper.CleanupCertificates();
             (X509Certificate2 clientCertificate, X509Certificate2Collection clientChain) = TestHelper.GenerateCertificates("SslStream_ClinetCertificate_SendsChain", serverCertificate: false);
+
             using (X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
             {
                 // add chain certificate so we can construct chain since there is no way how to pass intermediates directly.
@@ -879,7 +882,7 @@ namespace System.Net.Security.Tests
                 }
             }
 
-            var clientOptions = new SslClientAuthenticationOptions() { TargetHost = "localhost", };
+            var clientOptions = new SslClientAuthenticationOptions() { TargetHost = "localhost" };
             clientOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
             clientOptions.LocalCertificateSelectionCallback = (sender, target, certificates, remoteCertificate, issuers) => clientCertificate;
 
@@ -896,7 +899,8 @@ namespace System.Net.Security.Tests
                     _output.WriteLine("received {0}", c.Subject);
                 }
 
-                Assert.True(chain.ChainPolicy.ExtraStore.Count >= clientChain.Count - 1, "client did not sent expected chain");
+                Assert.Equal(clientChain.Count - 1, chain.ChainPolicy.ExtraStore.Count);
+                Assert.Contains(clientChain[0], chain.ChainPolicy.ExtraStore);
                 return true;
             };
 
@@ -909,7 +913,7 @@ namespace System.Net.Security.Tests
 
                 Task t1 = client.AuthenticateAsClientAsync(clientOptions, CancellationToken.None);
                 Task t2 = server.AuthenticateAsServerAsync(serverOptions, CancellationToken.None);
-                await Task.WhenAll(t1, t2).WaitAsync(TestConfiguration.PassingTestTimeout);
+                await TestConfiguration.WhenAllOrAnyFailedWithTimeout(t1, t2);
 
                 // hold to the streams so they stay in credential cache
                 streams.Add(client);
@@ -934,6 +938,7 @@ namespace System.Net.Security.Tests
         [InlineData(16384 * 100, 4096, 1024, true)]
         [InlineData(16384 * 100, 1024 * 20, 1024, true)]
         [InlineData(16384, 3, 3, true)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/68206", TestPlatforms.Android)]
         public async Task SslStream_RandomSizeWrites_OK(int bufferSize, int readBufferSize, int writeBufferSize, bool useAsync)
         {
             byte[] dataToCopy = RandomNumberGenerator.GetBytes(bufferSize);
@@ -956,7 +961,7 @@ namespace System.Net.Security.Tests
 
                 await TestConfiguration.WhenAllOrAnyFailedWithTimeout(t1, t2);
 
-                Task writer = Task.Run(() =>
+                Task writer = Task.Run(async () =>
                 {
                     Memory<byte> data = new Memory<byte>(dataToCopy);
                     while (data.Length > 0)
@@ -964,11 +969,12 @@ namespace System.Net.Security.Tests
                         int writeLength = Math.Min(data.Length, writeBufferSize);
                         if (useAsync)
                         {
-                            server.WriteAsync(data.Slice(0, writeLength)).GetAwaiter().GetResult();
+                            await server.WriteAsync(data.Slice(0, writeLength));
                         }
                         else
                         {
                             server.Write(data.Span.Slice(0, writeLength));
+                            await Task.CompletedTask;
                         }
 
                         data = data.Slice(Math.Min(writeBufferSize, data.Length));
@@ -977,7 +983,7 @@ namespace System.Net.Security.Tests
                     server.ShutdownAsync().GetAwaiter().GetResult();
                 });
 
-                Task reader = Task.Run(() =>
+                Task reader = Task.Run(async () =>
                 {
                     Memory<byte> readBuffer = new Memory<byte>(dataReceived);
                     int totalLength = 0;
@@ -987,11 +993,12 @@ namespace System.Net.Security.Tests
                     {
                         if (useAsync)
                         {
-                            readLength = client.ReadAsync(readBuffer.Slice(totalLength, readBufferSize)).GetAwaiter().GetResult();
+                            readLength = await client.ReadAsync(readBuffer.Slice(totalLength, readBufferSize));
                         }
                         else
                         {
                             readLength = client.Read(readBuffer.Span.Slice(totalLength, readBufferSize));
+                            await Task.CompletedTask;
                         }
 
                         if (readLength == 0)
@@ -1010,6 +1017,71 @@ namespace System.Net.Security.Tests
                 await TestConfiguration.WhenAllOrAnyFailedWithTimeout(writer, reader);
             }
 
+        }
+
+        [ConditionalTheory(typeof(PlatformDetection), nameof(PlatformDetection.SupportsTls10))]
+        [InlineData(true)]
+        [InlineData(false)]
+        [PlatformSpecific(TestPlatforms.Windows)]
+        public async Task SslStream_UnifiedHello_Ok(bool useOptionCallback)
+        {
+            (Stream client, Stream server) = TestHelper.GetConnectedTcpStreams();
+            SslStream ssl = new SslStream(server);
+
+            var cts = new CancellationTokenSource();
+            cts.CancelAfter(TestConfiguration.PassingTestTimeout);
+            bool callbackCalled = false;
+            Task serverTask;
+
+            var options = new SslServerAuthenticationOptions();
+            if (useOptionCallback)
+            {
+                serverTask = ssl.AuthenticateAsServerAsync((ssl, info, o, ct) =>
+                {
+                    callbackCalled = true;
+                    options.ServerCertificate = Configuration.Certificates.GetServerCertificate();
+                    return new ValueTask<SslServerAuthenticationOptions>(options);
+                }, null, cts.Token);
+
+            }
+            else
+            {
+                options.ServerCertificateSelectionCallback = (o, name) =>
+                {
+                    callbackCalled = true;
+                    return Configuration.Certificates.GetServerCertificate();
+                };
+
+                serverTask = ssl.AuthenticateAsServerAsync(options, cts.Token);
+            }
+
+            Task.WaitAny(client.WriteAsync(TlsFrameHelperTests.s_UnifiedHello).AsTask(), serverTask);
+            if (serverTask.IsCompleted)
+            {
+                // Something failed. Raise exception.
+                await serverTask;
+            }
+
+            byte[] buffer = new byte[1024];
+            Task<int> readTask = client.ReadAsync(buffer, cts.Token).AsTask();
+            Task.WaitAny(readTask, serverTask);
+            if (serverTask.IsCompleted)
+            {
+                // Something failed. Raise exception.
+                await serverTask;
+            }
+
+            int readLength = await readTask;
+            // We should get back ServerHello
+            Assert.True(readLength > 0);
+            Assert.True(callbackCalled);
+            Assert.Equal(22, buffer[0]); // Handshake Protocol
+            Assert.Equal(2, buffer[5]);  // ServerHello
+
+            // Handshake should not be finished at this point.
+            Assert.False(serverTask.IsCompleted);
+            cts.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => serverTask);
         }
 
         private static bool ValidateServerCertificate(

@@ -347,7 +347,7 @@ namespace System.Net
         {
             CheckDisposed();
             string? headerValue = Headers[headerName];
-            return (headerValue == null) ? string.Empty : headerValue;
+            return headerValue ?? string.Empty;
         }
 
         public override void Close()
@@ -373,6 +373,6 @@ namespace System.Net
             }
         }
 
-        private string GetHeaderValueAsString(IEnumerable<string> values) => string.Join(", ", values);
+        private static string GetHeaderValueAsString(IEnumerable<string> values) => string.Join(", ", values);
     }
 }

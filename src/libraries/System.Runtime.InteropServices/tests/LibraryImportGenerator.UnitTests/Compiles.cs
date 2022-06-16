@@ -55,6 +55,18 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers<double>() };
             yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers<IntPtr>() };
             yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers<UIntPtr>() };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("byte*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("sbyte*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("short*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("ushort*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("int*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("uint*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("long*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("ulong*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("float*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("double*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("System.IntPtr*", "unsafe") };
+            yield return new[] { CodeSnippets.MarshalAsArrayParametersAndModifiers("System.UIntPtr*", "unsafe") };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithSizeParam<byte>(isByRef: false) };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithSizeParam<sbyte>(isByRef: false) };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithSizeParam<short>(isByRef: false) };
@@ -82,7 +94,6 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.BasicParametersAndModifiersWithStringMarshalling<string>(StringMarshalling.Utf8) };
 
             // StringMarshallingCustomType
-            yield return new[] { CodeSnippets.CustomStringMarshallingParametersAndModifiers<char>() };
             yield return new[] { CodeSnippets.CustomStringMarshallingParametersAndModifiers<string>() };
 
             // MarshalAs
@@ -97,14 +108,20 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.MarshalAsParametersAndModifiers<string>(UnmanagedType.LPTStr) };
             yield return new[] { CodeSnippets.MarshalAsParametersAndModifiers<string>(UnmanagedType.LPUTF8Str) };
             yield return new[] { CodeSnippets.MarshalAsParametersAndModifiers<string>(UnmanagedType.LPStr) };
+            yield return new[] { CodeSnippets.MarshalAsParametersAndModifiers<string>(UnmanagedType.BStr) };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithNestedMarshalInfo<string>(UnmanagedType.LPWStr) };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithNestedMarshalInfo<string>(UnmanagedType.LPUTF8Str) };
             yield return new[] { CodeSnippets.MarshalAsArrayParameterWithNestedMarshalInfo<string>(UnmanagedType.LPStr) };
+            yield return new[] { CodeSnippets.MarshalAsArrayParameterWithNestedMarshalInfo<string>(UnmanagedType.BStr) };
 
             // [In, Out] attributes
             // By value non-blittable array
-            yield return new[] { CodeSnippets.ByValueParameterWithModifier("S[]", "Out", CodeSnippets.DisableRuntimeMarshalling + CodeSnippets.BasicNonBlittableUserDefinedType) };
-            yield return new[] { CodeSnippets.ByValueParameterWithModifier("S[]", "In, Out", CodeSnippets.DisableRuntimeMarshalling + CodeSnippets.BasicNonBlittableUserDefinedType) };
+            yield return new [] { CodeSnippets.ByValueParameterWithModifier("S[]", "Out")
+                + CodeSnippets.CustomStructMarshalling.NonBlittableUserDefinedType()
+                + CodeSnippets.CustomStructMarshalling.NativeTypeRef };
+            yield return new [] { CodeSnippets.ByValueParameterWithModifier("S[]", "In, Out")
+                + CodeSnippets.CustomStructMarshalling.NonBlittableUserDefinedType()
+                + CodeSnippets.CustomStructMarshalling.NativeTypeRef };
 
             // Enums
             yield return new[] { CodeSnippets.EnumParameters };
@@ -138,7 +155,12 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.MarshalAsParametersAndModifiersUnsafe("delegate* unmanaged<int>", UnmanagedType.FunctionPtr) };
 
             // Structs
-            yield return new[] { CodeSnippets.BlittableStructParametersAndModifiers };
+            yield return new[] { CodeSnippets.BlittableStructParametersAndModifiers(string.Empty) };
+            yield return new[] { CodeSnippets.BlittableStructParametersAndModifiers(CodeSnippets.DisableRuntimeMarshalling) };
+            yield return new[] { CodeSnippets.ValidateDisableRuntimeMarshalling.TypeUsage(string.Empty)
+                + CodeSnippets.ValidateDisableRuntimeMarshalling.NonBlittableUserDefinedTypeWithNativeType };
+            yield return new[] { CodeSnippets.ValidateDisableRuntimeMarshalling.TypeUsage(CodeSnippets.DisableRuntimeMarshalling)
+                + CodeSnippets.ValidateDisableRuntimeMarshalling.NonBlittableUserDefinedTypeWithNativeType };
 
             // SafeHandle
             yield return new[] { CodeSnippets.BasicParametersAndModifiers("Microsoft.Win32.SafeHandles.SafeFileHandle") };
@@ -147,14 +169,17 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.SafeHandleWithCustomDefaultConstructorAccessibility(privateCtor: true) };
 
             // Custom type marshalling
-            yield return new[] { CodeSnippets.CustomStructMarshallingParametersAndModifiers };
-            yield return new[] { CodeSnippets.CustomStructMarshallingStackallocParametersAndModifiersNoRef };
-            yield return new[] { CodeSnippets.CustomStructMarshallingStackallocValuePropertyParametersAndModifiersNoRef };
-            yield return new[] { CodeSnippets.CustomStructMarshallingOptionalStackallocParametersAndModifiers };
-            yield return new[] { CodeSnippets.CustomStructMarshallingValuePropertyParametersAndModifiers };
-            yield return new[] { CodeSnippets.CustomStructMarshallingPinnableParametersAndModifiers };
-            yield return new[] { CodeSnippets.CustomStructMarshallingNativeTypePinnable };
-            yield return new[] { CodeSnippets.CustomStructMarshallingMarshalUsingParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.ParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.StackallocParametersAndModifiersNoRef };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.StackallocTwoStageParametersAndModifiersNoRef };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.OptionalStackallocParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.TwoStageParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.PinnableParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.NativeTypePinnable("byte", "byte") };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.NativeTypePinnable("byte", "int") };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.MarshalUsingParametersAndModifiers };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.NativeToManagedOnlyOutParameter };
+            yield return new[] { CodeSnippets.CustomStructMarshalling.NativeToManagedOnlyReturnValue };
             yield return new[] { CodeSnippets.ArrayMarshallingWithCustomStructElement };
             yield return new[] { CodeSnippets.ArrayMarshallingWithCustomStructElementWithValueProperty };
 
@@ -231,7 +256,7 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.CollectionsOfCollectionsStress };
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(CodeSnippetsToCompile))]
         public async Task ValidateSnippets(string source)
         {
@@ -241,8 +266,7 @@ namespace LibraryImportGenerator.UnitTests
             var newComp = TestUtils.RunGenerators(comp, out var generatorDiags, new Microsoft.Interop.LibraryImportGenerator());
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
         }
 
         public static IEnumerable<object[]> CodeSnippetsToCompileWithPreprocessorSymbols()
@@ -257,7 +281,7 @@ namespace LibraryImportGenerator.UnitTests
             yield return new object[] { CodeSnippets.PreprocessorIfAfterAttributeAroundFunctionAdditionalFunctionAfter("Foo"), Array.Empty<string>() };
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(CodeSnippetsToCompileWithPreprocessorSymbols))]
         public async Task ValidateSnippetsWithPreprocessorDefintions(string source, IEnumerable<string> preprocessorSymbols)
         {
@@ -267,8 +291,7 @@ namespace LibraryImportGenerator.UnitTests
             var newComp = TestUtils.RunGenerators(comp, out var generatorDiags, new Microsoft.Interop.LibraryImportGenerator());
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
         }
 
         public static IEnumerable<object[]> CodeSnippetsToValidateFallbackForwarder()
@@ -284,7 +307,7 @@ namespace LibraryImportGenerator.UnitTests
                 yield return new object[] { code, TestTargetFramework.Framework, false };
             }
 
-            // Confirm that all unsupported target frameworks fallback to a forwarder.
+            // Confirm that all unsupported target frameworks fall back to a forwarder.
             {
                 string code = CodeSnippets.BasicParametersAndModifiers<byte[]>(CodeSnippets.LibraryImportAttributeDeclaration);
                 yield return new object[] { code, TestTargetFramework.Net5, true };
@@ -293,7 +316,7 @@ namespace LibraryImportGenerator.UnitTests
                 yield return new object[] { code, TestTargetFramework.Framework, true };
             }
 
-            // Confirm that all unsupported target frameworks fallback to a forwarder.
+            // Confirm that all unsupported target frameworks fall back to a forwarder.
             {
                 string code = CodeSnippets.BasicParametersAndModifiersWithStringMarshalling<string>(StringMarshalling.Utf16, CodeSnippets.LibraryImportAttributeDeclaration);
                 yield return new object[] { code, TestTargetFramework.Net5, true };
@@ -301,10 +324,20 @@ namespace LibraryImportGenerator.UnitTests
                 yield return new object[] { code, TestTargetFramework.Standard, true };
                 yield return new object[] { code, TestTargetFramework.Framework, true };
             }
+
+            // Confirm that if support is missing for any type (like arrays), we fall back to a forwarder even if other types are supported.
+            {
+                string code = CodeSnippets.BasicReturnAndParameterByValue("System.Runtime.InteropServices.SafeHandle", "int[]", CodeSnippets.LibraryImportAttributeDeclaration);
+                yield return new object[] { code, TestTargetFramework.Net5, true };
+                yield return new object[] { code, TestTargetFramework.Core, true };
+                yield return new object[] { code, TestTargetFramework.Standard, true };
+                yield return new object[] { code, TestTargetFramework.Framework, true };
+            }
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(CodeSnippetsToValidateFallbackForwarder))]
+        [OuterLoop("Uses the network for downlevel ref packs")]
         public async Task ValidateSnippetsFallbackForwarder(string source, TestTargetFramework targetFramework, bool expectFallbackForwarder)
         {
             Compilation comp = await TestUtils.CreateCompilation(source, targetFramework);
@@ -317,8 +350,7 @@ namespace LibraryImportGenerator.UnitTests
 
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
 
             // Verify that the forwarder generates the method as a DllImport.
             SyntaxTree generatedCode = newComp.SyntaxTrees.Last();
@@ -340,7 +372,7 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.BasicParameterByValue("int") };
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(FullyBlittableSnippetsToCompile))]
         public async Task ValidateSnippetsWithBlittableAutoForwarding(string source)
         {
@@ -354,8 +386,7 @@ namespace LibraryImportGenerator.UnitTests
 
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
 
             // Verify that the forwarder generates the method as a DllImport.
             SyntaxTree generatedCode = newComp.SyntaxTrees.Last();
@@ -374,7 +405,7 @@ namespace LibraryImportGenerator.UnitTests
             yield return new[] { CodeSnippets.SetLastErrorTrue<int>() };
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(SnippetsWithBlittableTypesButNonBlittableDataToCompile))]
         public async Task ValidateSnippetsWithBlittableTypesButNonBlittableMetadataDoNotAutoForward(string source)
         {
@@ -388,8 +419,7 @@ namespace LibraryImportGenerator.UnitTests
 
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
 
             // Verify that the generator generates stubs with inner DllImports for all methods.
             SyntaxTree generatedCode = newComp.SyntaxTrees.Last();
@@ -412,7 +442,7 @@ namespace LibraryImportGenerator.UnitTests
 #pragma warning disable xUnit1004 // Test methods should not be skipped.
                                   // If we have any new experimental APIs that we are implementing that have not been approved,
                                   // we will add new scenarios for this test.
-        [ConditionalTheory(Skip = "No current scenarios to test.")]
+        [Theory(Skip = "No current scenarios to test.")]
 #pragma warning restore
         [MemberData(nameof(CodeSnippetsToCompileWithMarshalType))]
         public async Task ValidateSnippetsWithMarshalType(string source)
@@ -428,13 +458,7 @@ namespace LibraryImportGenerator.UnitTests
 
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-
-            Assert.All(newCompDiags, diag =>
-            {
-                Assert.Equal("CS0117", diag.Id);
-                Assert.StartsWith("'Marshal' does not contain a definition for ", diag.GetMessage());
-            });
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp, "CS0117");
         }
 
         public static IEnumerable<object[]> CodeSnippetsToCompileMultipleSources()
@@ -444,7 +468,7 @@ namespace LibraryImportGenerator.UnitTests
             yield return new object[] { new[] { CodeSnippets.BasicParameterByValue("int[]", CodeSnippets.DisableRuntimeMarshalling), CodeSnippets.BasicParameterWithByRefModifier("ref", "int") } };
         }
 
-        [ConditionalTheory]
+        [Theory]
         [MemberData(nameof(CodeSnippetsToCompileMultipleSources))]
         public async Task ValidateSnippetsWithMultipleSources(string[] sources)
         {
@@ -454,8 +478,7 @@ namespace LibraryImportGenerator.UnitTests
             var newComp = TestUtils.RunGenerators(comp, out var generatorDiags, new Microsoft.Interop.LibraryImportGenerator());
             Assert.Empty(generatorDiags);
 
-            var newCompDiags = newComp.GetDiagnostics();
-            Assert.Empty(newCompDiags);
+            TestUtils.AssertPostSourceGeneratorCompilation(newComp);
         }
     }
 }

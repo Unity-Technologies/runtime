@@ -34,7 +34,7 @@ namespace System.Runtime.Serialization
             }
         }
 
-        private XmlDocument Document => _xmlDocument ?? (_xmlDocument = new XmlDocument());
+        private XmlDocument Document => _xmlDocument ??= new XmlDocument();
 
 
         internal override bool IsGetOnlyCollection
@@ -983,7 +983,7 @@ namespace System.Runtime.Serialization
             }
         }
 
-        private bool IsContentNode(XmlNodeType nodeType)
+        private static bool IsContentNode(XmlNodeType nodeType)
         {
             switch (nodeType)
             {

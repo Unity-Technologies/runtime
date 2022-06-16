@@ -340,7 +340,7 @@ namespace System.Xml.Serialization
             return false;
         }
 
-        private XmlSchemaImport? FindImport(XmlSchema schema, string? ns)
+        private static XmlSchemaImport? FindImport(XmlSchema schema, string? ns)
         {
             foreach (object item in schema.Includes)
             {
@@ -513,7 +513,7 @@ namespace System.Xml.Serialization
                             seq.Items.Add(any);
                             type.Particle = seq;
                             string? anyNs = serializableMapping.Schema.TargetNamespace;
-                            any.Namespace = anyNs == null ? "" : anyNs;
+                            any.Namespace = anyNs ?? "";
                             XmlSchema? existingSchema = _schemas[anyNs];
                             if (existingSchema == null)
                             {
@@ -786,7 +786,7 @@ namespace System.Xml.Serialization
                         }
                         else
                         {
-                            list.ItemTypeName = ExportPrimitiveMapping(pm, accessor.Namespace == null ? ns : accessor.Namespace);
+                            list.ItemTypeName = ExportPrimitiveMapping(pm, accessor.Namespace ?? ns);
                         }
                         dataType.Content = list;
                         attribute.SchemaType = dataType;
@@ -799,7 +799,7 @@ namespace System.Xml.Serialization
                         }
                         else
                         {
-                            attribute.SchemaTypeName = ExportPrimitiveMapping(pm, accessor.Namespace == null ? ns : accessor.Namespace);
+                            attribute.SchemaTypeName = ExportPrimitiveMapping(pm, accessor.Namespace ?? ns);
                         }
                     }
                 }
@@ -1199,7 +1199,7 @@ namespace System.Xml.Serialization
             return dataType;
         }
 
-        private void AddXmlnsAnnotation(XmlSchemaComplexType type, string xmlnsMemberName)
+        private static void AddXmlnsAnnotation(XmlSchemaComplexType type, string xmlnsMemberName)
         {
             XmlSchemaAnnotation annotation = new XmlSchemaAnnotation();
             XmlSchemaAppInfo appinfo = new XmlSchemaAppInfo();

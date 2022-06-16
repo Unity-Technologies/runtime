@@ -295,7 +295,7 @@ void ThreadNative::Start(Thread* pNewThread, int threadStackSize, int priority, 
     pNewThread->SetThreadPriority(MapToNTPriority(priority));
     pNewThread->ChooseThreadCPUGroupAffinity();
 
-    FastInterlockOr((ULONG *) &pNewThread->m_State, Thread::TS_LegalToJoin);
+    pNewThread->SetThreadState(Thread::TS_LegalToJoin);
 
     DWORD ret = pNewThread->StartThread();
 
@@ -536,7 +536,7 @@ extern "C" UINT64 QCALLTYPE ThreadNative_GetCurrentOSThreadId()
     // We special case the API for non-Windows to get the 64-bit value and zero-extend
     // the Windows value to return a single data type on all platforms.
 
-    UINT64 threadId;
+    UINT64 threadId = 0;
 
     BEGIN_QCALL;
 #ifndef TARGET_UNIX

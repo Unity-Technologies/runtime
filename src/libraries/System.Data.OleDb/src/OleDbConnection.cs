@@ -16,10 +16,9 @@ namespace System.Data.OleDb
 
     // wraps the OLEDB IDBInitialize interface which represents a connection
     // Notes about connection pooling
-    // 1. Connection pooling isn't supported on Win95
-    // 2. Only happens if we use the IDataInitialize or IDBPromptInitialize interfaces
+    // 1. Only happens if we use the IDataInitialize or IDBPromptInitialize interfaces
     //    it won't happen if you directly create the provider and set its properties
-    // 3. First call on IDBInitialize must be Initialize, can't QI for any other interfaces before that
+    // 2. First call on IDBInitialize must be Initialize, can't QI for any other interfaces before that
     [DefaultEvent("InfoMessage")]
     public sealed partial class OleDbConnection : DbConnection, ICloneable, IDbConnection
     {
@@ -178,8 +177,7 @@ namespace System.Data.OleDb
             get
             {
                 OleDbConnectionString? constr = this.OleDbConnectionStringValue;
-                string? value = ((null != constr) ? constr.ConvertValueToString(ODB.Provider, null) : null);
-                return ((null != value) ? value : string.Empty);
+                return constr?.ConvertValueToString(ODB.Provider, null) ?? string.Empty;
             }
         }
 
@@ -306,8 +304,6 @@ namespace System.Data.OleDb
             }
             return quotedIdentifierCase;
         }
-
-        internal bool ForceNewConnection { get { return false; } set {; } }
 
         public new OleDbTransaction BeginTransaction()
         {

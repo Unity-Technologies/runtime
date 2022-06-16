@@ -90,7 +90,7 @@ STDMETHODIMP CorHost2::Start()
         else
         {
             // Increment the global (and dynamic) refCount...
-            FastInterlockIncrement(&m_RefCount);
+            InterlockedIncrement(&m_RefCount);
 
             // And set our flag that this host has invoked the Start...
             m_fStarted = TRUE;
@@ -113,7 +113,7 @@ STDMETHODIMP CorHost2::Start()
             // So, if you want to do that, just make sure you are the first host to load the
             // specific version of CLR in memory AND start it.
             m_fFirstToLoadCLR = TRUE;
-            FastInterlockIncrement(&m_RefCount);
+            InterlockedIncrement(&m_RefCount);
         }
     }
 
@@ -159,7 +159,7 @@ HRESULT CorHost2::Stop()
                 break;
             }
             else
-            if (FastInterlockCompareExchange(&m_RefCount, refCount - 1, refCount) == refCount)
+            if (InterlockedCompareExchange(&m_RefCount, refCount - 1, refCount) == refCount)
             {
                 // Indicate that we have got a Stop for a corresponding Start call from the
                 // Host. Semantically, CoreCLR has stopped for them.
@@ -393,6 +393,11 @@ HRESULT CorHost2::ExecuteAssembly(DWORD dwAppDomainId,
 
     UNINSTALL_UNWIND_AND_CONTINUE_HANDLER;
     UNINSTALL_UNHANDLED_MANAGED_EXCEPTION_TRAP;
+
+#ifdef LOG_EXECUTABLE_ALLOCATOR_STATISTICS
+    ExecutableAllocator::DumpHolderUsage();
+    ExecutionManager::DumpExecutionManagerUsage();
+#endif
 
 ErrExit:
 
@@ -735,7 +740,6 @@ HRESULT CorHost2::CreateDelegate(
     BEGIN_EXTERNAL_ENTRYPOINT(&hr);
     GCX_COOP_THREAD_EXISTS(GET_THREAD());
 
-    MAKE_UTF8PTR_FROMWIDE(szAssemblyName, wszAssemblyName);
     MAKE_UTF8PTR_FROMWIDE(szClassName, wszClassName);
     MAKE_UTF8PTR_FROMWIDE(szMethodName, wszMethodName);
 
@@ -743,7 +747,8 @@ HRESULT CorHost2::CreateDelegate(
         GCX_PREEMP();
 
         AssemblySpec spec;
-        spec.Init(szAssemblyName);
+        SString ssAssemblyName(wszAssemblyName);
+        spec.Init(ssAssemblyName);
         Assembly* pAsm=spec.LoadAssembly(FILE_ACTIVE);
 
         TypeHandle th=pAsm->GetLoader()->LoadTypeByNameThrowing(pAsm,NULL,szClassName);

@@ -41,20 +41,22 @@ namespace System.Text
             return charCount / 4 * 3;
         }
 
-        private bool IsValidLeadBytes(int v1, int v2, int v3, int v4)
+        private static bool IsValidLeadBytes(int v1, int v2, int v3, int v4)
         {
             // First two chars of a four char base64 sequence can't be ==, and must be valid
             return ((v1 | v2) < 64) && ((v3 | v4) != 0xFF);
         }
 
-        private bool IsValidTailBytes(int v3, int v4)
+        private static bool IsValidTailBytes(int v3, int v4)
         {
             // If the third char is = then the fourth char must be =
             return !(v3 == 64 && v4 != 64);
         }
 
-        public unsafe override int GetByteCount(char[] chars!!, int index, int count)
+        public override unsafe int GetByteCount(char[] chars, int index, int count)
         {
+            ArgumentNullException.ThrowIfNull(chars);
+
             if (index < 0)
                 throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(index), SR.ValueMustBeNonNegative));
             if (index > chars.Length)
@@ -105,7 +107,7 @@ namespace System.Text
             }
         }
 
-        public unsafe override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
+        public override unsafe int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
         {
             ArgumentNullException.ThrowIfNull(chars);
             if (charIndex < 0)
@@ -267,7 +269,7 @@ namespace System.Text
             return GetMaxCharCount(count);
         }
 
-        public unsafe override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
+        public override unsafe int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
         {
             ArgumentNullException.ThrowIfNull(bytes);
             if (byteIndex < 0)

@@ -43,6 +43,7 @@ public class Interfaces
         TestDynamicInterfaceCastable.Run();
         TestStaticInterfaceMethodsAnalysis.Run();
         TestStaticInterfaceMethods.Run();
+        TestSimpleStaticDefaultInterfaceMethods.Run();
 
         return Pass;
     }
@@ -495,6 +496,13 @@ public class Interfaces
 
         class Foo<T> : IFoo<T> { }
 
+        class Base : IFoo
+        {
+            int IFoo.GetNumber() => 100;
+        }
+
+        class Derived : Base, IBar { }
+
         public static void Run()
         {
             Console.WriteLine("Testing default interface methods...");
@@ -506,6 +514,9 @@ public class Interfaces
                 throw new Exception();
 
             if (((IFoo)new Baz()).GetNumber() != 100)
+                throw new Exception();
+
+            if (((IFoo)new Derived()).GetNumber() != 100)
                 throw new Exception();
 
             if (((IFoo<object>)new Foo<object>()).GetInterfaceType() != typeof(IFoo<object>))
@@ -930,6 +941,13 @@ public class Interfaces
             {
                 throw new Exception($"{actual} != {expected}");
             }
+
+            Func<string> del = T.GetCookie;
+            actual = del();
+            if (actual != expected)
+            {
+                throw new Exception($"{actual} != {expected}");
+            }
         }
 
         static void TestSimpleInterfaceWithGenericMethod<T, U>(string expected) where T : ISimple
@@ -939,11 +957,25 @@ public class Interfaces
             {
                 throw new Exception($"{actual} != {expected}");
             }
+
+            Func<string> del = T.GetCookieGeneric<U>;
+            actual = del();
+            if (actual != expected)
+            {
+                throw new Exception($"{actual} != {expected}");
+            }
         }
 
         static void TestVariantInterface<T, U>(string expected) where T : IVariant<U>
         {
             string actual = T.WhichMethod(default);
+            if (actual != expected)
+            {
+                throw new Exception($"{actual} != {expected}");
+            }
+
+            Func<U, string> del = T.WhichMethod;
+            actual = del(default);
             if (actual != expected)
             {
                 throw new Exception($"{actual} != {expected}");
@@ -987,6 +1019,79 @@ public class Interfaces
             TestVariantInterface<GenericVariantWithHiddenDerived<Base>, Mid>("GenericVariantWithHiddenDerived.WhichMethod(Base)");
             TestVariantInterface<GenericVariantWithHiddenDerived<Mid>, Mid>("GenericVariantWithHiddenDerived.WhichMethod(Mid)");
             TestVariantInterface<GenericVariantWithHiddenDerived<Derived>, Mid>("GenericVariantWithHiddenBase.WhichMethod(Mid)");
+        }
+    }
+
+    class TestSimpleStaticDefaultInterfaceMethods
+    {
+        interface IFoo
+        {
+            static virtual string GetCookie() => nameof(IFoo);
+        }
+
+        struct StructFooWithDefault : IFoo { }
+
+        struct StructFooWithExplicit : IFoo
+        {
+            public static string GetCookie() => nameof(StructFooWithExplicit);
+        }
+
+        class ClassFooWithDefault : IFoo { }
+
+        class ClassFooWithExplicit : IFoo
+        {
+            public static string GetCookie() => nameof(ClassFooWithExplicit);
+        }
+
+        interface IFoo<T>
+        {
+            static virtual string GetCookie() => $"IFoo<{typeof(T).Name}>";
+        }
+
+        struct StructFooWithDefault<T> : IFoo<T> { }
+
+        struct StructFooWithExplicit<T> : IFoo<T>
+        {
+            public static string GetCookie() => $"StructFooWithExplicit<{typeof(T).Name}>";
+        }
+
+        class ClassFooWithDefault<T> : IFoo<T> { }
+
+        class ClassFooWithExplicit<T> : IFoo<T>
+        {
+            public static string GetCookie() => $"ClassFooWithExplicit<{typeof(T).Name}>";
+        }
+
+        class Atom { }
+
+        static string GetCookie<T>() where T : IFoo => T.GetCookie();
+        static string GetCookie<T, U>() where T : IFoo<U> => T.GetCookie();
+
+        public static void Run()
+        {
+            if (GetCookie<StructFooWithDefault>() != "IFoo")
+                throw new Exception();
+
+            if (GetCookie<StructFooWithExplicit>() != "StructFooWithExplicit")
+                throw new Exception();
+
+            if (GetCookie<ClassFooWithDefault>() != "IFoo")
+                throw new Exception();
+
+            if (GetCookie<ClassFooWithExplicit>() != "ClassFooWithExplicit")
+                throw new Exception();
+
+            if (GetCookie<StructFooWithDefault<Atom>, Atom>() != "IFoo<Atom>")
+                throw new Exception();
+
+            if (GetCookie<StructFooWithExplicit<Atom>, Atom>() != "StructFooWithExplicit<Atom>")
+                throw new Exception();
+
+            if (GetCookie<ClassFooWithDefault<Atom>, Atom>() != "IFoo<Atom>")
+                throw new Exception();
+
+            if (GetCookie<ClassFooWithExplicit<Atom>, Atom>() != "ClassFooWithExplicit<Atom>")
+                throw new Exception();
         }
     }
 }

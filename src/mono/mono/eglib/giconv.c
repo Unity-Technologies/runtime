@@ -158,8 +158,8 @@ static FORCE_INLINE (uint16_t)
 read_uint16_endian (unsigned char *inptr, unsigned endian)
 {
 	if (endian == G_LITTLE_ENDIAN)
-		return (inptr[1] << 8) | inptr[0];
-	return (inptr[0] << 8) | inptr[1];
+		return (uint16_t)((inptr[1] << 8) | inptr[0]);
+	return (uint16_t)((inptr[0] << 8) | inptr[1]);
 }
 
 static FORCE_INLINE (int)
@@ -246,7 +246,7 @@ encode_utf16_endian (gunichar c, char *outbuf, size_t outleft, unsigned endian)
 			return -1;
 		}
 
-		write_uint16_endian (outptr, c, endian);
+		write_uint16_endian (outptr, GUNICHAR_TO_UINT16 (c), endian);
 		return 2;
 	} else {
 		if (outleft < 4) {
@@ -343,7 +343,7 @@ encode_utf8 (gunichar c, char *outbuf, size_t outleft)
 	int base, n, i;
 
 	if (c < 0x80) {
-		outptr[0] = c;
+		outptr[0] = GUNICHAR_TO_UINT8 (c);
 		return 1;
 	} else if (c < 0x800) {
 		base = 192;
@@ -382,7 +382,7 @@ encode_utf8 (gunichar c, char *outbuf, size_t outleft)
 		c >>= 6;
 	}
 
-	outptr[0] = c | base;
+	outptr[0] = GUNICHAR_TO_UINT8 (c | base);
 #endif
 
 	return n;
@@ -469,7 +469,7 @@ g_unichar_to_utf8 (gunichar c, gchar *outbuf)
 		}
 
 		/* first character has a different base */
-		outbuf[0] = c | base;
+		outbuf[0] = GUNICHAR_TO_CHAR (c | base);
 	}
 
 	return n;
@@ -551,7 +551,7 @@ eg_utf8_to_utf16_general (const gchar *str, glong len, glong *items_read, glong 
 			return NULL;
 		}
 
-		len = strlen (str);
+		len = (glong)strlen (str);
 	}
 
 	inptr = (char *) str;
@@ -579,10 +579,10 @@ eg_utf8_to_utf16_general (const gchar *str, glong len, glong *items_read, glong 
 	}
 
 	if (items_read)
-		*items_read = inptr - str;
+		*items_read = GPTRDIFF_TO_LONG (inptr - str);
 
 	if (items_written)
-		*items_written = outlen;
+		*items_written = (glong)outlen;
 
 	if (G_LIKELY (!custom_alloc_func))
 		outptr = outbuf = g_malloc ((outlen + 1) * sizeof (gunichar2));
@@ -635,7 +635,7 @@ error:
 	}
 
 	if (items_read)
-		*items_read = inptr - str;
+		*items_read = GPTRDIFF_TO_LONG (inptr - str);
 
 	if (items_written)
 		*items_written = 0;
@@ -680,7 +680,7 @@ g_utf8_to_ucs4 (const gchar *str, glong len, glong *items_read, glong *items_wri
 	g_return_val_if_fail (str != NULL, NULL);
 
 	if (len < 0)
-		len = strlen (str);
+		len = (glong)strlen (str);
 
 	inptr = (char *) str;
 	inleft = len;
@@ -699,7 +699,7 @@ g_utf8_to_ucs4 (const gchar *str, glong len, glong *items_read, glong *items_wri
 			}
 
 			if (items_read)
-				*items_read = inptr - str;
+				*items_read = GPTRDIFF_TO_LONG (inptr - str);
 
 			if (items_written)
 				*items_written = 0;
@@ -714,10 +714,10 @@ g_utf8_to_ucs4 (const gchar *str, glong len, glong *items_read, glong *items_wri
 	}
 
 	if (items_written)
-		*items_written = outlen / 4;
+		*items_written = (glong)(outlen / 4);
 
 	if (items_read)
-		*items_read = inptr - str;
+		*items_read = GPTRDIFF_TO_LONG (inptr - str);
 
 	outptr = outbuf = g_malloc (outlen + 4);
 	inptr = (char *) str;
@@ -780,7 +780,7 @@ eg_utf16_to_utf8_general (const gunichar2 *str, glong len, glong *items_read, gl
 			}
 
 			if (items_read)
-				*items_read = (inptr - (char *) str) / 2;
+				*items_read = GPTRDIFF_TO_LONG ((inptr - (char *) str) / 2);
 
 			if (items_written)
 				*items_written = 0;
@@ -795,10 +795,10 @@ eg_utf16_to_utf8_general (const gunichar2 *str, glong len, glong *items_read, gl
 	}
 
 	if (items_read)
-		*items_read = (inptr - (char *) str) / 2;
+		*items_read = GPTRDIFF_TO_LONG ((inptr - (char *) str) / 2);
 
 	if (items_written)
-		*items_written = outlen;
+		*items_written = (glong)outlen;
 
 	if (G_LIKELY (!custom_alloc_func))
 		outptr = outbuf = g_malloc (outlen + 1);
@@ -884,7 +884,7 @@ g_utf16_to_ucs4 (const gunichar2 *str, glong len, glong *items_read, glong *item
 			}
 
 			if (items_read)
-				*items_read = (inptr - (char *) str) / 2;
+				*items_read = GPTRDIFF_TO_LONG ((inptr - (char *) str) / 2);
 
 			if (items_written)
 				*items_written = 0;
@@ -899,10 +899,10 @@ g_utf16_to_ucs4 (const gunichar2 *str, glong len, glong *items_read, glong *item
 	}
 
 	if (items_read)
-		*items_read = (inptr - (char *) str) / 2;
+		*items_read = GPTRDIFF_TO_LONG ((inptr - (char *) str) / 2);
 
 	if (items_written)
-		*items_written = outlen / 4;
+		*items_written = (glong)(outlen / 4);
 
 	outptr = outbuf = g_malloc (outlen + 4);
 	inptr = (char *) str;
@@ -978,7 +978,7 @@ g_ucs4_to_utf8 (const gunichar *str, glong len, glong *items_read, glong *items_
 	*outptr = 0;
 
 	if (items_written)
-		*items_written = outlen;
+		*items_written = (glong)outlen;
 
 	if (items_read)
 		*items_read = i;
@@ -1040,7 +1040,7 @@ g_ucs4_to_utf16 (const gunichar *str, glong len, glong *items_read, glong *items
 	*outptr = 0;
 
 	if (items_written)
-		*items_written = outlen;
+		*items_written = (glong)outlen;
 
 	if (items_read)
 		*items_read = i;

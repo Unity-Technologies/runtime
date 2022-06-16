@@ -16,8 +16,11 @@ namespace System.Xml
     {
         private XmlUTF8NodeWriter? _writer;
 
-        public void SetOutput(Stream stream!!, Encoding encoding!!, bool ownsStream)
+        public void SetOutput(Stream stream, Encoding encoding, bool ownsStream)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(encoding);
+
             if (encoding.WebName != Encoding.UTF8.WebName)
             {
                 stream = new EncodingStreamWrapper(stream, encoding, true);
@@ -427,7 +430,7 @@ namespace System.Xml
             WriteEscapedText(s.Value);
         }
 
-        public unsafe override void WriteEscapedText(string s)
+        public override unsafe void WriteEscapedText(string s)
         {
             int count = s.Length;
             if (count > 0)
@@ -439,7 +442,7 @@ namespace System.Xml
             }
         }
 
-        public unsafe override void WriteEscapedText(char[] s, int offset, int count)
+        public override unsafe void WriteEscapedText(char[] s, int offset, int count)
         {
             if (count > 0)
             {
@@ -510,7 +513,7 @@ namespace System.Xml
             WriteUTF8Chars(chars, offset, count);
         }
 
-        public unsafe override void WriteText(char[] chars, int offset, int count)
+        public override unsafe void WriteText(char[] chars, int offset, int count)
         {
             if (count > 0)
             {
@@ -628,7 +631,7 @@ namespace System.Xml
             }
         }
 
-        private int ToBase16(byte[] chars, int offset, uint value)
+        private static int ToBase16(byte[] chars, int offset, uint value)
         {
             int count = 0;
             do

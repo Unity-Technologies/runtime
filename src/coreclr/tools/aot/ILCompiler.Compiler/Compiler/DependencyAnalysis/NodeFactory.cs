@@ -294,6 +294,11 @@ namespace ILCompiler.DependencyAnalysis
                 return new ReflectableMethodNode(method);
             });
 
+            _reflectableFields = new NodeCache<FieldDesc, ReflectableFieldNode>(field =>
+            {
+                return new ReflectableFieldNode(field);
+            });
+
             _objectGetTypeFlowDependencies = new NodeCache<MetadataType, ObjectGetTypeFlowDependenciesNode>(type =>
             {
                 return new ObjectGetTypeFlowDependenciesNode(type);
@@ -852,6 +857,12 @@ namespace ILCompiler.DependencyAnalysis
             return _reflectableMethods.GetOrAdd(method);
         }
 
+        private NodeCache<FieldDesc, ReflectableFieldNode> _reflectableFields;
+        public ReflectableFieldNode ReflectableField(FieldDesc field)
+        {
+            return _reflectableFields.GetOrAdd(field);
+        }
+
         private NodeCache<MetadataType, ObjectGetTypeFlowDependenciesNode> _objectGetTypeFlowDependencies;
         internal ObjectGetTypeFlowDependenciesNode ObjectGetTypeFlowDependencies(MetadataType type)
         {
@@ -1089,12 +1100,12 @@ namespace ILCompiler.DependencyAnalysis
         public ArrayOfEmbeddedPointersNode<GCStaticsNode> GCStaticsRegion = new ArrayOfEmbeddedPointersNode<GCStaticsNode>(
             "__GCStaticRegionStart", 
             "__GCStaticRegionEnd",
-            new SortableDependencyNode.ObjectNodeComparer(new CompilerComparer()));
+            new SortableDependencyNode.ObjectNodeComparer(CompilerComparer.Instance));
 
         public ArrayOfEmbeddedDataNode<ThreadStaticsNode> ThreadStaticsRegion = new ArrayOfEmbeddedDataNode<ThreadStaticsNode>(
             "__ThreadStaticRegionStart",
             "__ThreadStaticRegionEnd",
-            new SortableDependencyNode.EmbeddedObjectNodeComparer(new CompilerComparer()));
+            new SortableDependencyNode.EmbeddedObjectNodeComparer(CompilerComparer.Instance));
 
         public ArrayOfEmbeddedPointersNode<IMethodNode> EagerCctorTable = new ArrayOfEmbeddedPointersNode<IMethodNode>(
             "__EagerCctorStart",
@@ -1104,12 +1115,12 @@ namespace ILCompiler.DependencyAnalysis
         public ArrayOfEmbeddedPointersNode<InterfaceDispatchMapNode> DispatchMapTable = new ArrayOfEmbeddedPointersNode<InterfaceDispatchMapNode>(
             "__DispatchMapTableStart",
             "__DispatchMapTableEnd",
-            new SortableDependencyNode.ObjectNodeComparer(new CompilerComparer()));
+            new SortableDependencyNode.ObjectNodeComparer(CompilerComparer.Instance));
 
         public ArrayOfEmbeddedDataNode<EmbeddedObjectNode> FrozenSegmentRegion = new ArrayOfFrozenObjectsNode<EmbeddedObjectNode>(
             "__FrozenSegmentRegionStart",
             "__FrozenSegmentRegionEnd",
-            new SortableDependencyNode.EmbeddedObjectNodeComparer(new CompilerComparer()));
+            new SortableDependencyNode.EmbeddedObjectNodeComparer(CompilerComparer.Instance));
 
         internal ModuleInitializerListNode ModuleInitializerList = new ModuleInitializerListNode();
 

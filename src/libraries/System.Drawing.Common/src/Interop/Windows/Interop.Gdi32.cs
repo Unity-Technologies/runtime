@@ -4,7 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 #if NET7_0_OR_GREATER
-using System.Runtime.InteropServices.GeneratedMarshalling;
+using System.Runtime.InteropServices.Marshalling;
 #endif
 
 internal static partial class Interop
@@ -188,6 +188,7 @@ internal static partial class Interop
             internal int fwType;
 
 #if NET7_0_OR_GREATER
+            [CustomTypeMarshaller(typeof(DOCINFO), Direction = CustomTypeMarshallerDirection.In, Features = CustomTypeMarshallerFeatures.UnmanagedResources)]
             internal struct Native
             {
                 internal int cbSize;
@@ -216,7 +217,7 @@ internal static partial class Interop
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public class DEVMODE
+        public sealed class DEVMODE
         {
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
             public string? dmDeviceName;

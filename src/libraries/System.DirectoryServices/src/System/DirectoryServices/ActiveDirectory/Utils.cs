@@ -606,7 +606,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 if ((index = tmpUsername.IndexOf('\\')) != -1)
                 {
                     domain = tmpUsername.Substring(0, index);
-                    username = tmpUsername.Substring(index + 1, tmpUsername.Length - index - 1);
+                    username = tmpUsername.Substring(index + 1);
                 }
                 else
                 {
@@ -705,7 +705,7 @@ namespace System.DirectoryServices.ActiveDirectory
             }
             if (result != 0)
             {
-                throw ExceptionHelper.GetExceptionFromErrorCode(result, (domainControllerName != null) ? domainControllerName : domainName);
+                throw ExceptionHelper.GetExceptionFromErrorCode(result, domainControllerName ?? domainName);
             }
             return handle;
         }

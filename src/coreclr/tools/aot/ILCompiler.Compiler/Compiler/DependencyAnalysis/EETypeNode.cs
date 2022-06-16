@@ -315,8 +315,16 @@ namespace ILCompiler.DependencyAnalysis
 
             DefType defType = _type.GetClosestDefType();
 
+            // Interfaces don't have vtables and we don't need to track their slot use.
+            // The only exception are those interfaces that provide IDynamicInterfaceCastable implementations;
+            // those have slots and we dispatch on them.
+            bool needsDependenciesForVirtualMethodImpls = !defType.IsInterface
+                || ((MetadataType)defType).IsDynamicInterfaceCastableImplementation();
+
             // If we're producing a full vtable, none of the dependencies are conditional.
-            if (!factory.VTable(defType).HasFixedSlots)
+            needsDependenciesForVirtualMethodImpls &= !factory.VTable(defType).HasFixedSlots;
+            
+            if (needsDependenciesForVirtualMethodImpls)
             {
                 foreach (MethodDesc decl in defType.EnumAllVirtualSlots())
                 {
@@ -336,6 +344,8 @@ namespace ILCompiler.DependencyAnalysis
                     {
                         factory.MetadataManager.NoteOverridingMethod(decl, impl);
                     }
+
+                    factory.MetadataManager.GetDependenciesForOverridingMethod(ref result, factory, decl, impl);
                 }
 
                 Debug.Assert(
@@ -381,6 +391,8 @@ namespace ILCompiler.DependencyAnalysis
                             }
 
                             factory.MetadataManager.NoteOverridingMethod(interfaceMethod, implMethod);
+
+                            factory.MetadataManager.GetDependenciesForOverridingMethod(ref result, factory, interfaceMethod, implMethod);
                         }
                         else
                         {
@@ -406,6 +418,8 @@ namespace ILCompiler.DependencyAnalysis
                                 result.Add(new CombinedDependencyListEntry(factory.MethodEntrypoint(defaultIntfMethod), factory.VirtualMethodUse(interfaceMethod), "Interface method"));
 
                                 factory.MetadataManager.NoteOverridingMethod(interfaceMethod, implMethod);
+
+                                factory.MetadataManager.GetDependenciesForOverridingMethod(ref result, factory, interfaceMethod, implMethod);
                             }
                         }
                     }
@@ -437,9 +451,9 @@ namespace ILCompiler.DependencyAnalysis
             if (method.IsPInvoke)
                 return false;
 
-            // CoreRT can generate method bodies for these no matter what (worst case
-            // they'll be throwing). We don't want to take the "return false" code path on CoreRT because
-            // delegate methods fall into the runtime implemented category on CoreRT, but we
+            // NativeAOT can generate method bodies for these no matter what (worst case
+            // they'll be throwing). We don't want to take the "return false" code path because
+            // delegate methods fall into the runtime implemented category on NativeAOT, but we
             // just treat them like regular method bodies.
             return true;
         }
@@ -743,14 +757,29 @@ namespace ILCompiler.DependencyAnalysis
             return _type.BaseType != null ? factory.NecessaryTypeSymbol(_type.BaseType) : null;
         }
 
+        protected virtual ISymbolNode GetNonNullableValueTypeArrayElementTypeNode(NodeFactory factory)
+        {
+            return factory.NecessaryTypeSymbol(((ArrayType)_type).ElementType);
+        }
+
         private ISymbolNode GetRelatedTypeNode(NodeFactory factory)
         {
             ISymbolNode relatedTypeNode = null;
 
-            if (_type.IsArray || _type.IsPointer || _type.IsByRef)
+            if (_type.IsParameterizedType)
             {
                 var parameterType = ((ParameterizedType)_type).ParameterType;
-                relatedTypeNode = factory.NecessaryTypeSymbol(parameterType);
+                if (_type.IsArray && parameterType.IsValueType && !parameterType.IsNullable)
+                {
+                    // This might be a constructed type symbol. There are APIs on Array that allow allocating element
+                    // types through runtime magic ("((Array)new NeverAllocated[1]).GetValue(0)" or IEnumerable) and we don't have
+                    // visibility into that. Conservatively assume element types of constructed arrays are also constructed.
+                    relatedTypeNode = GetNonNullableValueTypeArrayElementTypeNode(factory);
+                }
+                else
+                {
+                    relatedTypeNode = factory.NecessaryTypeSymbol(parameterType);
+                }
             }
             else
             {

@@ -373,10 +373,6 @@ namespace System.Data.Odbc
             }
         }
 
-        private void DisposeMe(bool disposing)
-        { // MDAC 65459
-        }
-
         internal string GetConnectAttrString(ODBC32.SQL_ATTR attribute)
         {
             string value = "";
@@ -523,7 +519,7 @@ namespace System.Data.Odbc
                 case ODBC32.SQLRETURN.SUCCESS_WITH_INFO:
                     {
                         //Optimize to only create the event objects and obtain error info if
-                        //the user is really interested in retriveing the events...
+                        //the user is really interested in retrieveing the events...
                         if (_infoMessageEventHandler != null)
                         {
                             OdbcErrorCollection errors = ODBC32.GetDiagErrors(null, hrHandle, retcode);
