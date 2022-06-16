@@ -193,6 +193,11 @@ public:
         assert(0);
     }
 
+    virtual int64_t GetTotalPauseDuration()
+    {
+        return 1;
+    }
+
     // Get the last memory load in percentage observed by the last GC.
     virtual uint32_t GetMemoryLoad()
     {
