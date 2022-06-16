@@ -2925,7 +2925,7 @@ extern "C" EXPORT_API MonoType* EXPORT_CC mono_signature_get_return_type(MonoMet
     return (MonoType*)reth.AsPtr();
 }
 
-extern "C" EXPORT_API char EXPORT_CC mono_signature_is_instance(MonoMethodSignature *sig)
+extern "C" EXPORT_API gboolean EXPORT_CC mono_signature_is_instance(MonoMethodSignature *sig)
 {
     MonoMethodSignature_clr* sig_clr = (MonoMethodSignature_clr*)sig;
     MetaSig msig(sig_clr);

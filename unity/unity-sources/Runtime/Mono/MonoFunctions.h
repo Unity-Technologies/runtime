@@ -196,7 +196,7 @@ DO_API(gboolean, mono_metadata_signature_equal, (MonoMethodSignature * sig1, Mon
 
 DO_API(MonoObject *, mono_value_box, (MonoDomain * domain, MonoClass * klass, gpointer val))
 DO_API(MonoImage*, mono_class_get_image, (MonoClass * klass))
-DO_API(char, mono_signature_is_instance, (MonoMethodSignature * signature))
+DO_API(gboolean, mono_signature_is_instance, (MonoMethodSignature * signature))
 DO_API(MonoMethod*, mono_method_get_last_managed, ())
 DO_API(MonoClass*, mono_get_enum_class, ())
 DO_API(MonoType*, mono_class_get_byref_type, (MonoClass * klass))
