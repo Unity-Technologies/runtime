@@ -159,7 +159,6 @@ public:
     BOOL HasV1Metadata();
     IMDInternalImport* GetMDImport();
     BOOL MDImportLoaded();
-    IMDInternalImport* GetNativeMDImport(BOOL loadAllowed = TRUE);
 
     BOOL HasContents() ;
     BOOL IsPtrInImage(PTR_CVOID data);
@@ -213,7 +212,6 @@ private:
     PTR_PEImageLayout GetExistingLayoutInternal(DWORD imageLayoutMask);
 
     void OpenMDImport();
-    void OpenNativeMDImport();
     // ------------------------------------------------------------
     // Private routines
     // ------------------------------------------------------------
@@ -337,7 +335,6 @@ private:
 #endif // METADATATRACKER_DATA
 
     IMDInternalImport* m_pMDImport;
-    IMDInternalImport* m_pNativeMDImport;
 };
 
 FORCEINLINE void PEImageRelease(PEImage *i)
