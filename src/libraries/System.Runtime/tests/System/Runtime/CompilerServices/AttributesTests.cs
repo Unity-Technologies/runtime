@@ -83,7 +83,7 @@ namespace System.Runtime.CompilerServices.Tests
         public static void DecimalConstantAttributeTests()
         {
             var attrSigned = new DecimalConstantAttribute(scale: 10, sign: 20, hi: 30, mid: 40, low: 50);
-            Assert.Equal(-55340232238.3085240370m, attrSigned.Value);
+            Assert.Equal(0, attrSigned.Value);
 
             var attrUnsigned = new DecimalConstantAttribute(scale: 0, sign: 0, hi: 12u, mid: 13u, low: 14u);
             Assert.Equal(221360928940349194254m, attrUnsigned.Value);
