@@ -1,0 +1,31 @@
+{% metadata_file .yamato/Globals.metafile %}
+---
+name: Build and test OSX x64
+
+agent:
+  type: Unity::VM::osx
+  image: platform-foundation/mac-bokken:v0.1.8-972754
+  flavor: m1.mac
+
+variables:
+  ARTIFACT_FILENAME: {{globals.artifact_base_name}}-osx-x64.7z
+
+commands:
+  - chmod 755 .yamato/scripts/build_osx_x64.sh
+  - chmod 755 .yamato/scripts/test_osx_x64.sh
+  - ./.yamato/scripts/build_osx_x64.sh
+  - ./.yamato/scripts/test_osx_x64.sh
+
+artifacts:
+  7z-archives:
+    paths:
+      - artifacts/unity/**
+  build:
+    paths:
+      - artifacts/bin/**
+
+triggers:
+  pull_requests:
+    - targets:
+        only:
+          - "unity-main"
