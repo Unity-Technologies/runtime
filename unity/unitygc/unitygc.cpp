@@ -715,6 +715,18 @@ public:
         return 0;
     }
 
+    // Get the total paused duration.
+    virtual int64_t GetTotalPauseDuration(){
+        assert(0);
+        return 0;
+    }
+
+    // Gets all the names and values of the GC configurations.
+    virtual void EnumerateConfigurationValues(void* context, ConfigurationValueFunc configurationValueFunc)
+    {
+    }
+
+
     GCHeap(IGCToCLR* pGCToCLR) :
         m_pGCToCLR(pGCToCLR),
         m_bGCInProgress(false)

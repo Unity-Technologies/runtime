@@ -134,7 +134,8 @@ enum CrstType
     CrstUnwindInfoTableLock = 116,
     CrstVSDIndirectionCellLock = 117,
     CrstWrapperTemplate = 118,
-    kNumberOfCrstTypes = 119
+    kNumberOfCrstTypes = 119,
+    CrstMonoICalls = 120
 };
 
 #endif // __CRST_TYPES_INCLUDED
