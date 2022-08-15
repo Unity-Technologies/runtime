@@ -11,7 +11,7 @@ dependencies:
   - path: .yamato/build_windows_x86.yml
 
 commands:
-  - choco install ninja
+  - choco install -y ninja
   - .yamato/scripts/test_windows_x86.cmd
 
 triggers:
