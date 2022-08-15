@@ -12,6 +12,7 @@ dependencies:
 
 commands:
 # build/run tests
+  - choco install ninja
   - .yamato/scripts/test_windows_x64.cmd
 
 triggers:

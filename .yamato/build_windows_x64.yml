@@ -11,6 +11,7 @@ variables:
   ARTIFACT_FILENAME: {{globals.artifact_base_name}}-win-x64.7z
 
 commands:
+  - choco install ninja
   - .yamato/scripts/build_windows_x64.cmd
   - powershell .yamato\scripts\download_7z.ps1
   - copy LICENSE.md artifacts\bin\microsoft.netcore.app.runtime.win-x64\Release\runtimes\win-x64
