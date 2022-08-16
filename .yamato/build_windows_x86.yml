@@ -4,14 +4,13 @@ name: Build Windows x86
 
 agent:
   type: Unity::VM
-  image: burst/burst-base:1.0.3-1183552
+  image: burst/burst-base:1.0.7-1191974
   flavor: b1.xlarge
 
 variables:
   ARTIFACT_FILENAME: {{globals.artifact_base_name}}-win-x86.7z
 
 commands:
-  - choco install -y ninja
   - .yamato/scripts/build_windows_x86.cmd
   - powershell .yamato\scripts\download_7z.ps1
   - copy LICENSE.md artifacts\bin\microsoft.netcore.app.runtime.win-x86\Release\runtimes\win-x86

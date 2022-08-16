@@ -4,7 +4,7 @@ name: Test Windows x64
 
 agent:
   type: Unity::VM
-  image: burst/burst-base:1.0.3-1183552
+  image: burst/burst-base:1.0.7-1191974
   flavor: b1.xlarge
 
 dependencies:
@@ -12,7 +12,6 @@ dependencies:
 
 commands:
 # build/run tests
-  - choco install -y ninja
   - .yamato/scripts/test_windows_x64.cmd
 
 triggers:

@@ -4,14 +4,13 @@ name: Test Windows x86
 
 agent:
   type: Unity::VM
-  image: burst/burst-base:1.0.3-1183552
+  image: burst/burst-base:1.0.7-1191974
   flavor: b1.xlarge
 
 dependencies:
   - path: .yamato/build_windows_x86.yml
 
 commands:
-  - choco install -y ninja
   - .yamato/scripts/test_windows_x86.cmd
 
 triggers:
