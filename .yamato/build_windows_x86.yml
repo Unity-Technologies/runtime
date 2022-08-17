@@ -4,7 +4,7 @@ name: Build Windows x86
 
 agent:
   type: Unity::VM
-  image: burst/burst-base:1.0.7-1191974
+  image: burst/burst-base:1.0.8-1195360
   flavor: b1.xlarge
 
 variables:
