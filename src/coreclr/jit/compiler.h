@@ -58,6 +58,10 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 #include "emit.h"
 
+// Forward declaration
+template <class T>
+inline var_types genActualType(T value);
+
 #include "hwintrinsic.h"
 #include "simd.h"
 #include "simdashwintrinsic.h"
@@ -2216,7 +2220,7 @@ public:
     bool fgNormalizeEHCase2();
     bool fgNormalizeEHCase3();
 
-    void fgCreateFiltersForGenericExceptions();
+    bool fgCreateFiltersForGenericExceptions();
 
     void fgCheckForLoopsInHandlers();
 
@@ -4335,7 +4339,7 @@ public:
     }
 
     BasicBlock* fgNewBasicBlock(BBjumpKinds jumpKind);
-    void fgEnsureFirstBBisScratch();
+    bool fgEnsureFirstBBisScratch();
     bool fgFirstBBisScratch();
     bool fgBBisScratch(BasicBlock* block);
 
@@ -4457,6 +4461,8 @@ public:
 
     PhaseStatus fgTransformPatchpoints();
 
+    PhaseStatus fgMorphInit();
+
     PhaseStatus fgInline();
 
     PhaseStatus fgRemoveEmptyTry();
@@ -4518,7 +4524,7 @@ public:
     // The number of separate return points in the method.
     unsigned fgReturnCount;
 
-    void fgAddInternal();
+    PhaseStatus fgAddInternal();
 
     enum class FoldResult
     {
@@ -5218,7 +5224,7 @@ public:
 
     unsigned fgGetNestingLevel(BasicBlock* block, unsigned* pFinallyNesting = nullptr);
 
-    void fgPostImportationCleanup();
+    PhaseStatus fgPostImportationCleanup();
 
     void fgRemoveStmt(BasicBlock* block, Statement* stmt DEBUGARG(bool isUnlink = false));
     void fgUnlinkStmt(BasicBlock* block, Statement* stmt);
@@ -5271,8 +5277,8 @@ public:
     bool fgIsIntraHandlerPred(BasicBlock* predBlock, BasicBlock* block);
     bool fgAnyIntraHandlerPreds(BasicBlock* block);
     void fgInsertFuncletPrologBlock(BasicBlock* block);
-    void fgCreateFuncletPrologBlocks();
-    void fgCreateFunclets();
+    void        fgCreateFuncletPrologBlocks();
+    PhaseStatus fgCreateFunclets();
 #else  // !FEATURE_EH_FUNCLETS
     bool fgRelocateEHRegions();
 #endif // !FEATURE_EH_FUNCLETS
@@ -5297,10 +5303,10 @@ public:
 #ifdef DEBUG
     void fgPrintEdgeWeights();
 #endif
-    void     fgComputeBlockAndEdgeWeights();
-    weight_t fgComputeMissingBlockWeights();
-    void fgComputeCalledCount(weight_t returnWeight);
-    void fgComputeEdgeWeights();
+    PhaseStatus fgComputeBlockAndEdgeWeights();
+    bool fgComputeMissingBlockWeights(weight_t* returnWeight);
+    bool fgComputeCalledCount(weight_t returnWeight);
+    PhaseStatus fgComputeEdgeWeights();
 
     bool fgReorderBlocks(bool useProfile);
 
@@ -5312,7 +5318,8 @@ public:
 
     bool fgIsForwardBranch(BasicBlock* bJump, BasicBlock* bSrc = nullptr);
 
-    bool fgUpdateFlowGraph(bool doTailDup = false);
+    bool fgUpdateFlowGraph(bool doTailDup = false, bool isPhase = false);
+    PhaseStatus fgUpdateFlowGraphPhase();
 
     PhaseStatus fgFindOperOrder();
 
@@ -5892,7 +5899,7 @@ private:
     static fgWalkPreFn fgDebugCheckForTransformableIndirectCalls;
 #endif
 
-    void fgPromoteStructs();
+    PhaseStatus fgPromoteStructs();
     void fgMorphStructField(GenTree* tree, GenTree* parent);
     void fgMorphLocalField(GenTree* tree, GenTree* parent);
 
@@ -5901,12 +5908,12 @@ private:
 
     // Change implicit byrefs' types from struct to pointer, and for any that were
     // promoted, create new promoted struct temps.
-    void fgRetypeImplicitByRefArgs();
+    PhaseStatus fgRetypeImplicitByRefArgs();
 
     // Clear up annotations for any struct promotion temps created for implicit byrefs.
     void fgMarkDemotedImplicitByRefArgs();
 
-    void fgMarkAddressExposedLocals();
+    PhaseStatus fgMarkAddressExposedLocals();
     void fgMarkAddressExposedLocals(Statement* stmt);
 
     PhaseStatus fgForwardSub();
@@ -7106,6 +7113,31 @@ public:
             return ((assertionKind == OAK_EQUAL) || (assertionKind == OAK_NOT_EQUAL)) && (op2.kind == O2K_CONST_INT);
         }
 
+        bool CanPropLclVar()
+        {
+            return assertionKind == OAK_EQUAL && op1.kind == O1K_LCLVAR;
+        }
+
+        bool CanPropEqualOrNotEqual()
+        {
+            return assertionKind == OAK_EQUAL || assertionKind == OAK_NOT_EQUAL;
+        }
+
+        bool CanPropNonNull()
+        {
+            return assertionKind == OAK_NOT_EQUAL && op2.vn == ValueNumStore::VNForNull();
+        }
+
+        bool CanPropBndsCheck()
+        {
+            return op1.kind == O1K_ARR_BND;
+        }
+
+        bool CanPropSubRange()
+        {
+            return assertionKind == OAK_SUBRANGE && op1.kind == O1K_LCLVAR;
+        }
+
         static bool SameKind(AssertionDsc* a1, AssertionDsc* a2)
         {
             return a1->assertionKind == a2->assertionKind && a1->op1.kind == a2->op1.kind &&
@@ -7227,6 +7259,11 @@ protected:
     AssertionDsc*  optAssertionTabPrivate;      // table that holds info about value assignments
     AssertionIndex optAssertionCount;           // total number of assertions in the assertion table
     AssertionIndex optMaxAssertionCount;
+    bool           optCanPropLclVar;
+    bool           optCanPropEqual;
+    bool           optCanPropNonNull;
+    bool           optCanPropBndsChk;
+    bool           optCanPropSubRange;
 
 public:
     void optVnNonNullPropCurStmt(BasicBlock* block, Statement* stmt, GenTree* tree);
@@ -9174,6 +9211,9 @@ public:
         bool optRepeat; // Repeat optimizer phases k times
 #endif
 
+        bool disAsm;      // Display native code as it is generated
+        bool dspDiffable; // Makes the Jit Dump 'diff-able' (currently uses same COMPlus_* flag as disDiffable)
+        bool disDiffable; // Makes the Disassembly code 'diff-able'
 #ifdef DEBUG
         bool compProcedureSplittingEH; // Separate cold code from hot code for functions with EH
         bool dspCode;                  // Display native code generated
@@ -9183,19 +9223,16 @@ public:
         bool dspLines;                 // Display source-code lines intermixed with native code output
         bool dmpHex;                   // Display raw bytes in hex of native code output
         bool varNames;                 // Display variables names in native code output
-        bool disAsm;                   // Display native code as it is generated
         bool disAsmSpilled;            // Display native code when any register spilling occurs
         bool disasmWithGC;             // Display GC info interleaved with disassembly.
-        bool disDiffable;              // Makes the Disassembly code 'diff-able'
         bool disAddr;                  // Display process address next to each instruction in disassembly code
         bool disAlignment;             // Display alignment boundaries in disassembly code
         bool disAsm2;                  // Display native code after it is generated using external disassembler
         bool dspOrder;                 // Display names of each of the methods that we ngen/jit
         bool dspUnwind;                // Display the unwind info output
-        bool dspDiffable;     // Makes the Jit Dump 'diff-able' (currently uses same COMPlus_* flag as disDiffable)
-        bool compLongAddress; // Force using large pseudo instructions for long address
-                              // (IF_LARGEJMP/IF_LARGEADR/IF_LARGLDC)
-        bool dspGCtbls;       // Display the GC tables
+        bool compLongAddress;          // Force using large pseudo instructions for long address
+                                       // (IF_LARGEJMP/IF_LARGEADR/IF_LARGLDC)
+        bool dspGCtbls;                // Display the GC tables
 #endif
 
         bool compExpandCallsEarly; // True if we should expand virtual call targets early for this method
@@ -9300,9 +9337,7 @@ public:
 
     static bool       s_pJitFunctionFileInitialized;
     static MethodSet* s_pJitMethodSet;
-#endif // DEBUG
 
-#ifdef DEBUG
 // silence warning of cast to greater size. It is easier to silence than construct code the compiler is happy with, and
 // it is safe in this case
 #pragma warning(push)
@@ -9320,6 +9355,24 @@ public:
         return (o == ZERO) ? ZERO : (opts.dspDiffable ? T(0xD1FFAB1E) : o);
     }
 #pragma warning(pop)
+#else
+#pragma warning(push)
+#pragma warning(disable : 4312)
+    template <typename T>
+    T dspPtr(T p)
+    {
+        return p;
+    }
+
+    template <typename T>
+    T dspOffset(T o)
+    {
+        return o;
+    }
+#pragma warning(pop)
+#endif
+
+#ifdef DEBUG
 
     static int dspTreeID(GenTree* tree)
     {
@@ -9792,11 +9845,11 @@ private:
 
 public:
 #ifdef DEBUG
-    LONG     compMethodID;
     unsigned compGenTreeID;
     unsigned compStatementID;
     unsigned compBasicBlockID;
 #endif
+    LONG compMethodID;
 
     BasicBlock* compCurBB;   // the current basic block in process
     Statement*  compCurStmt; // the current statement in process
@@ -10004,12 +10057,12 @@ public:
 
     const char* compLocalVarName(unsigned varNum, unsigned offs);
     VarName compVarName(regNumber reg, bool isFloatReg = false);
-    const char* compRegVarName(regNumber reg, bool displayVar = false, bool isFloatReg = false);
-    const char* compRegNameForSize(regNumber reg, size_t size);
     const char* compFPregVarName(unsigned fpReg, bool displayVar = false);
     void compDspSrcLinesByNativeIP(UNATIVE_OFFSET curIP);
     void compDspSrcLinesByLineNum(unsigned line, bool seek = false);
 #endif // DEBUG
+    const char* compRegNameForSize(regNumber reg, size_t size);
+    const char* compRegVarName(regNumber reg, bool displayVar = false, bool isFloatReg = false);
 
     //-------------------------------------------------------------------------
 
@@ -10352,10 +10405,11 @@ public:
     GSCookie            gsGlobalSecurityCookieVal;  // Value of global cookie if addr is NULL
     ShadowParamVarInfo* gsShadowVarInfo;            // Table used by shadow param analysis code
 
-    void gsGSChecksInitCookie();   // Grabs cookie variable
-    void gsCopyShadowParams();     // Identify vulnerable params and create dhadow copies
-    bool gsFindVulnerableParams(); // Shadow param analysis code
-    void gsParamsToShadows();      // Insert copy code and replave param uses by shadow
+    PhaseStatus gsPhase();
+    void        gsGSChecksInitCookie();   // Grabs cookie variable
+    void        gsCopyShadowParams();     // Identify vulnerable params and create dhadow copies
+    bool        gsFindVulnerableParams(); // Shadow param analysis code
+    void        gsParamsToShadows();      // Insert copy code and replave param uses by shadow
 
     static fgWalkPreFn gsMarkPtrsAndAssignGroups; // Shadow param analysis tree-walk
     static fgWalkPreFn gsReplaceShadowParams;     // Shadow param replacement tree-walk
@@ -10990,6 +11044,28 @@ public:
                 }
                 break;
 #endif // defined(FEATURE_SIMD) || defined(FEATURE_HW_INTRINSICS)
+
+            case GT_SELECT:
+            {
+                GenTreeConditional* const conditional = node->AsConditional();
+
+                result = WalkTree(&conditional->gtCond, conditional);
+                if (result == fgWalkResult::WALK_ABORT)
+                {
+                    return result;
+                }
+                result = WalkTree(&conditional->gtOp1, conditional);
+                if (result == fgWalkResult::WALK_ABORT)
+                {
+                    return result;
+                }
+                result = WalkTree(&conditional->gtOp2, conditional);
+                if (result == fgWalkResult::WALK_ABORT)
+                {
+                    return result;
+                }
+                break;
+            }
 
             // Binary nodes
             default:

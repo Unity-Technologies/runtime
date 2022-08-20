@@ -192,6 +192,25 @@ namespace System.Runtime.InteropServices.JavaScript
             }
         }
 
+#if FEATURE_WASM_THREADS
+
+        [MethodImpl(MethodImplOptions.NoInlining)] // https://github.com/dotnet/runtime/issues/71425
+        // the marshaled signature is:
+        // void InstallSynchronizationContext()
+        public static void InstallSynchronizationContext (JSMarshalerArgument* arguments_buffer) {
+            ref JSMarshalerArgument arg_exc = ref arguments_buffer[0]; // initialized by caller in alloc_stack_frame()
+            try
+            {
+                JSSynchronizationContext.Install();
+            }
+            catch (Exception ex)
+            {
+                arg_exc.ToJS(ex);
+            }
+        }
+
+#endif
+
         [MethodImpl(MethodImplOptions.NoInlining)] // https://github.com/dotnet/runtime/issues/71425
         public static void StopProfile()
         {
