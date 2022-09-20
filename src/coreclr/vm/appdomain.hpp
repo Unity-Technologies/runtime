@@ -40,6 +40,7 @@ class SystemDomain;
 class AppDomain;
 class GlobalStringLiteralMap;
 class StringLiteralMap;
+class FrozenObjectHeapManager;
 class MngStdInterfacesInfo;
 class DomainAssembly;
 class LoadLevelLimiter;
@@ -1093,6 +1094,11 @@ public:
         return &m_crstLoaderAllocatorReferences;
     }
 
+    void AssertLoadLockHeld()
+    {
+        _ASSERTE(m_FileLoadLock.HasLock());
+    }
+
 protected:
 
     //****************************************************************************************
@@ -1255,8 +1261,7 @@ public:
 
 #ifdef DACCESS_COMPILE
 public:
-    virtual void EnumMemoryRegions(CLRDataEnumMemoryFlags flags,
-                                   bool enumThis);
+    virtual void EnumMemoryRegions(CLRDataEnumMemoryFlags flags, bool enumThis) = 0;
 #endif
 
 };  // class BaseDomain
@@ -1951,12 +1956,6 @@ public:
     RCWRefCache *GetRCWRefCache();
 #endif // FEATURE_COMWRAPPERS
 
-    TPIndex GetTPIndex()
-    {
-        LIMITED_METHOD_CONTRACT;
-        return m_tpIndex;
-    }
-
     DefaultAssemblyBinder *CreateDefaultBinder();
 
     void SetIgnoreUnhandledExceptions()
@@ -2205,9 +2204,6 @@ private:
     RCWRefCache *m_pRCWRefCache;
 #endif // FEATURE_COMWRAPPERS
 
-    // The thread-pool index of this app domain among existing app domains (starting from 1)
-    TPIndex m_tpIndex;
-
     Volatile<Stage> m_Stage;
 
     ArrayList        m_failedAssemblies;
@@ -2393,6 +2389,7 @@ public:
     void Init();
     void Stop();
     static void LazyInitGlobalStringLiteralMap();
+    static void LazyInitFrozenObjectsHeap();
 
     //****************************************************************************************
     //
@@ -2464,6 +2461,15 @@ public:
 
         _ASSERTE(m_pGlobalStringLiteralMap);
         return m_pGlobalStringLiteralMap;
+    }
+    static FrozenObjectHeapManager* GetFrozenObjectHeapManager()
+    {
+        WRAPPER_NO_CONTRACT;
+        if (m_FrozenObjectHeapManager == NULL)
+        {
+            LazyInitFrozenObjectsHeap();
+        }
+        return m_FrozenObjectHeapManager;
     }
 #endif // DACCESS_COMPILE
 
@@ -2634,6 +2640,7 @@ private:
     static CrstStatic       m_SystemDomainCrst;
 
     static GlobalStringLiteralMap *m_pGlobalStringLiteralMap;
+    static FrozenObjectHeapManager *m_FrozenObjectHeapManager;
 #endif // DACCESS_COMPILE
 
 public:
