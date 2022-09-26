@@ -132,8 +132,9 @@ enum CrstType
     CrstVSDIndirectionCellLock = 114,
     CrstWrapperTemplate = 115,
     CrstFrozenObjectHeap = 116,
-    CrstMonoICalls = 117,
-    kNumberOfCrstTypes = 118
+    CrstMethodTableExposedObject = 117,
+    CrstMonoICalls = 118,
+    kNumberOfCrstTypes = 119
 };
 
 #endif // __CRST_TYPES_INCLUDED
