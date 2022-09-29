@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <unordered_map>
+#include <vector>
 
 #include "gcenv.base.h"
 #include "gcinterface.h"
@@ -364,7 +365,10 @@ public:
     // Returns true if this pointer points into a GC heap, false otherwise.
     virtual bool IsHeapPointer(void* object, bool small_heap_only = false)
     {
-        return m_pGlobalHeapStart <= object && object <= m_pGlobalHeapCurrent;
+        if (m_pGlobalHeapStart <= object && object <= m_pGlobalHeapCurrent)
+            return true;
+
+        return IsInFrozenSegment((Object*)object);
     }
 
     // Return the generation that has been condemned by the current GC.
@@ -676,21 +680,36 @@ public:
     // Registers a frozen segment with the GC.
     virtual segment_handle RegisterFrozenSegment(segment_info *pseginfo)
     {
-        assert(0);
-        return NULL;
+        int handle = m_FrozenSegments.size() + 1;
+        m_FrozenSegments.push_back(*pseginfo);
+        return (segment_handle)handle;
     }
 
     // Unregisters a frozen segment.
     virtual void UnregisterFrozenSegment(segment_handle seg)
     {
-        assert(0);
+        m_FrozenSegments.erase(m_FrozenSegments.begin() + (intptr_t)seg-1);
     }
 
     // Indicates whether an object is in a frozen segment.
     virtual bool IsInFrozenSegment(Object *object)
     {
-        assert(0);
+        for (int i = 0; i < m_FrozenSegments.size(); i++)
+        {
+            void* start = m_FrozenSegments[i].pvMem;
+            void* end = (uint8_t*)m_FrozenSegments[i].pvMem + m_FrozenSegments[i].ibCommit;
+
+            if (start <= object && object <= end)
+                return true;
+        }
+
         return false;
+    }
+
+    virtual void UpdateFrozenSegment(segment_handle seg, uint8_t* allocated, uint8_t* committed)
+    {
+        m_FrozenSegments[(intptr_t)seg-1].ibAllocated = allocated - (uint8_t*)m_FrozenSegments[(intptr_t)seg-1].pvMem;
+        m_FrozenSegments[(intptr_t)seg-1].ibCommit = committed - (uint8_t*)m_FrozenSegments[(intptr_t)seg-1].pvMem;
     }
 
     /*
@@ -723,10 +742,6 @@ public:
 
     // Gets all the names and values of the GC configurations.
     virtual void EnumerateConfigurationValues(void* context, ConfigurationValueFunc configurationValueFunc)
-    {
-    }
-
-    virtual void UpdateFrozenSegment(segment_handle seg, uint8_t* allocated, uint8_t* committed)
     {
     }
 
@@ -768,7 +783,7 @@ public:
         uint8_t* m_pGlobalHeapCurrent;
         uint8_t* m_pGlobalHeapEnd;
         bool m_bGCInProgress;
-
+        std::vector<segment_info> m_FrozenSegments;
 };
 
 class GCHandleStore : public IGCHandleStore
