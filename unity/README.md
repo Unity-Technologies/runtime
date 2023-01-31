@@ -7,8 +7,8 @@ The difference between this fork and the upstream repository should be as small 
 
 ## Environment requirements
 
-Please refer to this page for environment requirements before build:
-https://github.com/dotnet/runtime/tree/main/docs/workflow/requirements
+Please refer to [this page](https://github.com/dotnet/runtime/tree/main/docs/workflow/requirements) for environment requirements before build.
+
 
 
 ## Building, testing, and debugging locally
