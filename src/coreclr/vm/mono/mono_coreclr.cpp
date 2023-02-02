@@ -60,6 +60,7 @@ struct HostStruct
     ManagedStringPtr_t (*string_new_len)(MonoDomain *domain, const char *text, guint32 length);
     ManagedStringPtr_t (*string_new_utf16)(MonoDomain * domain, const guint16 * text, gint32 length);
     ManagedStringPtr_t (*string_new_wrapper)(const char* text);
+    intptr_t (*runtime_invoke)(MonoMethod *method, void *obj, void **params, void**exc);
 };
 HostStruct* g_HostStruct;
 
@@ -2621,9 +2622,14 @@ extern "C" EXPORT_API MonoObject* EXPORT_CC mono_runtime_invoke_with_nested_obje
 {
     TRACE_API("%p, %p, %p, %p, %p", method, obj, parentobj, params, exc);
 
-    GCX_COOP();
-
     auto method_clr = (MonoMethod_clr*)method;
+    
+    //if (strcmp(method_clr->GetName(), "test_managed_invoke") == 0)
+    {
+        return (MonoObject*)g_HostStruct->runtime_invoke(method, obj, params, (void**)exc);
+    }
+
+    GCX_COOP();
 
     MetaSig     methodSig(method_clr);
     DWORD numArgs = methodSig.NumFixedArgs();

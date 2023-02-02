@@ -374,6 +374,16 @@ TEST(mono_runtime_invoke_can_invoke_static_method_with_no_args)
     CHECK_EQUAL(42, int_result);
 }
 
+TEST(mono_runtime_invoke_test_managed_invoke)
+{
+    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "test_managed_invoke", 0);
+    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
+    CHECK_EQUAL(NULL, returnValue);
+
+    returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
+    CHECK_EQUAL(NULL, returnValue);
+}
+
 TEST(mono_runtime_invoke_can_invoke_private_method)
 {
     MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticPrivateMethodReturningInt", 0);
@@ -2494,9 +2504,9 @@ void SetupMono(Mode mode)
     if (mode == CoreCLR)
     {
 #if defined(_DEBUG)
-        assembliesPaths = abs_path_from_file("../unity-embed-hos/bin/Debug/net7.0");
+        assembliesPaths = abs_path_from_file("../unity-embed-host/bin/Debug/net7.0");
 #else
-        assembliesPaths = abs_path_from_file("../unity-embed-hos/bin/Release/net7.0");
+        assembliesPaths = abs_path_from_file("../unity-embed-host/bin/Release/net7.0");
 #endif
         auto assembliesPathsChar = assembliesPaths.c_str();
         assembliesPathsNullTerm = new char[strlen(assembliesPathsChar) + 2];
@@ -2522,12 +2532,12 @@ void ShutdownMono()
     s_MonoLibrary = NULL;
 }
 
-int RunTests(Mode mode)
+int RunTests(Mode mode, int argc, char * argv[])
 {
     SetupMono(mode);
 
     Catch::Session session;
-    int result = session.run();
+    int result = session.run(argc, argv);
 
     ShutdownMono();
 
@@ -2537,7 +2547,7 @@ int RunTests(Mode mode)
 int main(int argc, char * argv[])
 {
     if (getenv("UNITY_ROOT") != NULL)
-        return RunTests(Mono);
+        return RunTests(Mono, argc, argv);
 
-    return RunTests(CoreCLR);
+    return RunTests(CoreCLR, argc, argv);
 }

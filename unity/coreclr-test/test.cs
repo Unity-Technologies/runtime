@@ -526,6 +526,11 @@ namespace TestDll
         {
             return ((GCHandle)p).Target;
         }
+
+        public static void test_managed_invoke()
+        {
+            Console.WriteLine("test_managed_invoke");
+        }
     }
 
     public class DerivedClass : TestClass
