@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <unordered_map>
+#include <stack>
 
 #include "gcenv.base.h"
 #include "gcinterface.h"
@@ -766,6 +767,12 @@ public:
 
 };
 
+typedef struct _GCHandleBlock
+{
+    void* first;
+    void* second;
+} GCHandleBlock;
+
 class GCHandleStore : public IGCHandleStore
 {
     public:
@@ -781,10 +788,26 @@ class GCHandleStore : public IGCHandleStore
 
     virtual OBJECTHANDLE CreateHandleOfType(Object* object, HandleType type)
     {
-        int32_t index = m_dwCurrentIndex;
-        assert(index < m_dwMaxIndex);
-        m_pHandles[m_dwCurrentIndex++] = (OBJECTHANDLE)object;
-        return (OBJECTHANDLE)&m_pHandles[index];
+        OBJECTHANDLE handle;
+
+        if(!m_reuseNext.empty())
+        {
+           handle = (OBJECTHANDLE)m_reuseNext.top();
+           m_reuseNext.pop();
+        }
+        
+        else
+        {
+            int32_t index = m_dwCurrentIndex;
+            assert(index < m_dwMaxIndex);
+            m_dwCurrentIndex++;
+            handle = (OBJECTHANDLE)&m_pHandles[index];
+        }
+
+        ((GCHandleBlock*)handle)->first = object;
+        ((GCHandleBlock*)handle)->second = nullptr;
+
+        return handle;
     }
 
     virtual OBJECTHANDLE CreateHandleOfType(Object* object, HandleType type, int heapToAffinitizeTo)
@@ -802,31 +825,28 @@ class GCHandleStore : public IGCHandleStore
     virtual OBJECTHANDLE CreateDependentHandle(Object* primary, Object* secondary)
     {
         auto handle = CreateHandleOfType(primary, HNDTYPE_DEFAULT);
-
-        m_dependentHandleSecondary.insert(std::unordered_map<OBJECTHANDLE, Object*>::value_type(handle, secondary));
-
+        ((GCHandleBlock*)handle)->second = secondary;
         return handle;
     }
 
     // helpers
     Object* GetDependentHandleSecondary(OBJECTHANDLE handle)
     {
-        auto iter = m_dependentHandleSecondary.find(handle);
-        if (iter != m_dependentHandleSecondary.end())
-            return iter->second;
-
-        return NULL;
+        return (Object*)(((GCHandleBlock*)handle)->second);
     }
 
     void DestroyHandle(OBJECTHANDLE handle)
     {
-        *(Object**)handle = nullptr;
+        ((GCHandleBlock*)handle)->first = nullptr;
+        ((GCHandleBlock*)handle)->second = nullptr;
+
+        m_reuseNext.push(((GCHandleBlock*)handle));
     }
 
 
     void StoreObjectInHandle(OBJECTHANDLE handle, Object* object)
     {
-        *(Object**)handle = object;
+        ((GCHandleBlock*)handle)->first = object;
     }
 
     GCHandleStore() :
@@ -834,7 +854,7 @@ class GCHandleStore : public IGCHandleStore
         m_dwCurrentIndex(0)
 
     {
-        m_pHandles = (OBJECTHANDLE*)calloc(m_dwMaxIndex, sizeof(OBJECTHANDLE));
+        m_pHandles = (GCHandleBlock*)calloc(m_dwMaxIndex, sizeof(GCHandleBlock));
     }
 
     virtual ~GCHandleStore()
@@ -842,10 +862,10 @@ class GCHandleStore : public IGCHandleStore
 
     }
     private:
-        OBJECTHANDLE* m_pHandles;
+        GCHandleBlock* m_pHandles;
         int32_t m_dwMaxIndex;
         int32_t m_dwCurrentIndex;
-        std::unordered_map<OBJECTHANDLE, Object*> m_dependentHandleSecondary;
+        std::stack<GCHandleBlock*> m_reuseNext;
 };
 
 class GCHandleManager : public IGCHandleManager
