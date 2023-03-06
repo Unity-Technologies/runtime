@@ -25,7 +25,7 @@ namespace System.Net.Http.Headers
         private const string publicString = "public";
         private const string sharedMaxAgeString = "s-maxage";
 
-        private static readonly HttpHeaderParser s_nameValueListParser = GenericHeaderParser.MultipleValueNameValueParser;
+        private static readonly GenericHeaderParser s_nameValueListParser = GenericHeaderParser.MultipleValueNameValueParser;
 
         private bool _noCache;
         private TokenObjectCollection? _noCacheHeaders;
@@ -364,17 +364,17 @@ namespace System.Net.Http.Headers
         public static CacheControlHeaderValue Parse(string? input)
         {
             int index = 0;
-            return (CacheControlHeaderValue)CacheControlHeaderParser.Parser.ParseValue(input, null, ref index);
+            return (CacheControlHeaderValue)CacheControlHeaderParser.Parser.ParseValue(input, null, ref index) ?? new CacheControlHeaderValue();
         }
 
-        public static bool TryParse(string? input, out CacheControlHeaderValue? parsedValue)
+        public static bool TryParse(string? input, [NotNullWhen(true)] out CacheControlHeaderValue? parsedValue)
         {
             int index = 0;
             parsedValue = null;
 
             if (CacheControlHeaderParser.Parser.TryParseValue(input, null, ref index, out object? output))
             {
-                parsedValue = (CacheControlHeaderValue?)output;
+                parsedValue = (CacheControlHeaderValue?)output ?? new CacheControlHeaderValue();
                 return true;
             }
             return false;
@@ -404,6 +404,7 @@ namespace System.Net.Http.Headers
                     return 0;
                 }
 
+                Debug.Assert(nameValue is not null);
                 nameValueList.Add((NameValueHeaderValue)nameValue);
             }
 

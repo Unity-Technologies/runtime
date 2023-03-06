@@ -33,10 +33,12 @@ fi
 
 if [[ "$XHARNESS_COMMAND" == "test" ]]; then
 	if [[ -z "$JS_ENGINE" ]]; then
-		if [[ "$SCENARIO" == "WasmTestOnNodeJs" || "$SCENARIO" == "wasmtestonnodejs" ]]; then
+		if [[ "$SCENARIO" == "WasmTestOnNodeJS" || "$SCENARIO" == "wasmtestonnodejs" ]]; then
 			JS_ENGINE="--engine=NodeJS"
+			JS_ENGINE_ARGS="$JS_ENGINE_ARGS --engine-arg=--experimental-wasm-simd"
 		else
 			JS_ENGINE="--engine=V8"
+			JS_ENGINE_ARGS="$JS_ENGINE_ARGS --engine-arg=--experimental-wasm-simd"
 		fi
 	fi
 

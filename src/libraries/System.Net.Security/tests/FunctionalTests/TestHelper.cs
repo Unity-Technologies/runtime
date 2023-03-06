@@ -51,10 +51,10 @@ namespace System.Net.Security.Tests
             return true;
         }
 
-        public static (SslStream ClientStream, SslStream ServerStream) GetConnectedSslStreams()
+        public static (SslStream ClientStream, SslStream ServerStream) GetConnectedSslStreams(bool leaveInnerStreamOpen = false)
         {
             (Stream clientStream, Stream serverStream) = GetConnectedStreams();
-            return (new SslStream(clientStream), new SslStream(serverStream));
+            return (new SslStream(clientStream, leaveInnerStreamOpen), new SslStream(serverStream, leaveInnerStreamOpen));
         }
 
         public static (Stream ClientStream, Stream ServerStream) GetConnectedStreams()
@@ -105,12 +105,12 @@ namespace System.Net.Security.Tests
             }
         }
 
-        internal static void CleanupCertificates([CallerMemberName] string? testName = null)
+        internal static void CleanupCertificates([CallerMemberName] string? testName = null, StoreName storeName = StoreName.CertificateAuthority)
         {
             string caName = $"O={testName}";
             try
             {
-                using (X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine))
+                using (X509Store store = new X509Store(storeName, StoreLocation.LocalMachine))
                 {
                     store.Open(OpenFlags.ReadWrite);
                     foreach (X509Certificate2 cert in store.Certificates)
@@ -127,7 +127,7 @@ namespace System.Net.Security.Tests
 
             try
             {
-                using (X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
+                using (X509Store store = new X509Store(storeName, StoreLocation.CurrentUser))
                 {
                     store.Open(OpenFlags.ReadWrite);
                     foreach (X509Certificate2 cert in store.Certificates)

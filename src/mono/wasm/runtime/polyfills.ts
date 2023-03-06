@@ -1,10 +1,13 @@
-import Configuration from "consts:configuration";
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+import BuildConfiguration from "consts:configuration";
 import MonoWasmThreads from "consts:monoWasmThreads";
 import { ENVIRONMENT_IS_NODE, ENVIRONMENT_IS_SHELL, ENVIRONMENT_IS_WEB, ENVIRONMENT_IS_WORKER, INTERNAL, Module, runtimeHelpers } from "./imports";
 import { afterUpdateGlobalBufferAndViews } from "./memory";
-import { afterLoadWasmModuleToWorker } from "./pthreads/browser";
-import { afterThreadInitTLS } from "./pthreads/worker";
+import { replaceEmscriptenPThreadLibrary } from "./pthreads/shared/emscripten-replacements";
 import { DotnetModuleConfigImports, EarlyReplacements } from "./types";
+import { TypedArray } from "./types/emscripten";
 
 let node_fs: any | undefined = undefined;
 let node_url: any | undefined = undefined;
@@ -144,7 +147,7 @@ export function init_polyfills(replacements: EarlyReplacements): void {
     // script location
     runtimeHelpers.scriptDirectory = replacements.scriptDirectory = detectScriptDirectory(replacements);
     anyModule.mainScriptUrlOrBlob = replacements.scriptUrl;// this is needed by worker threads
-    if (Configuration === "Debug") {
+    if (BuildConfiguration === "Debug") {
         console.debug(`MONO_WASM: starting script ${replacements.scriptUrl}`);
         console.debug(`MONO_WASM: starting in ${runtimeHelpers.scriptDirectory}`);
     }
@@ -159,13 +162,8 @@ export function init_polyfills(replacements: EarlyReplacements): void {
         runtimeHelpers.locateFile = anyModule.locateFile;
     }
 
-    // fetch poly
-    if (imports.fetch) {
-        replacements.fetch = runtimeHelpers.fetch_like = imports.fetch;
-    }
-    else {
-        replacements.fetch = runtimeHelpers.fetch_like = fetch_like;
-    }
+    // prefer fetch_like over global fetch for assets
+    replacements.fetch = runtimeHelpers.fetch_like = imports.fetch || fetch_like;
 
     // misc
     replacements.noExitRuntime = ENVIRONMENT_IS_WEB;
@@ -173,16 +171,7 @@ export function init_polyfills(replacements: EarlyReplacements): void {
     // threads
     if (MonoWasmThreads) {
         if (replacements.pthreadReplacements) {
-            const originalLoadWasmModuleToWorker = replacements.pthreadReplacements.loadWasmModuleToWorker;
-            replacements.pthreadReplacements.loadWasmModuleToWorker = (worker: Worker, onFinishedLoading: Function): void => {
-                originalLoadWasmModuleToWorker(worker, onFinishedLoading);
-                afterLoadWasmModuleToWorker(worker);
-            };
-            const originalThreadInitTLS = replacements.pthreadReplacements.threadInitTLS;
-            replacements.pthreadReplacements.threadInitTLS = (): void => {
-                originalThreadInitTLS();
-                afterThreadInitTLS();
-            };
+            replaceEmscriptenPThreadLibrary(replacements.pthreadReplacements);
         }
     }
 
@@ -202,6 +191,32 @@ export async function init_polyfills_async(): Promise<void> {
             const { performance } = INTERNAL.require("perf_hooks");
             globalThis.performance = performance;
         }
+
+        if (!globalThis.crypto) {
+            globalThis.crypto = <any>{};
+        }
+        if (!globalThis.crypto.getRandomValues) {
+            let nodeCrypto: any = undefined;
+            try {
+                nodeCrypto = INTERNAL.require("node:crypto");
+            } catch (err: any) {
+                // Noop, error throwing polyfill provided bellow
+            }
+
+            if (!nodeCrypto) {
+                globalThis.crypto.getRandomValues = () => {
+                    throw new Error("Using node without crypto support. To enable current operation, either provide polyfill for 'globalThis.crypto.getRandomValues' or enable 'node:crypto' module.");
+                };
+            } else if (nodeCrypto.webcrypto) {
+                globalThis.crypto = nodeCrypto.webcrypto;
+            } else if (nodeCrypto.randomBytes) {
+                globalThis.crypto.getRandomValues = (buffer: TypedArray) => {
+                    if (buffer) {
+                        buffer.set(nodeCrypto.randomBytes(buffer.length));
+                    }
+                };
+            }
+        }
     }
 }
 
@@ -212,26 +227,36 @@ const dummyPerformance = {
 };
 
 export async function fetch_like(url: string, init?: RequestInit): Promise<Response> {
+    const imports = Module.imports as DotnetModuleConfigImports;
+    const hasFetch = typeof (globalThis.fetch) === "function";
     try {
-        if (ENVIRONMENT_IS_NODE) {
+        if (typeof (imports.fetch) === "function") {
+            return imports.fetch(url, init || { credentials: "same-origin" });
+        }
+        else if (ENVIRONMENT_IS_NODE) {
+            const isFileUrl = url.startsWith("file://");
+            if (!isFileUrl && hasFetch) {
+                return globalThis.fetch(url, init || { credentials: "same-origin" });
+            }
             if (!node_fs) {
                 const node_require = await runtimeHelpers.requirePromise;
                 node_url = node_require("url");
                 node_fs = node_require("fs");
             }
-            if (url.startsWith("file://")) {
+            if (isFileUrl) {
                 url = node_url.fileURLToPath(url);
             }
 
             const arrayBuffer = await node_fs.promises.readFile(url);
             return <Response><any>{
                 ok: true,
+                headers: [],
                 url,
                 arrayBuffer: () => arrayBuffer,
                 json: () => JSON.parse(arrayBuffer)
             };
         }
-        else if (typeof (globalThis.fetch) === "function") {
+        else if (hasFetch) {
             return globalThis.fetch(url, init || { credentials: "same-origin" });
         }
         else if (typeof (read) === "function") {

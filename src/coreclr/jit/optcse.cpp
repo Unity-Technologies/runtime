@@ -478,8 +478,9 @@ unsigned Compiler::optValnumCSE_Index(GenTree* tree, Statement* stmt)
         assert(vnStore->IsVNConstant(vnLibNorm));
 
         // We don't share small offset constants when they require a reloc
+        // Also, we don't share non-null const gc handles
         //
-        if (!tree->AsIntConCommon()->ImmedValNeedsReloc(this))
+        if (!tree->AsIntConCommon()->ImmedValNeedsReloc(this) && ((tree->IsIntegralConst(0)) || !varTypeIsGC(tree)))
         {
             // Here we make constants that have the same upper bits use the same key
             //
@@ -784,9 +785,9 @@ bool Compiler::optValnumCSE_Locate()
 
         compCurBB = block;
 
-        /* Ensure that the BBF_VISITED and BBF_MARKED flag are clear */
-        /* Everyone who uses these flags are required to clear afterwards */
-        noway_assert((block->bbFlags & (BBF_VISITED | BBF_MARKED)) == 0);
+        // Ensure that the BBF_MARKED flag is clear.
+        // Everyone who uses this flag is required to clear it afterwards.
+        noway_assert((block->bbFlags & BBF_MARKED) == 0);
 
         /* Walk the statement trees in this basic block */
         for (Statement* const stmt : block->NonPhiStatements())
@@ -811,7 +812,7 @@ bool Compiler::optValnumCSE_Locate()
                     if (!enableConstCSE &&
                         // Unconditionally allow these constant handles to be CSE'd
                         !tree->IsIconHandle(GTF_ICON_STATIC_HDL) && !tree->IsIconHandle(GTF_ICON_CLASS_HDL) &&
-                        !tree->IsIconHandle(GTF_ICON_STR_HDL))
+                        !tree->IsIconHandle(GTF_ICON_STR_HDL) && !tree->IsIconHandle(GTF_ICON_OBJ_HDL))
                     {
                         continue;
                     }
@@ -1728,6 +1729,7 @@ class CSE_Heuristic
     unsigned               enregCount; // count of the number of predicted enregistered variables
     bool                   largeFrame;
     bool                   hugeFrame;
+    bool                   madeChanges;
     Compiler::codeOptimize codeOptKind;
     Compiler::CSEdsc**     sortTab;
     size_t                 sortSiz;
@@ -1745,6 +1747,11 @@ public:
     Compiler::codeOptimize CodeOptKind()
     {
         return codeOptKind;
+    }
+
+    bool MadeChanges() const
+    {
+        return madeChanges;
     }
 
     // Perform the Initialization step for our CSE Heuristics. Determine the various cut off values to use for
@@ -2225,8 +2232,8 @@ public:
     //------------------------------------------------------------------------
     // optConfigBiasedCSE:
     //     Stress mode to shuffle the decision to CSE or not using environment
-    //     variable COMPlus_JitStressBiasedCSE (= 0 to 100%). When the bias value
-    //     is not specified but COMPlus_JitStress is ON, generate a random bias.
+    //     variable DOTNET_JitStressBiasedCSE (= 0 to 100%). When the bias value
+    //     is not specified but DOTNET_JitStress is ON, generate a random bias.
     //
     // Return Value:
     //      0 -- This method is indifferent about this CSE (no bias specified and no stress)
@@ -2237,13 +2244,13 @@ public:
     //     A debug stress only method that returns "1" with probability (P)
     //     defined by:
     //
-    //         P = (COMPlus_JitStressBiasedCSE / 100) (or)
-    //         P = (random(100) / 100) when COMPlus_JitStress is specified and
-    //                                 COMPlus_JitStressBiasedCSE is unspecified.
+    //         P = (DOTNET_JitStressBiasedCSE / 100) (or)
+    //         P = (random(100) / 100) when DOTNET_JitStress is specified and
+    //                                 DOTNET_JitStressBiasedCSE is unspecified.
     //
     //     When specified, the bias is reinterpreted as a decimal number between 0
     //     to 100.
-    //     When bias is not specified, a bias is randomly generated if COMPlus_JitStress
+    //     When bias is not specified, a bias is randomly generated if DOTNET_JitStress
     //     is non-zero.
     //
     //     Callers are supposed to call this method for each CSE promotion decision
@@ -2648,9 +2655,10 @@ public:
                 //
                 int spillSimdRegInProlog = 1;
 
+#if defined(TARGET_XARCH)
                 // If we have a SIMD32 that is live across a call we have even higher spill costs
                 //
-                if (candidate->Expr()->TypeGet() == TYP_SIMD32)
+                if (candidate->Expr()->TypeIs(TYP_SIMD32, TYP_SIMD64))
                 {
                     // Additionally for a simd32 CSE candidate we assume that and second spilled/restore will be needed.
                     // (to hold the upper half of the simd32 register that isn't preserved across the call)
@@ -2662,6 +2670,7 @@ public:
                     //
                     cse_use_cost += 2;
                 }
+#endif // TARGET_XARCH
 
                 extra_yes_cost = (BB_UNITY_WEIGHT_UNSIGNED * spillSimdRegInProlog) * 3;
             }
@@ -2840,7 +2849,8 @@ public:
 
         // If there's just a single def for the CSE, we'll put this
         // CSE into SSA form on the fly. We won't need any PHIs.
-        unsigned cseSsaNum = SsaConfig::RESERVED_SSA_NUM;
+        unsigned      cseSsaNum = SsaConfig::RESERVED_SSA_NUM;
+        LclSsaVarDsc* ssaVarDsc = nullptr;
 
         if (dsc->csdDefCount == 1)
         {
@@ -2851,6 +2861,7 @@ public:
             // Allocate the ssa num
             CompAllocator allocator = m_pCompiler->getAllocator(CMK_SSA);
             cseSsaNum               = m_pCompiler->lvaTable[cseLclVarNum].lvPerSsaData.AllocSsaNum(allocator);
+            ssaVarDsc               = m_pCompiler->lvaTable[cseLclVarNum].GetPerSsaData(cseSsaNum);
         }
 
         // Verify that all of the ValueNumbers in this list are correct as
@@ -3038,6 +3049,12 @@ public:
 
                 // Assign the ssa num for the lclvar use. Note it may be the reserved num.
                 cseLclVar->AsLclVarCommon()->SetSsaNum(cseSsaNum);
+
+                // If this local is in ssa, notify ssa there's a new use.
+                if (ssaVarDsc != nullptr)
+                {
+                    ssaVarDsc->AddUse(blk);
+                }
 
                 cse = cseLclVar;
                 if (isSharedConst)
@@ -3244,8 +3261,6 @@ public:
 
                 if (cseSsaNum != SsaConfig::RESERVED_SSA_NUM)
                 {
-                    LclSsaVarDsc* ssaVarDsc = m_pCompiler->lvaTable[cseLclVarNum].GetPerSsaData(cseSsaNum);
-
                     // These should not have been set yet, since this is the first and
                     // only def for this CSE.
                     assert(ssaVarDsc->GetBlock() == nullptr);
@@ -3262,6 +3277,12 @@ public:
 
                 // Assign the ssa num for the lclvar use. Note it may be the reserved num.
                 cseLclVar->AsLclVarCommon()->SetSsaNum(cseSsaNum);
+
+                // If this local is in ssa, notify ssa there's a new use.
+                if (ssaVarDsc != nullptr)
+                {
+                    ssaVarDsc->AddUse(blk);
+                }
 
                 GenTree* cseUse = cseLclVar;
                 if (isSharedConst)
@@ -3410,6 +3431,7 @@ public:
             if (doCSE)
             {
                 PerformCSE(&candidate);
+                madeChanges = true;
             }
         }
     }
@@ -3422,12 +3444,14 @@ public:
     }
 };
 
-/*****************************************************************************
- *
- *  Routine for performing the Value Number based CSE using our heuristics
- */
-
-void Compiler::optValnumCSE_Heuristic()
+//------------------------------------------------------------------------
+// optValnumCSE_Heuristic: Perform common sub-expression elimination
+//    based on profitabiliy heuristic
+//
+// Returns:
+//    true if changes were made
+//
+bool Compiler::optValnumCSE_Heuristic()
 {
 #ifdef DEBUG
     if (verbose)
@@ -3444,24 +3468,30 @@ void Compiler::optValnumCSE_Heuristic()
     cse_heuristic.SortCandidates();
     cse_heuristic.ConsiderCandidates();
     cse_heuristic.Cleanup();
+
+    return cse_heuristic.MadeChanges();
 }
 
-/*****************************************************************************
- *
- *  Perform common sub-expression elimination.
- */
-
-void Compiler::optOptimizeValnumCSEs()
+//------------------------------------------------------------------------
+// optOptimizeValnumCSEs: Perform common sub-expression elimination
+//
+// Returns:
+//    Suitable phase status
+//
+PhaseStatus Compiler::optOptimizeValnumCSEs()
 {
+
 #ifdef DEBUG
     if (optConfigDisableCSE())
     {
-        return; // Disabled by JitNoCSE
+        JITDUMP("Disabled by JitNoCSE\n");
+        return PhaseStatus::MODIFIED_NOTHING;
     }
 #endif
 
     optValnumCSE_phase = true;
     optCSEweight       = -1.0f;
+    bool madeChanges   = false;
 
     optValnumCSE_Init();
 
@@ -3470,10 +3500,12 @@ void Compiler::optOptimizeValnumCSEs()
         optValnumCSE_InitDataFlow();
         optValnumCSE_DataFlow();
         optValnumCSE_Availability();
-        optValnumCSE_Heuristic();
+        madeChanges = optValnumCSE_Heuristic();
     }
 
     optValnumCSE_phase = false;
+
+    return madeChanges ? PhaseStatus::MODIFIED_EVERYTHING : PhaseStatus::MODIFIED_NOTHING;
 }
 
 /*****************************************************************************
@@ -3636,12 +3668,6 @@ bool Compiler::optIsCSEcandidate(GenTree* tree)
         case GT_GT:
             return true; // Allow the CSE of Comparison operators
 
-#ifdef FEATURE_SIMD
-        case GT_SIMD:
-            return true; // allow SIMD intrinsics to be CSE-ed
-
-#endif // FEATURE_SIMD
-
 #ifdef FEATURE_HW_INTRINSICS
         case GT_HWINTRINSIC:
         {
@@ -3725,7 +3751,7 @@ bool Compiler::optIsCSEcandidate(GenTree* tree)
 //
 bool Compiler::optConfigDisableCSE()
 {
-    // Next check if COMPlus_JitNoCSE is set and applies to this method
+    // Next check if DOTNET_JitNoCSE is set and applies to this method
     //
     unsigned jitNoCSE = JitConfig.JitNoCSE();
 
@@ -3846,11 +3872,11 @@ void Compiler::optOptimizeCSEs()
 
 void Compiler::optCleanupCSEs()
 {
-    // We must clear the BBF_VISITED and BBF_MARKED flags.
+    // We must clear the BBF_MARKED flag.
     for (BasicBlock* const block : Blocks())
     {
-        // And clear all the "visited" bits on the block.
-        block->bbFlags &= ~(BBF_VISITED | BBF_MARKED);
+        // And clear the "marked" flag on the block.
+        block->bbFlags &= ~BBF_MARKED;
 
         // Walk the statement trees in this basic block.
         for (Statement* const stmt : block->NonPhiStatements())
@@ -3876,7 +3902,7 @@ void Compiler::optEnsureClearCSEInfo()
 {
     for (BasicBlock* const block : Blocks())
     {
-        assert((block->bbFlags & (BBF_VISITED | BBF_MARKED)) == 0);
+        assert((block->bbFlags & BBF_MARKED) == 0);
 
         for (Statement* const stmt : block->NonPhiStatements())
         {

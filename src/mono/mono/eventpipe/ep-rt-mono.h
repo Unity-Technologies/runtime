@@ -1004,15 +1004,6 @@ ep_rt_config_value_get_output_streaming (void)
 
 static
 inline
-bool
-ep_rt_config_value_get_use_portable_thread_pool (void)
-{
-	// Only supports portable thread pool.
-	return true;
-}
-
-static
-inline
 uint32_t
 ep_rt_config_value_get_rundown (void)
 {
@@ -1024,6 +1015,21 @@ ep_rt_config_value_get_rundown (void)
 		value_uint32_t = (uint32_t)atoi (value);
 	g_free (value);
 	return value_uint32_t;
+}
+
+static
+inline
+bool
+ep_rt_config_value_get_enable_stackwalk (void)
+{
+	uint32_t value_uint32_t = 1;
+	gchar *value = g_getenv ("DOTNET_EventPipeEnableStackwalk");
+	if (!value)
+		value = g_getenv ("COMPlus_EventPipeEnableStackwalk");
+	if (value)
+		value_uint32_t = (uint32_t)atoi (value);
+	g_free (value);
+	return value_uint32_t != 0;
 }
 
 /*
@@ -1366,6 +1372,14 @@ ep_rt_thread_create (
 	}
 
 	return false;
+}
+
+static
+inline
+void
+ep_rt_set_server_name(void)
+{
+	mono_native_thread_set_name(mono_native_thread_id_get(), ".NET EventPipe");
 }
 
 static
@@ -1964,7 +1978,7 @@ ep_rt_runtime_version_get_utf8 (void)
 static
 inline
 void
-ep_rt_thread_setup ()
+ep_rt_thread_setup (void)
 {
 	ep_rt_mono_thread_setup (false);
 }

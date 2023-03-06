@@ -202,6 +202,7 @@ ep_session_alloc (
 	instance->session_start_time = ep_system_timestamp_get ();
 	instance->session_start_timestamp = ep_perf_timestamp_get ();
 	instance->paused = false;
+	instance->enable_stackwalk = ep_rt_config_value_get_enable_stackwalk ();
 
 ep_on_exit:
 	ep_requires_lock_held ();
@@ -267,13 +268,14 @@ ep_session_enable_rundown (EventPipeSession *session)
 
 	//! This is CoreCLR specific keywords for native ETW events (ending up in event pipe).
 	//! The keywords below seems to correspond to:
+	//!  GCKeyword                          (0x00000001)
 	//!  LoaderKeyword                      (0x00000008)
 	//!  JitKeyword                         (0x00000010)
 	//!  NgenKeyword                        (0x00000020)
 	//!  unused_keyword                     (0x00000100)
 	//!  JittedMethodILToNativeMapKeyword   (0x00020000)
 	//!  ThreadTransferKeyword              (0x80000000)
-	const uint64_t keywords = 0x80020138;
+	const uint64_t keywords = 0x80020139;
 	const EventPipeEventLevel verbose_logging_level = EP_EVENT_LEVEL_VERBOSE;
 
 	EventPipeProviderConfiguration rundown_providers [2];

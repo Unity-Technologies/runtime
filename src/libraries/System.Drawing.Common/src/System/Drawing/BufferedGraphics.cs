@@ -13,7 +13,7 @@ namespace System.Drawing
     /// </summary>
     public sealed class BufferedGraphics : IDisposable
     {
-        private Graphics? _targetGraphics;
+        private readonly Graphics? _targetGraphics;
         private readonly IntPtr _targetDC;
         private Graphics _bufferedGraphicsSurface;
         private BufferedGraphicsContext _context;
@@ -38,7 +38,7 @@ namespace System.Drawing
         {
             if (_context != null)
             {
-                _context.ReleaseBuffer(this);
+                _context.ReleaseBuffer();
 
                 if (DisposeContext)
                 {

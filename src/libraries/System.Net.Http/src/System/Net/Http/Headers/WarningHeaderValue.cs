@@ -132,7 +132,7 @@ namespace System.Net.Http.Headers
             return result;
         }
 
-        public static WarningHeaderValue Parse(string? input)
+        public static WarningHeaderValue Parse(string input)
         {
             int index = 0;
             return (WarningHeaderValue)GenericHeaderParser.SingleValueWarningParser.ParseValue(input, null, ref index);
@@ -280,19 +280,12 @@ namespace System.Net.Http.Headers
 
                 // Find the closing '"'
                 int dateStartIndex = current;
-                while (current < input.Length)
+                int quote = input.AsSpan(current).IndexOf('"');
+                if (quote <= 0) // no quote was found or it was the first character (meaning an empty quoted string)
                 {
-                    if (input[current] == '"')
-                    {
-                        break;
-                    }
-                    current++;
+                    return false;
                 }
-
-                if ((current == input.Length) || (current == dateStartIndex))
-                {
-                    return false; // we couldn't find the closing '"' or we have an empty quoted string.
-                }
+                current += quote;
 
                 DateTimeOffset temp;
                 if (!HttpDateParser.TryParse(input.AsSpan(dateStartIndex, current - dateStartIndex), out temp))
@@ -316,10 +309,8 @@ namespace System.Net.Http.Headers
 
         private static void CheckCode(int code)
         {
-            if ((code < 0) || (code > 999))
-            {
-                throw new ArgumentOutOfRangeException(nameof(code));
-            }
+            ArgumentOutOfRangeException.ThrowIfNegative(code);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(code, 999);
         }
 
         private static void CheckAgent(string agent)

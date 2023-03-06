@@ -403,8 +403,9 @@ bool
 ep_rt_config_value_get_output_streaming (void);
 
 static
+inline
 bool
-ep_rt_config_value_get_use_portable_thread_pool (void);
+ep_rt_config_value_get_enable_stackwalk (void);
 
 /*
  * EventPipeSampleProfiler.
@@ -569,6 +570,10 @@ ep_rt_thread_create (
 	void *params,
 	EventPipeThreadType thread_type,
 	void *id);
+
+static
+void
+ep_rt_set_server_name (void);
 
 static
 void

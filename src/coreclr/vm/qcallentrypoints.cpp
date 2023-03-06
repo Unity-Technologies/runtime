@@ -30,7 +30,6 @@
 #include "assemblynative.hpp"
 #include "comthreadpool.h"
 #include "comwaithandle.h"
-#include "nativeoverlapped.h"
 
 #include "proftoeeinterfaceimpl.h"
 
@@ -159,6 +158,7 @@ static const Entry s_QCall[] =
     DllImportEntry(TypeName_GetTypeArguments)
     DllImportEntry(TypeName_GetModifiers)
     DllImportEntry(TypeName_GetAssemblyName)
+    DllImportEntry(Array_GetElementConstructorEntrypoint)
     DllImportEntry(AssemblyName_InitializeAssemblySpec)
     DllImportEntry(AssemblyNative_GetFullName)
     DllImportEntry(AssemblyNative_GetLocation)
@@ -205,15 +205,11 @@ static const Entry s_QCall[] =
     DllImportEntry(LoaderAllocator_Destroy)
     DllImportEntry(AppDomain_CreateDynamicAssembly)
     DllImportEntry(ThreadNative_Start)
-    DllImportEntry(ThreadNative_UninterruptibleSleep0)
     DllImportEntry(ThreadNative_InformThreadNameChange)
     DllImportEntry(ThreadNative_YieldThread)
     DllImportEntry(ThreadNative_GetCurrentOSThreadId)
     DllImportEntry(ThreadNative_Abort)
     DllImportEntry(ThreadNative_ResetAbort)
-    DllImportEntry(ThreadPool_GetCompletedWorkItemCount)
-    DllImportEntry(ThreadPool_RequestWorkerThread)
-    DllImportEntry(ThreadPool_PerformGateActivities)
 #ifdef TARGET_UNIX
     DllImportEntry(WaitHandle_CorWaitOnePrioritizedNative)
 #endif
@@ -257,6 +253,8 @@ static const Entry s_QCall[] =
     DllImportEntry(ReflectionSerialization_GetUninitializedObject)
 #if defined(FEATURE_COMWRAPPERS)
     DllImportEntry(ComWrappers_GetIUnknownImpl)
+    DllImportEntry(ComWrappers_TryGetComInstance)
+    DllImportEntry(ComWrappers_TryGetObject)
     DllImportEntry(ComWrappers_TryGetOrCreateComInterfaceForObject)
     DllImportEntry(ComWrappers_TryGetOrCreateObjectForComInstance)
     DllImportEntry(ComWrappers_SetGlobalInstanceRegisteredForMarshalling)
@@ -320,6 +318,10 @@ static const Entry s_QCall[] =
 #endif
 #if defined(FEATURE_COMINTEROP)
     DllImportEntry(InterfaceMarshaler__ClearNative)
+#endif
+#if defined(FEATURE_COMINTEROP) || defined(FEATURE_COMWRAPPERS)
+    DllImportEntry(ComWeakRefToObject)
+    DllImportEntry(ObjectToComWeakRef)
 #endif
 };
 

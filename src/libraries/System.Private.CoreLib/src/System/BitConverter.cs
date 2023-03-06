@@ -368,7 +368,7 @@ namespace System
             if (unchecked((uint)startIndex) >= unchecked((uint)value.Length))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.startIndex, ExceptionResource.ArgumentOutOfRange_IndexMustBeLess);
             if (startIndex > value.Length - sizeof(short))
-                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ArrayPlusOffTooSmall, ExceptionArgument.value);
+                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ByteArrayTooSmallForValue, ExceptionArgument.value);
 
             return Unsafe.ReadUnaligned<short>(ref value[startIndex]);
         }
@@ -406,7 +406,7 @@ namespace System
             if (unchecked((uint)startIndex) >= unchecked((uint)value.Length))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.startIndex, ExceptionResource.ArgumentOutOfRange_IndexMustBeLess);
             if (startIndex > value.Length - sizeof(int))
-                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ArrayPlusOffTooSmall, ExceptionArgument.value);
+                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ByteArrayTooSmallForValue, ExceptionArgument.value);
 
             return Unsafe.ReadUnaligned<int>(ref value[startIndex]);
         }
@@ -444,7 +444,7 @@ namespace System
             if (unchecked((uint)startIndex) >= unchecked((uint)value.Length))
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.startIndex, ExceptionResource.ArgumentOutOfRange_IndexMustBeLess);
             if (startIndex > value.Length - sizeof(long))
-                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ArrayPlusOffTooSmall, ExceptionArgument.value);
+                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ByteArrayTooSmallForValue, ExceptionArgument.value);
 
             return Unsafe.ReadUnaligned<long>(ref value[startIndex]);
         }
@@ -657,21 +657,17 @@ namespace System
                 ThrowHelper.ThrowArgumentNullException(ExceptionArgument.value);
             if (startIndex < 0 || startIndex >= value.Length && startIndex > 0)
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.startIndex, ExceptionResource.ArgumentOutOfRange_IndexMustBeLess);
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length), SR.ArgumentOutOfRange_GenericPositive);
+            ArgumentOutOfRangeException.ThrowIfNegative(length);
             if (startIndex > value.Length - length)
-                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ArrayPlusOffTooSmall, ExceptionArgument.value);
+                ThrowHelper.ThrowArgumentException(ExceptionResource.Arg_ByteArrayTooSmallForValue, ExceptionArgument.value);
 
             if (length == 0)
             {
                 return string.Empty;
             }
 
-            if (length > (int.MaxValue / 3))
-            {
-                // (int.MaxValue / 3) == 715,827,882 Bytes == 699 MB
-                throw new ArgumentOutOfRangeException(nameof(length), SR.Format(SR.ArgumentOutOfRange_LengthTooLarge, int.MaxValue / 3));
-            }
+            // (int.MaxValue / 3) == 715,827,882 Bytes == 699 MB
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(length, int.MaxValue / 3);
 
             return string.Create(length * 3 - 1, (value, startIndex, length), static (dst, state) =>
             {

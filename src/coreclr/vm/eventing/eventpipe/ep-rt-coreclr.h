@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 // Implementation of ep-rt.h targeting CoreCLR runtime.
 #ifndef __EVENTPIPE_RT_CORECLR_H__
 #define __EVENTPIPE_RT_CORECLR_H__
@@ -11,8 +14,8 @@
 #include <eventpipe/ep-session-provider.h>
 #include "fstream.h"
 #include "typestring.h"
-#include "win32threadpool.h"
 #include "clrversion.h"
+#include "hostinformation.h"
 
 #undef EP_INFINITE_WAIT
 #define EP_INFINITE_WAIT INFINITE
@@ -1135,9 +1138,36 @@ ep_rt_entrypoint_assembly_name_get_utf8 (void)
 		}
 	}
 
-	// fallback to the empty string if we can't get assembly info, e.g., if the runtime is
+	// get the name from the host if we can't get assembly info, e.g., if the runtime is
 	// suspended before an assembly is loaded.
-	return reinterpret_cast<const ep_char8_t*>("");
+	// We'll cache the value in a static function global as the caller expects the lifetime of this value
+	// to outlast the calling function.
+	static const ep_char8_t* entrypoint_assembly_name = nullptr;
+	if (entrypoint_assembly_name == nullptr)
+	{
+		const ep_char8_t* entrypoint_assembly_name_local;
+		SString assembly_name;
+		if (HostInformation::GetProperty (HOST_PROPERTY_ENTRY_ASSEMBLY_NAME, assembly_name))
+		{
+			entrypoint_assembly_name_local = reinterpret_cast<const ep_char8_t*>(assembly_name.GetCopyOfUTF8String ());
+		}
+		else
+		{
+			// fallback to the empty string
+			// Allocate a new empty string here so we consistently allocate with the same allocator no matter our code-path.
+			entrypoint_assembly_name_local = new ep_char8_t [1] { '\0' };
+		}
+		// Try setting this entrypoint name as the cached value.
+		// If someone else beat us to it, free the memory we allocated.
+		// We want to only leak the one global copy of the entrypoint name,
+		// not multiple copies.
+		if (InterlockedCompareExchangeT(&entrypoint_assembly_name, entrypoint_assembly_name_local, nullptr) != nullptr)
+		{
+			delete[] entrypoint_assembly_name_local;
+		}
+	}
+
+	return entrypoint_assembly_name;
 }
 
 static
@@ -1664,10 +1694,10 @@ ep_rt_config_value_get_output_streaming (void)
 static
 inline
 bool
-ep_rt_config_value_get_use_portable_thread_pool (void)
+ep_rt_config_value_get_enable_stackwalk (void)
 {
 	STATIC_CONTRACT_NOTHROW;
-	return ThreadpoolMgr::UsePortableThreadPool ();
+	return CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EventPipeEnableStackwalk) != 0;
 }
 
 /*
@@ -2022,28 +2052,43 @@ ep_rt_thread_create (
 
 	EX_TRY
 	{
-		rt_coreclr_thread_params_internal_t *thread_params = new (nothrow) rt_coreclr_thread_params_internal_t ();
-		if (thread_params) {
-			thread_params->thread_params.thread_type = thread_type;
-			if (thread_type == EP_THREAD_TYPE_SESSION || thread_type == EP_THREAD_TYPE_SAMPLING) {
+		if (thread_type == EP_THREAD_TYPE_SERVER)
+		{
+			DWORD thread_id = 0;
+			HANDLE server_thread = ::CreateThread (nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_func), nullptr, 0, &thread_id);
+			if (server_thread != NULL)
+			{
+				if (id)
+				{
+					*reinterpret_cast<DWORD *>(id) = thread_id;
+				}
+				::CloseHandle (server_thread);
+				result = true;
+			}
+		}
+		else if (thread_type == EP_THREAD_TYPE_SESSION || thread_type == EP_THREAD_TYPE_SAMPLING)
+		{
+			rt_coreclr_thread_params_internal_t *thread_params = new (nothrow) rt_coreclr_thread_params_internal_t ();
+			if (thread_params)
+			{
+				thread_params->thread_params.thread_type = thread_type;
 				thread_params->thread_params.thread = SetupUnstartedThread ();
 				thread_params->thread_params.thread_func = reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_func);
 				thread_params->thread_params.thread_params = params;
-				if (thread_params->thread_params.thread->CreateNewThread (0, ep_rt_thread_coreclr_start_func, thread_params)) {
+
+				if (thread_params->thread_params.thread->CreateNewThread (0, ep_rt_thread_coreclr_start_func, thread_params))
+				{
+					if (id)
+					{
+						*reinterpret_cast<DWORD *>(id) = thread_params->thread_params.thread->GetThreadId ();
+					}
 					thread_params->thread_params.thread->SetBackground (TRUE);
 					thread_params->thread_params.thread->StartThread ();
-					if (id)
-						*reinterpret_cast<DWORD *>(id) = thread_params->thread_params.thread->GetThreadId ();
 					result = true;
 				}
-			} else if (thread_type == EP_THREAD_TYPE_SERVER) {
-				DWORD thread_id = 0;
-				HANDLE server_thread = ::CreateThread (nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(thread_func), nullptr, 0, &thread_id);
-				if (server_thread != NULL) {
-					::CloseHandle (server_thread);
-					if (id)
-						*reinterpret_cast<DWORD *>(id) = thread_id;
-					result = true;
+				else
+				{
+					delete thread_params;
 				}
 			}
 		}
@@ -2055,6 +2100,14 @@ ep_rt_thread_create (
 	EX_END_CATCH(SwallowAllExceptions);
 
 	return result;
+}
+
+static
+inline
+void
+ep_rt_set_server_name(void)
+{
+	::SetThreadName(GetCurrentThread(), W(".NET EventPipe"));
 }
 
 static

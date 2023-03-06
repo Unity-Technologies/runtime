@@ -22,7 +22,6 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #include "emit.h"
 
 /*****************************************************************************/
-#ifdef DEBUG
 
 //-----------------------------------------------------------------------------
 // genInsName: Returns the string representation of the given CPU instruction, as
@@ -37,12 +36,12 @@ const char* CodeGen::genInsName(instruction ins)
     const char * const insNames[] =
     {
 #if defined(TARGET_XARCH)
-        #define INST0(id, nm, um, mr,                 flags) nm,
-        #define INST1(id, nm, um, mr,                 flags) nm,
-        #define INST2(id, nm, um, mr, mi,             flags) nm,
-        #define INST3(id, nm, um, mr, mi, rm,         flags) nm,
-        #define INST4(id, nm, um, mr, mi, rm, a4,     flags) nm,
-        #define INST5(id, nm, um, mr, mi, rm, a4, rr, flags) nm,
+        #define INST0(id, nm, um, mr,                 tt, flags) nm,
+        #define INST1(id, nm, um, mr,                 tt, flags) nm,
+        #define INST2(id, nm, um, mr, mi,             tt, flags) nm,
+        #define INST3(id, nm, um, mr, mi, rm,         tt, flags) nm,
+        #define INST4(id, nm, um, mr, mi, rm, a4,     tt, flags) nm,
+        #define INST5(id, nm, um, mr, mi, rm, a4, rr, tt, flags) nm,
         #include "instrs.h"
 
 #elif defined(TARGET_ARM)
@@ -102,7 +101,7 @@ const char* CodeGen::genInsDisplayName(emitter::instrDesc* id)
     static char     buf[4][TEMP_BUFFER_LEN];
     const char*     retbuf;
 
-    if (GetEmitter()->IsAVXInstruction(ins) && !GetEmitter()->IsBMIInstruction(ins))
+    if (GetEmitter()->IsVexEncodedInstruction(ins) && !GetEmitter()->IsBMIInstruction(ins))
     {
         sprintf_s(buf[curBuf], TEMP_BUFFER_LEN, "v%s", insName);
         retbuf = buf[curBuf];
@@ -147,15 +146,10 @@ const char* CodeGen::genInsDisplayName(emitter::instrDesc* id)
     return insName;
 }
 
-/*****************************************************************************/
-#endif // DEBUG
-
 /*****************************************************************************
  *
  *  Return the size string (e.g. "word ptr") appropriate for the given size.
  */
-
-#ifdef DEBUG
 
 const char* CodeGen::genSizeStr(emitAttr attr)
 {
@@ -163,36 +157,23 @@ const char* CodeGen::genSizeStr(emitAttr attr)
     static
     const char * const sizes[] =
     {
-        "",
         "byte  ptr ",
         "word  ptr ",
-        nullptr,
         "dword ptr ",
-        nullptr,
-        nullptr,
-        nullptr,
         "qword ptr ",
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
         "xmmword ptr ",
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        "ymmword ptr"
+        "ymmword ptr",
+        "zmmword ptr"
     };
     // clang-format on
 
     unsigned size = EA_SIZE(attr);
 
-    assert(size == 0 || size == 1 || size == 2 || size == 4 || size == 8 || size == 16 || size == 32);
+    assert(genMaxOneBit(size) && (size <= 64));
 
     if (EA_ATTR(size) == attr)
     {
-        return sizes[size];
+        return (size > 0) ? sizes[genLog2(size)] : "";
     }
     else if (attr == EA_GCREF)
     {
@@ -212,8 +193,6 @@ const char* CodeGen::genSizeStr(emitAttr attr)
         return "unknw ptr ";
     }
 }
-
-#endif
 
 /*****************************************************************************
  *
@@ -326,61 +305,8 @@ void CodeGen::inst_SET(emitJumpKind condition, regNumber reg)
     // These instructions only write the low byte of 'reg'
     GetEmitter()->emitIns_R(ins, EA_1BYTE, reg);
 #elif defined(TARGET_ARM64)
-    insCond cond;
-    /* Convert the condition to an insCond value */
-    switch (condition)
-    {
-        case EJ_eq:
-            cond = INS_COND_EQ;
-            break;
-        case EJ_ne:
-            cond = INS_COND_NE;
-            break;
-        case EJ_hs:
-            cond = INS_COND_HS;
-            break;
-        case EJ_lo:
-            cond = INS_COND_LO;
-            break;
 
-        case EJ_mi:
-            cond = INS_COND_MI;
-            break;
-        case EJ_pl:
-            cond = INS_COND_PL;
-            break;
-        case EJ_vs:
-            cond = INS_COND_VS;
-            break;
-        case EJ_vc:
-            cond = INS_COND_VC;
-            break;
-
-        case EJ_hi:
-            cond = INS_COND_HI;
-            break;
-        case EJ_ls:
-            cond = INS_COND_LS;
-            break;
-        case EJ_ge:
-            cond = INS_COND_GE;
-            break;
-        case EJ_lt:
-            cond = INS_COND_LT;
-            break;
-
-        case EJ_gt:
-            cond = INS_COND_GT;
-            break;
-        case EJ_le:
-            cond = INS_COND_LE;
-            break;
-
-        default:
-            NO_WAY("unexpected condition type");
-            return;
-    }
-    GetEmitter()->emitIns_R_COND(INS_cset, EA_8BYTE, reg, cond);
+    GetEmitter()->emitIns_R_COND(INS_cset, EA_8BYTE, reg, JumpKindToInsCond(condition));
 #else
     NYI("inst_SET");
 #endif
@@ -763,10 +689,37 @@ CodeGen::OperandDesc CodeGen::genOperandDesc(GenTree* op)
         }
         else
         {
+            assert(op->OperIsHWIntrinsic());
+
 #if defined(FEATURE_HW_INTRINSICS)
-            assert(op->AsHWIntrinsic()->OperIsMemoryLoad());
-            assert(op->AsHWIntrinsic()->GetOperandCount() == 1);
-            addr = op->AsHWIntrinsic()->Op(1);
+            GenTreeHWIntrinsic* hwintrinsic = op->AsHWIntrinsic();
+            NamedIntrinsic      intrinsicId = hwintrinsic->GetHWIntrinsicId();
+
+            switch (intrinsicId)
+            {
+                case NI_Vector128_CreateScalarUnsafe:
+                case NI_Vector256_CreateScalarUnsafe:
+                {
+                    // The hwintrinsic should be contained and its
+                    // op1 should be either contained or spilled. This
+                    // allows us to transparently "look through" the
+                    // CreateScalarUnsafe and treat it directly like
+                    // a load from memory.
+
+                    assert(hwintrinsic->isContained());
+                    op = hwintrinsic->Op(1);
+                    return genOperandDesc(op);
+                }
+
+                default:
+                {
+                    assert(hwintrinsic->OperIsMemoryLoad());
+                    assert(hwintrinsic->GetOperandCount() == 1);
+
+                    addr = hwintrinsic->Op(1);
+                    break;
+                }
+            }
 #else
             unreached();
 #endif // FEATURE_HW_INTRINSICS
@@ -806,7 +759,7 @@ CodeGen::OperandDesc CodeGen::genOperandDesc(GenTree* op)
                 break;
 
             case GT_CNS_DBL:
-                return OperandDesc(emit->emitFltOrDblConst(op->AsDblCon()->gtDconVal, emitTypeSize(op)));
+                return OperandDesc(emit->emitFltOrDblConst(op->AsDblCon()->DconValue(), emitTypeSize(op)));
 
             case GT_CNS_INT:
                 assert(op->isContainedIntOrIImmed());
@@ -826,15 +779,29 @@ CodeGen::OperandDesc CodeGen::genOperandDesc(GenTree* op)
                     case TYP_SIMD12:
                     case TYP_SIMD16:
                     {
-                        simd16_t constValue = op->AsVecCon()->gtSimd16Val;
+                        simd16_t constValue = {};
+
+                        if (op->TypeIs(TYP_SIMD12))
+                            memcpy(&constValue, &op->AsVecCon()->gtSimd12Val, sizeof(simd12_t));
+                        else
+                            constValue = op->AsVecCon()->gtSimd16Val;
+
                         return OperandDesc(emit->emitSimd16Const(constValue));
                     }
 
+#if defined(TARGET_XARCH)
                     case TYP_SIMD32:
                     {
                         simd32_t constValue = op->AsVecCon()->gtSimd32Val;
                         return OperandDesc(emit->emitSimd32Const(constValue));
                     }
+
+                    case TYP_SIMD64: // TODO-XArch-AVX512: Fix once GenTreeVecCon supports gtSimd64Val.
+                    {
+                        simd32_t constValue = op->AsVecCon()->gtSimd32Val;
+                        return OperandDesc(emit->emitSimd32Const(constValue));
+                    }
+#endif // TARGET_XARCH
 #endif // FEATURE_SIMD
 
                     default:
@@ -1015,7 +982,7 @@ void CodeGen::inst_RV_TT_IV(instruction ins, emitAttr attr, regNumber reg1, GenT
         break;
 
         case OperandKind::Reg:
-            emit->emitIns_SIMD_R_R_I(ins, attr, reg1, rmOp->GetRegNum(), ival);
+            emit->emitIns_SIMD_R_R_I(ins, attr, reg1, rmOpDesc.GetReg(), ival);
             break;
 
         default:
@@ -1068,7 +1035,7 @@ void CodeGen::inst_RV_RV_TT(
 
         case OperandKind::Reg:
         {
-            regNumber op2Reg = op2->GetRegNum();
+            regNumber op2Reg = op2Desc.GetReg();
 
             if ((op1Reg != targetReg) && (op2Reg == targetReg) && isRMW)
             {
@@ -1433,11 +1400,6 @@ instruction CodeGenInterface::ins_Load(var_types srcType, bool aligned /*=false*
         }
         else
 #endif // FEATURE_SIMD
-            if (compiler->canUseVexEncoding())
-        {
-            return (aligned) ? INS_movapd : INS_movupd;
-        }
-        else
         {
             // SSE2 Note: always prefer movaps/movups over movapd/movupd since the
             // former doesn't require 66h prefix and one byte smaller than the
@@ -1696,11 +1658,6 @@ instruction CodeGenInterface::ins_Store(var_types dstType, bool aligned /*=false
         }
         else
 #endif // FEATURE_SIMD
-            if (compiler->canUseVexEncoding())
-        {
-            return (aligned) ? INS_movapd : INS_movupd;
-        }
-        else
         {
             // SSE2 Note: always prefer movaps/movups over movapd/movupd since the
             // former doesn't require 66h prefix and one byte smaller than the
@@ -1843,8 +1800,18 @@ instruction CodeGen::ins_MathOp(genTreeOps oper, var_types type)
     }
 }
 
-// Conversions to or from floating point values
-instruction CodeGen::ins_FloatConv(var_types to, var_types from)
+//------------------------------------------------------------------------
+// ins_FloatConv: Conversions to or from floating point values.
+//
+// Arguments:
+//    to - Destination type.
+//    from - Source type.
+//    attr - Input size.
+//
+// Returns:
+//    The correct conversion instruction to use based on src and dst types.
+//
+instruction CodeGen::ins_FloatConv(var_types to, var_types from, emitAttr attr)
 {
     // AVX: For now we support only conversion from Int/Long -> float
 
@@ -1856,9 +1823,29 @@ instruction CodeGen::ins_FloatConv(var_types to, var_types from)
             switch (to)
             {
                 case TYP_FLOAT:
-                    return INS_cvtsi2ss;
+                {
+                    if (EA_SIZE(attr) == EA_4BYTE)
+                    {
+                        return INS_cvtsi2ss32;
+                    }
+                    else if (EA_SIZE(attr) == EA_8BYTE)
+                    {
+                        return INS_cvtsi2ss64;
+                    }
+                    unreached();
+                }
                 case TYP_DOUBLE:
-                    return INS_cvtsi2sd;
+                {
+                    if (EA_SIZE(attr) == EA_4BYTE)
+                    {
+                        return INS_cvtsi2sd32;
+                    }
+                    else if (EA_SIZE(attr) == EA_8BYTE)
+                    {
+                        return INS_cvtsi2sd64;
+                    }
+                    unreached();
+                }
                 default:
                     unreached();
             }

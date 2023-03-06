@@ -10,7 +10,7 @@ namespace ILLink.Shared
 {
 	public enum DiagnosticId
 	{
-		// Linker error ids.
+		// Trimming error ids.
 		XmlFeatureDoesNotSpecifyFeatureValue = 1001,
 		XmlUnsupportedNonBooleanValueForFeature = 1002,
 		XmlException = 1003,
@@ -59,7 +59,7 @@ namespace ILLink.Shared
 		InvalidMetadataOption = 1046,
 		InvalidDependenciesFileFormat = 1047,
 
-		// Linker diagnostic ids.
+		// Trimming diagnostic ids.
 		TypeHasNoFieldsToPreserve = 2001,
 		TypeHasNoMethodsToPreserve = 2002,
 		CouldNotResolveDependencyAssembly = 2003,
@@ -84,7 +84,7 @@ namespace ILLink.Shared
 		XmlCouldNotFindMatchingConstructorForCustomAttribute = 2022,
 		XmlMoreThanOneReturnElementForMethod = 2023,
 		XmlMoreThanOneValyForParameterOfMethod = 2024,
-		XmlDuplicatePreserveMember = 2025,
+		_unused_XmlDuplicatePreserveMember = 2025,
 		RequiresUnreferencedCode = 2026,
 		AttributeShouldOnlyBeUsedOnceOnMember = 2027,
 		AttributeDoesntHaveTheRequiredNumberOfParameters = 2028,
@@ -222,7 +222,7 @@ namespace ILLink.Shared
 				2103 => MessageSubCategory.TrimAnalysis,
 				2106 => MessageSubCategory.TrimAnalysis,
 				2107 => MessageSubCategory.TrimAnalysis,
-				>= 2109 and <= 2120 => MessageSubCategory.TrimAnalysis,
+				>= 2109 and <= 2121 => MessageSubCategory.TrimAnalysis,
 				>= 3050 and <= 3052 => MessageSubCategory.AotAnalysis,
 				>= 3054 and <= 3055 => MessageSubCategory.AotAnalysis,
 				_ => MessageSubCategory.None,

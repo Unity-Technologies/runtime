@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Test;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -72,21 +74,23 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
 
             public ISet<string> InstantiatedISet { get; set; } = new HashSet<string>();
 
+            public ISet<string> ISetNoSetter { get; } = new HashSet<string>();
+
             public HashSet<string> InstantiatedHashSetWithSomeValues { get; set; } =
-                new HashSet<string>(new[] {"existing1", "existing2"});
+                new HashSet<string>(new[] { "existing1", "existing2" });
 
             public SortedSet<string> InstantiatedSortedSetWithSomeValues { get; set; } =
-                new SortedSet<string>(new[] {"existing1", "existing2"});
+                new SortedSet<string>(new[] { "existing1", "existing2" });
 
             public SortedSet<string> NonInstantiatedSortedSetWithSomeValues { get; set; } = null!;
 
             public ISet<string> InstantiatedISetWithSomeValues { get; set; } =
                 new HashSet<string>(new[] { "existing1", "existing2" });
-            
+
             public ISet<UnsupportedTypeInHashSet> HashSetWithUnsupportedKey { get; set; } =
                 new HashSet<UnsupportedTypeInHashSet>();
 
-            public ISet<UnsupportedTypeInHashSet> UninstantiatedHashSetWithUnsupportedKey { get; set; } 
+            public ISet<UnsupportedTypeInHashSet> UninstantiatedHashSetWithUnsupportedKey { get; set; }
 
 #if NETCOREAPP
             public IReadOnlySet<string> InstantiatedIReadOnlySet { get; set; } = new HashSet<string>();
@@ -250,6 +254,12 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
 
         public record struct RecordStructTypeOptions(string Color, int Length);
 
+        public record RecordOptionsWithNesting(int Number, RecordOptionsWithNesting.RecordNestedOptions Nested1,
+            RecordOptionsWithNesting.RecordNestedOptions Nested2 = null!)
+        {
+            public record RecordNestedOptions(string ValueA, int ValueB);
+        }
+
         // Here, the constructor has three parameters, but not all of those match
         // match to a property or field
         public class ClassWhereParametersDoNotMatchProperties
@@ -340,7 +350,7 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             }
 
             public string Color { get; set; }
-            public int Length { get; set;  }
+            public int Length { get; set; }
         }
 
         public class ImmutableLengthAndColorClass
@@ -491,6 +501,159 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             public byte[] MyByteArray { get; set; }
         }
 
+        public enum TestSettingsEnum
+        {
+            Option1,
+            Option2,
+        }
+
+        public class CollectionsBindingWithErrorOnUnknownConfiguration
+        {
+            public class MyModelContainingArray
+            {
+                public TestSettingsEnum[] Enums { get; set; }
+            }
+
+            public class MyModelContainingADictionary
+            {
+                public Dictionary<string, TestSettingsEnum> Enums { get; set; }
+            }
+
+            [Fact]
+            public void WithFlagUnset_NoExceptionIsThrownWhenFailingToParseEnumsInAnArrayAndValidItemsArePreserved()
+            {
+                var dic = new Dictionary<string, string>
+                    {
+                        {"Section:Enums:0", "Option1"},
+                        {"Section:Enums:1", "Option3"}, // invalid - ignored
+                        {"Section:Enums:2", "Option4"}, // invalid - ignored
+                        {"Section:Enums:3", "Option2"},
+                    };
+
+                var configurationBuilder = new ConfigurationBuilder();
+                configurationBuilder.AddInMemoryCollection(dic);
+                var config = configurationBuilder.Build();
+                var configSection = config.GetSection("Section");
+
+                var model = configSection.Get<MyModelContainingArray>(o => o.ErrorOnUnknownConfiguration = false);
+
+                Assert.Equal(2, model.Enums.Length);
+                Assert.Equal(TestSettingsEnum.Option1, model.Enums[0]);
+                Assert.Equal(TestSettingsEnum.Option2, model.Enums[1]);
+            }
+
+            [Fact]
+            public void WithFlagUnset_NoExceptionIsThrownWhenFailingToParseEnumsInADictionaryAndValidItemsArePreserved()
+            {
+                var dic = new Dictionary<string, string>
+                    {
+                        {"Section:Enums:First", "Option1"},
+                        {"Section:Enums:Second", "Option3"}, // invalid - ignored
+                        {"Section:Enums:Third", "Option4"}, // invalid - ignored
+                        {"Section:Enums:Fourth", "Option2"},
+                    };
+
+                var configurationBuilder = new ConfigurationBuilder();
+                configurationBuilder.AddInMemoryCollection(dic);
+                var config = configurationBuilder.Build();
+                var configSection = config.GetSection("Section");
+
+                var model = configSection.Get<MyModelContainingADictionary>(o =>
+                    o.ErrorOnUnknownConfiguration = false);
+
+                Assert.Equal(2, model.Enums.Count);
+                Assert.Equal(TestSettingsEnum.Option1, model.Enums["First"]);
+                Assert.Equal(TestSettingsEnum.Option2, model.Enums["Fourth"]);
+            }
+
+            [Fact]
+            public void WithFlagSet_AnExceptionIsThrownWhenFailingToParseEnumsInAnArray()
+            {
+                var dic = new Dictionary<string, string>
+                    {
+                        {"Section:Enums:0", "Option1"},
+                        {"Section:Enums:1", "Option3"}, // invalid - exception thrown
+                        {"Section:Enums:2", "Option1"},
+                    };
+
+                var configurationBuilder = new ConfigurationBuilder();
+                configurationBuilder.AddInMemoryCollection(dic);
+                var config = configurationBuilder.Build();
+                var configSection = config.GetSection("Section");
+
+                var exception = Assert.Throws<InvalidOperationException>(
+                    () => configSection.Get<MyModelContainingArray>(o => o.ErrorOnUnknownConfiguration = true));
+
+                Assert.Equal(
+                    SR.Format(SR.Error_GeneralErrorWhenBinding, nameof(BinderOptions.ErrorOnUnknownConfiguration)),
+                    exception.Message);
+            }
+
+            [Fact]
+            public void WithFlagSet_AnExceptionIsThrownWhenFailingToParseEnumsInADictionary()
+            {
+                var dic = new Dictionary<string, string>
+                    {
+                        {"Section:Enums:First", "Option1"},
+                        {"Section:Enums:Second", "Option3"}, // invalid - exception thrown
+                        {"Section:Enums:Third", "Option1"},
+                    };
+
+                var configurationBuilder = new ConfigurationBuilder();
+                configurationBuilder.AddInMemoryCollection(dic);
+                var config = configurationBuilder.Build();
+                var configSection = config.GetSection("Section");
+
+                var exception = Assert.Throws<InvalidOperationException>(
+                    () => configSection.Get<MyModelContainingADictionary>(o =>
+                        o.ErrorOnUnknownConfiguration = true));
+
+                Assert.Equal(
+                    SR.Format(SR.Error_GeneralErrorWhenBinding, nameof(BinderOptions.ErrorOnUnknownConfiguration)),
+                    exception.Message);
+            }
+        }
+
+        public record RootConfig(NestedConfig Nested);
+
+        public record NestedConfig(string MyProp);
+
+        [Fact]
+        public void BindWithNestedTypesWithReadOnlyProperties()
+        {
+            IConfiguration configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "Nested:MyProp", "Dummy" }
+                })
+                .Build();
+
+            var result = configuration.Get<RootConfig>();
+
+            Assert.Equal("Dummy", result.Nested.MyProp);
+        }
+
+        [Fact]
+        public void EnumBindCaseInsensitiveNotThrows()
+        {
+            var dic = new Dictionary<string, string>
+            {
+                {"Section:Option1", "opt1"},
+                {"Section:option2", "opt2"}
+            };
+
+            var configurationBuilder = new ConfigurationBuilder();
+            configurationBuilder.AddInMemoryCollection(dic);
+            var config = configurationBuilder.Build();
+            var configSection = config.GetSection("Section");
+
+            var configOptions = new Dictionary<TestSettingsEnum, string>();
+            configSection.Bind(configOptions);
+
+            Assert.Equal("opt1", configOptions[TestSettingsEnum.Option1]);
+            Assert.Equal("opt2", configOptions[TestSettingsEnum.Option2]);
+        }
+
         [Fact]
         public void CanBindIConfigurationSection()
         {
@@ -635,6 +798,27 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             Assert.Equal("Yo2", options.NonInstantiatedISet.ElementAt(1));
         }
 
+        [Fact]
+        public void CanBindISetNoSetter()
+        {
+            var dic = new Dictionary<string, string>
+            {
+                {"ISetNoSetter:0", "Yo1"},
+                {"ISetNoSetter:1", "Yo2"},
+                {"ISetNoSetter:2", "Yo2"},
+            };
+            var configurationBuilder = new ConfigurationBuilder();
+            configurationBuilder.AddInMemoryCollection(dic);
+
+            var config = configurationBuilder.Build();
+
+            var options = config.Get<ComplexOptions>(o => o.ErrorOnUnknownConfiguration = true)!;
+
+            Assert.Equal(2, options.ISetNoSetter.Count);
+            Assert.Equal("Yo1", options.ISetNoSetter.ElementAt(0));
+            Assert.Equal("Yo2", options.ISetNoSetter.ElementAt(1));
+        }
+
 #if NETCOREAPP
         [Fact]
         public void CanBindInstantiatedIReadOnlySet()
@@ -729,7 +913,7 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
         public class Foo
         {
             public IReadOnlyDictionary<string, int> Items { get; set; } =
-                new Dictionary<string, int> {{"existing-item1", 1}, {"existing-item2", 2}};
+                new Dictionary<string, int> { { "existing-item1", 1 }, { "existing-item2", 2 } };
 
         }
 
@@ -753,8 +937,6 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             Assert.Equal(2, options.Items["existing-item2"]);
             Assert.Equal(3, options.Items["item3"]);
             Assert.Equal(4, options.Items["item4"]);
-
-            
         }
 
         [Fact]
@@ -772,6 +954,7 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
 
             var options = config.Get<ConfigWithInstantiatedIReadOnlyDictionary>()!;
 
+            // Readonly dictionary with instantiated value cannot be mutated by the configuration
             Assert.Equal(3, options.Dictionary.Count);
 
             // does not overwrite original
@@ -843,6 +1026,7 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             var options = config.Get<ComplexOptions>()!;
 
             var resultingDictionary = options.InstantiatedReadOnlyDictionaryWithWithSomeValues;
+
             Assert.Equal(4, resultingDictionary.Count);
             Assert.Equal(1, resultingDictionary["existing-item1"]);
             Assert.Equal(2, resultingDictionary["existing-item2"]);
@@ -869,7 +1053,7 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             Assert.Equal(3, options.NonInstantiatedReadOnlyDictionary["item3"]);
             Assert.Equal(4, options.NonInstantiatedReadOnlyDictionary["item4"]);
         }
-        
+
 
         [Fact]
         public void CanBindNonInstantiatedDictionaryOfISet()
@@ -2330,6 +2514,29 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
         }
 
         [Fact]
+        public void CanBindNestedRecordOptions()
+        {
+            var dic = new Dictionary<string, string>
+            {
+                {"Number", "1"},
+                {"Nested1:ValueA", "Cool"},
+                {"Nested1:ValueB", "42"},
+                {"Nested2:ValueA", "Uncool"},
+                {"Nested2:ValueB", "24"},
+            };
+            var configurationBuilder = new ConfigurationBuilder();
+            configurationBuilder.AddInMemoryCollection(dic);
+            var config = configurationBuilder.Build();
+
+            var options = config.Get<RecordOptionsWithNesting>();
+            Assert.Equal(1, options.Number);
+            Assert.Equal("Cool", options.Nested1.ValueA);
+            Assert.Equal(42, options.Nested1.ValueB);
+            Assert.Equal("Uncool", options.Nested2.ValueA);
+            Assert.Equal(24, options.Nested2.ValueB);
+        }
+
+        [Fact]
         public void CanBindOnParametersAndProperties_PropertiesAreSetAfterTheConstructor()
         {
             var dic = new Dictionary<string, string>
@@ -2526,6 +2733,61 @@ namespace Microsoft.Extensions.Configuration.Binder.Test
             var test = new ClassOverridingVirtualProperty();
             config.Bind(test, b => b.BindNonPublicProperties = true);
             Assert.Equal("a", test.ExposePrivatePropertyValue());
+        }
+
+        [Fact]
+        public void EnsureCallingThePropertySetter()
+        {
+            var json = @"{
+                ""IPFiltering"": {
+                    ""HttpStatusCode"": 401,
+                    ""Blacklist"": [ ""192.168.0.10-192.168.10.20"", ""fe80::/10"" ]
+                }
+            }";
+
+            var configuration = new ConfigurationBuilder()
+                .AddJsonStream(TestStreamHelpers.StringToStream(json))
+                .Build();
+
+            OptionWithCollectionProperties options = configuration.GetSection("IPFiltering").Get<OptionWithCollectionProperties>();
+
+            Assert.NotNull(options);
+            Assert.Equal(2, options.Blacklist.Count);
+            Assert.Equal("192.168.0.10-192.168.10.20", options.Blacklist.ElementAt(0));
+            Assert.Equal("fe80::/10", options.Blacklist.ElementAt(1));
+
+            Assert.Equal(2, options.ParsedBlacklist.Count); // should be initialized when calling the options.Blacklist setter.
+
+            Assert.Equal(401, options.HttpStatusCode); // exists in configuration and properly sets the property
+            Assert.Equal(2, options.OtherCode); // doesn't exist in configuration. the setter sets default value '2'
+        }
+
+        public class OptionWithCollectionProperties
+        {
+            private int _otherCode;
+            private ICollection<string> blacklist = new HashSet<string>();
+
+            public ICollection<string> Blacklist
+            {
+                get => this.blacklist;
+                set
+                {
+                    this.blacklist = value ?? new HashSet<string>();
+                    this.ParsedBlacklist = this.blacklist.Select(b => b).ToList();
+                }
+            }
+
+            public int HttpStatusCode { get; set; } = 0;
+
+            // ParsedBlacklist initialized using the setter of Blacklist.
+            public ICollection<string> ParsedBlacklist { get; private set; } = new HashSet<string>();
+
+            // This property not having any match in the configuration. Still the setter need to be called during the binding.
+            public int OtherCode
+            {
+                get => _otherCode;
+                set => _otherCode = value == 0 ? 2 : value;
+            }
         }
 
         private interface ISomeInterface

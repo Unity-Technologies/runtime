@@ -28,7 +28,8 @@ provider_prepare_callback_data (
 	int64_t keywords,
 	EventPipeEventLevel provider_level,
 	const ep_char8_t *filter_data,
-	EventPipeProviderCallbackData *provider_callback_data);
+	EventPipeProviderCallbackData *provider_callback_data,
+	EventPipeSessionID session_id);
 
 // _Requires_lock_held (ep)
 static
@@ -69,7 +70,8 @@ provider_prepare_callback_data (
 	int64_t keywords,
 	EventPipeEventLevel provider_level,
 	const ep_char8_t *filter_data,
-	EventPipeProviderCallbackData *provider_callback_data)
+	EventPipeProviderCallbackData *provider_callback_data,
+	EventPipeSessionID session_id)
 {
 	EP_ASSERT (provider != NULL);
 	EP_ASSERT (provider_callback_data != NULL);
@@ -81,7 +83,8 @@ provider_prepare_callback_data (
 		provider->callback_data,
 		keywords,
 		provider_level,
-		provider->sessions != 0);
+		provider->sessions != 0,
+		session_id);
 }
 
 static
@@ -166,7 +169,6 @@ ep_provider_alloc (
 	EventPipeConfiguration *config,
 	const ep_char8_t *provider_name,
 	EventPipeCallback callback_func,
-	EventPipeCallbackDataFree callback_data_free_func,
 	void *callback_data)
 {
 	EP_ASSERT (config != NULL);
@@ -187,7 +189,6 @@ ep_provider_alloc (
 	instance->keywords = 0;
 	instance->provider_level = EP_EVENT_LEVEL_CRITICAL;
 	instance->callback_func = callback_func;
-	instance->callback_data_free_func = callback_data_free_func;
 	instance->callback_data = callback_data;
 	instance->config = config;
 	instance->delete_deferred = false;
@@ -208,9 +209,6 @@ ep_provider_free (EventPipeProvider * provider)
 	ep_return_void_if_nok (provider != NULL);
 
 	ep_requires_lock_not_held ();
-
-	if (provider->callback_data_free_func)
-		provider->callback_data_free_func (provider->callback_func, provider->callback_data);
 
 	if (!ep_rt_event_list_is_empty (&provider->event_list)) {
 		EP_LOCK_ENTER (section1)
@@ -244,6 +242,16 @@ ep_provider_add_event (
 	EP_ASSERT (provider != NULL);
 
 	ep_requires_lock_not_held ();
+
+	// Keyword bits 44-47 are reserved for use by EventSources, and every EventSource sets them all.
+	// We filter out those bits here so later comparisons don't have to take them in to account. Without
+	// filtering, EventSources wouldn't show up with Keywords=0.
+	uint64_t session_mask = ~0xF00000000000;
+	// -1 is special, it means all keywords. Don't change it.
+	uint64_t all_keywords = (uint64_t)(-1);
+	if (keywords != all_keywords) {
+		keywords &= session_mask;
+	}
 
 	EventPipeEvent *instance = ep_event_alloc (
 		provider,
@@ -281,13 +289,7 @@ ep_provider_set_delete_deferred (
 	EP_ASSERT (provider != NULL);
 	provider->delete_deferred = deferred;
 
-	// EventSources will be collected once they ungregister themselves,
-	// so we can't call back in to them.
-	if (provider->callback_func && provider->callback_data_free_func)
-		provider->callback_data_free_func (provider->callback_func, provider->callback_data);
-
 	provider->callback_func = NULL;
-	provider->callback_data_free_func = NULL;
 	provider->callback_data = NULL;
 }
 
@@ -300,7 +302,8 @@ provider_set_config (
 	int64_t keywords,
 	EventPipeEventLevel level,
 	const ep_char8_t *filter_data,
-	EventPipeProviderCallbackData *callback_data)
+	EventPipeProviderCallbackData *callback_data,
+	EventPipeSessionID session_id)
 {
 	EP_ASSERT (provider != NULL);
 	EP_ASSERT ((provider->sessions & session_mask) == 0);
@@ -312,7 +315,7 @@ provider_set_config (
 	provider->provider_level = level_for_all_sessions;
 
 	provider_refresh_all_events (provider);
-	provider_prepare_callback_data (provider, provider->keywords, provider->provider_level, filter_data, callback_data);
+	provider_prepare_callback_data (provider, provider->keywords, provider->provider_level, filter_data, callback_data, session_id);
 
 	ep_requires_lock_held ();
 	return callback_data;
@@ -341,7 +344,7 @@ provider_unset_config (
 	provider->provider_level = level_for_all_sessions;
 
 	provider_refresh_all_events (provider);
-	provider_prepare_callback_data (provider, provider->keywords, provider->provider_level, filter_data, callback_data);
+	provider_prepare_callback_data (provider, provider->keywords, provider->provider_level, filter_data, callback_data, (EventPipeSessionID)0);
 
 	ep_requires_lock_held ();
 	return callback_data;
@@ -361,6 +364,7 @@ provider_invoke_callback (EventPipeProviderCallbackData *provider_callback_data)
 	int64_t keywords = ep_provider_callback_data_get_keywords (provider_callback_data);
 	EventPipeEventLevel provider_level = ep_provider_callback_data_get_provider_level (provider_callback_data);
 	void *callback_data = ep_provider_callback_data_get_callback_data (provider_callback_data);
+	EventPipeSessionID session_id = ep_provider_callback_data_get_session_id (provider_callback_data);
 
 	bool is_event_filter_desc_init = false;
 	EventFilterDescriptor event_filter_desc;
@@ -406,7 +410,7 @@ provider_invoke_callback (EventPipeProviderCallbackData *provider_callback_data)
 	if (callback_function && !ep_rt_process_shutdown ()) {
 		ep_rt_provider_invoke_callback (
 			callback_function,
-			NULL, /* provider_id */
+			(uint8_t *)&session_id, /* session_id */
 			enabled ? 1 : 0, /* ControlCode */
 			(uint8_t)provider_level,
 			(uint64_t)keywords,
@@ -430,12 +434,11 @@ EventPipeProvider *
 provider_create_register (
 	const ep_char8_t *provider_name,
 	EventPipeCallback callback_func,
-	EventPipeCallbackDataFree callback_data_free_func,
 	void *callback_data,
 	EventPipeProviderCallbackDataQueue *provider_callback_data_queue)
 {
 	ep_requires_lock_held ();
-	return config_create_provider (ep_config_get (), provider_name, callback_func, callback_data_free_func, callback_data, provider_callback_data_queue);
+	return config_create_provider (ep_config_get (), provider_name, callback_func, callback_data, provider_callback_data_queue);
 }
 
 void
@@ -453,9 +456,6 @@ provider_free (EventPipeProvider * provider)
 	ep_return_void_if_nok (provider != NULL);
 
 	ep_requires_lock_held ();
-
-	if (provider->callback_data_free_func)
-		provider->callback_data_free_func (provider->callback_func, provider->callback_data);
 
 	if (!ep_rt_event_list_is_empty (&provider->event_list))
 		ep_rt_event_list_free (&provider->event_list, event_free_func);
