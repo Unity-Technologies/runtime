@@ -726,6 +726,11 @@ public:
     {
     };
 
+    virtual void UpdateFrozenSegment(segment_handle seg, uint8_t* allocated, uint8_t* committed)
+    {
+        assert(0);
+    }
+
     GCHeap(IGCToCLR* pGCToCLR) :
         m_pGCToCLR(pGCToCLR),
         m_bGCInProgress(false)
