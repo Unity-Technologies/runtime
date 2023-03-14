@@ -19,4 +19,10 @@ static class CoreCLRHostTestingWrappers
         var result = CoreCLRHost.gchandle_get_target_v2(handleIn);
         return Unsafe.As<IntPtr, object>(ref result);
     }
+
+    public static object? object_isinst(object obj, Type klass)
+    {
+        var result = CoreCLRHost.object_isinst(Unsafe.As<object, IntPtr>(ref obj), Unsafe.As<Type, IntPtr>(ref klass));
+        return Unsafe.As<IntPtr, object>(ref result);
+    }
 }

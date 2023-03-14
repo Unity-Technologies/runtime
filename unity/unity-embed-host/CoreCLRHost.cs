@@ -95,6 +95,34 @@ static unsafe partial class CoreCLRHost
         return Unsafe.As<object, IntPtr>(ref obj);
     }
 
+    [return: NativeCallbackType("MonoObject*")]
+    public static IntPtr object_isinst([NativeCallbackType("MonoObject*")] IntPtr obj, [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        var instance = Unsafe.As<IntPtr, object>(ref obj);
+        var type = Unsafe.As<IntPtr, Type>(ref klass);
+        Type current = instance.GetType();
+
+        while (current != null)
+        {
+            if (current == type)
+                return obj;
+
+            // TODO : Unclear what the value of this is.  The if above is always hit first preventing rank differences from being taken into consideration
+            // if (current.IsArray && type.IsArray && current.GetArrayRank() == type.GetArrayRank() && current.GetElementType() == type.GetElementType())
+            //     return obj;
+
+            foreach (var iface in current.GetInterfaces())
+            {
+                if (iface == type)
+                    return obj;
+            }
+
+            current = current.BaseType;
+        }
+
+        return nint.Zero;
+    }
+
     static StringPtr StringToPtr(string s)
     {
         // Return raw object pointer for now with the NullGC.
