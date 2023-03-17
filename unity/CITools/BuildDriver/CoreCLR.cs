@@ -24,7 +24,7 @@ public class CoreCLR
         ProcessStartInfo sInfo = new()
         {
             FileName = BuildScript,
-            Arguments = $"-subset clr+libs -a {gConfig.Architecture} -c {gConfig.Configuration} -ci -ninja{crossbuild}",
+            Arguments = $"-subset clr+libs -a {gConfig.Architecture} -c {gConfig.Configuration} -ninja{crossbuild}",
             WorkingDirectory = Paths.RepoRoot
         };
 
