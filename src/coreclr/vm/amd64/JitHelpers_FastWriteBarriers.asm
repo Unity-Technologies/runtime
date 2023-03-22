@@ -56,6 +56,17 @@ PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_Lower
 
         nop ; padding for alignment of constant
 
+ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
+
+PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_Upper
+        mov     r8, 0F0F0F0F0F0F0F0F0h
+
+        cmp     rdx, r8
+        jae     Exit
+
+        nop ; padding for alignment of constant
+endif
+
 PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_CardTable
         mov     rax, 0F0F0F0F0F0F0F0F0h
 
@@ -384,6 +395,18 @@ PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Lower
         ; Touch the card table entry, if not already dirty.
         shr     rcx, 0Bh
         NOP_2_BYTE ; padding for alignment of constant
+
+ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
+
+PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Upper
+        mov     r8, 0F0F0F0F0F0F0F0F0h
+
+        cmp     rdx, r8
+        jae     Exit
+
+        nop ; padding for alignment of constant
+endif
+
 PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_CardTable
         mov     rax, 0F0F0F0F0F0F0F0F0h
         cmp     byte ptr [rcx + rax], 0FFh
