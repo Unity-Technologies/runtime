@@ -4,7 +4,7 @@ name: Build Linux x64 Release
 
 agent:
   type: Unity::VM
-  image: platform-foundation/linux-ubuntu-18.04-mono-bokken:0.1.7-978398
+  image: platform-foundation/coreclr-linux:v0.0.1-1279116
   flavor: b1.large
 
 variables:
