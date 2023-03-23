@@ -64,7 +64,7 @@ public class Program
             Architecture = architecture,
             Configuration = configuration,
             Silent = silent,
-            DotNetVerbosity = "quiet"
+            DotNetVerbosity = "d"
         };
 
         // We need to build even when `skipBuild` is false because on CI we have the build and tests split into separate jobs.  And the way we have artifacts setup,
