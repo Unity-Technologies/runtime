@@ -32,23 +32,6 @@ PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_Lower
 
         nop // padding for alignment of constant
 
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-
-PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_Upper
-        movabs  r8, 0xF0F0F0F0F0F0F0F0
-
-        cmp     rsi, r8
-
-#ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
-        .byte 0x73, 0x4b
-#else
-        .byte 0x73, 0x2b
-#endif
-        // jae     Exit_PreGrow64
-
-        nop // padding for alignment of constant
-#endif
-
 PATCH_LABEL JIT_WriteBarrier_PreGrow64_Patch_Label_CardTable
         movabs  rax, 0xF0F0F0F0F0F0F0F0
 
@@ -432,24 +415,6 @@ PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Lower
         // Touch the card table entry, if not already dirty.
         shr     rdi, 0x0B
         NOP_2_BYTE // padding for alignment of constant
-
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-
-PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Upper
-        movabs  r10, 0xF0F0F0F0F0F0F0F0
-
-        cmp     rsi, r10
-
-#ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
-        .byte 0x73, 0x3b
-#else
-        .byte 0x73, 0x2b
-#endif
-        // jae     Exit_WriteWatch_PreGrow64
-
-        nop // padding for alignment of constant
-#endif
-
 PATCH_LABEL JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_CardTable
         movabs  rax, 0xF0F0F0F0F0F0F0F0
         cmp     byte ptr [rdi + rax], 0xFF

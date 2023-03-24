@@ -26,9 +26,6 @@ EXTERN_C void JIT_WriteBarrier_End();
 
 EXTERN_C void JIT_WriteBarrier_PreGrow64(Object **dst, Object *ref);
 EXTERN_C void JIT_WriteBarrier_PreGrow64_Patch_Label_Lower();
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-EXTERN_C void JIT_WriteBarrier_PreGrow64_Patch_Label_Upper();
-#endif
 EXTERN_C void JIT_WriteBarrier_PreGrow64_Patch_Label_CardTable();
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
 EXTERN_C void JIT_WriteBarrier_PreGrow64_Patch_Label_CardBundleTable();
@@ -82,9 +79,6 @@ EXTERN_C void JIT_WriteBarrier_Bit_Region64_End();
 EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64(Object **dst, Object *ref);
 EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_WriteWatchTable();
 EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Lower();
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_Upper();
-#endif
 EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_CardTable();
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
 EXTERN_C void JIT_WriteBarrier_WriteWatch_PreGrow64_Patch_Label_CardBundleTable();
@@ -178,15 +172,9 @@ void WriteBarrierManager::Validate()
 #endif
 
     pLowerBoundImmediate      = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_Lower, 2);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-    pUpperBoundImmediate      = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_Upper, 2);
-#endif
     pCardTableImmediate       = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_CardTable, 2);
 
     _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pLowerBoundImmediate) & 0x7) == 0);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-    _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pUpperBoundImmediate) & 0x7) == 0);
-#endif
     _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pCardTableImmediate) & 0x7) == 0);
 
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
@@ -251,16 +239,10 @@ void WriteBarrierManager::Validate()
 
     pWriteWatchTableImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_WriteWatchTable, 2);
     pLowerBoundImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_Lower, 2);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-    pUpperBoundImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_Upper, 2);
-#endif
     pCardTableImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_CardTable, 2);
 
     _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pWriteWatchTableImmediate) & 0x7) == 0);
     _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pLowerBoundImmediate) & 0x7) == 0);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-    _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pUpperBoundImmediate) & 0x7) == 0);
-#endif
     _ASSERTE_ALL_BUILDS((reinterpret_cast<UINT64>(pCardTableImmediate) & 0x7) == 0);
 
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
@@ -451,17 +433,11 @@ int WriteBarrierManager::ChangeWriteBarrierTo(WriteBarrierType newWriteBarrier, 
         case WRITE_BARRIER_PREGROW64:
         {
             m_pLowerBoundImmediate      = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_Lower, 2);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-            m_pUpperBoundImmediate      = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_Upper, 2);
-#endif
             m_pCardTableImmediate       = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_CardTable, 2);
 
             // Make sure that we will be bashing the right places (immediates should be hardcoded to 0x0f0f0f0f0f0f0f0f0).
             _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pLowerBoundImmediate);
             _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pCardTableImmediate);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-            _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pUpperBoundImmediate);
-#endif
 
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
             m_pCardBundleTableImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_PreGrow64, Patch_Label_CardBundleTable, 2);
@@ -553,17 +529,11 @@ int WriteBarrierManager::ChangeWriteBarrierTo(WriteBarrierType newWriteBarrier, 
         {
             m_pWriteWatchTableImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_WriteWatchTable, 2);
             m_pLowerBoundImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_Lower, 2);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-            m_pUpperBoundImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_Upper, 2);
-#endif
             m_pCardTableImmediate = CALC_PATCH_LOCATION(JIT_WriteBarrier_WriteWatch_PreGrow64, Patch_Label_CardTable, 2);
 
             // Make sure that we will be bashing the right places (immediates should be hardcoded to 0x0f0f0f0f0f0f0f0f0).
             _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pWriteWatchTableImmediate);
             _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pLowerBoundImmediate);
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-            _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pUpperBoundImmediate);
-#endif
             _ASSERTE_ALL_BUILDS(0xf0f0f0f0f0f0f0f0 == *(UINT64*)m_pCardTableImmediate);
 
 #ifdef FEATURE_MANUALLY_MANAGED_CARD_BUNDLES
@@ -818,12 +788,6 @@ int WriteBarrierManager::UpdateEphemeralBounds(bool isRuntimeSuspended)
         case WRITE_BARRIER_WRITE_WATCH_BYTE_REGIONS64:
         case WRITE_BARRIER_WRITE_WATCH_BIT_REGIONS64:
 #endif // FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP
-#ifdef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
-        case WRITE_BARRIER_PREGROW64:
-#ifdef FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP
-        case WRITE_BARRIER_WRITE_WATCH_PREGROW64:
-#endif // FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP
-#endif // FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
         {
             // Change immediate if different from new g_ephermeral_high.
             if (*(UINT64*)m_pUpperBoundImmediate != (size_t)g_ephemeral_high)
@@ -833,13 +797,11 @@ int WriteBarrierManager::UpdateEphemeralBounds(bool isRuntimeSuspended)
                 stompWBCompleteActions |= SWB_ICACHE_FLUSH;
             }
         }
-#ifndef FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
         FALLTHROUGH;
         case WRITE_BARRIER_PREGROW64:
 #ifdef FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP
         case WRITE_BARRIER_WRITE_WATCH_PREGROW64:
 #endif // FEATURE_USE_SOFTWARE_WRITE_WATCH_FOR_GC_HEAP
-#endif // FEATURE_UNITY_NULLGC_WRITEBARRIER_PATCH
         {
             // Change immediate if different from new g_ephermeral_low.
             if (*(UINT64*)m_pLowerBoundImmediate != (size_t)g_ephemeral_low)
