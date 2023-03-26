@@ -1586,6 +1586,10 @@ BOOL TypeVarTypeDesc::SatisfiesConstraints(SigTypeContext *pTypeContextOfConstra
                         fCanCast = TRUE;
                         break;
                     }
+                    else
+                    {
+                        fCanCast = TRUE;
+                    }
                 }
             }
 
