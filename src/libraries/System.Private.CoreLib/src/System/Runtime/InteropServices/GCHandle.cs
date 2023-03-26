@@ -36,10 +36,11 @@ namespace System.Runtime.InteropServices
                 throw new ArgumentOutOfRangeException(nameof(type), SR.ArgumentOutOfRange_Enum);
             }
 
-            if (type == GCHandleType.Pinned && !Marshal.IsPinnable(value))
+            // GC is null, anyway.
+            /* if (type == GCHandleType.Pinned && !Marshal.IsPinnable(value))
             {
                 throw new ArgumentException(SR.ArgumentException_NotIsomorphic, nameof(value));
-            }
+            } */
 
             IntPtr handle = InternalAlloc(value, type);
 
