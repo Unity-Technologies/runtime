@@ -830,8 +830,8 @@ void ArrayNative::CheckElementType(TypeHandle elementType)
             COMPlusThrow(kNotSupportedException, W("NotSupported_ByRefLikeArray"));
 
         // Check for open generic types.
-        if (pMT->IsGenericTypeDefinition() || pMT->ContainsGenericVariables())
-            COMPlusThrow(kNotSupportedException, W("NotSupported_OpenType"));
+        //if (pMT->IsGenericTypeDefinition() || pMT->ContainsGenericVariables())
+        //    COMPlusThrow(kNotSupportedException, W("NotSupported_OpenType"));
 
         // Check for Void.
         if (elementType.GetSignatureCorElementType() == ELEMENT_TYPE_VOID)
