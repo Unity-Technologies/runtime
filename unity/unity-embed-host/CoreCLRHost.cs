@@ -141,6 +141,13 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoClass*")] IntPtr klass)
         => FormatterServices.GetUninitializedObject(klass.TypeFromHandleIntPtr()).ToNativeRepresentation();
 
+    [return: NativeCallbackType("MonoObject*")]
+    public static IntPtr type_get_object(
+        [NoManagedWrapper] [NativeCallbackType("MonoDomain*")]
+        IntPtr domain,
+        [NativeCallbackType("MonoType*")] IntPtr type)
+        => type.TypeFromHandleIntPtr().GetTypeInfo().ToNativeRepresentation();
+
     static StringPtr StringToPtr(string s)
     {
         // Return raw object pointer for now with the NullGC.
