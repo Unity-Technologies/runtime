@@ -149,8 +149,10 @@ public class Program
             {
                 if (bTargets.HasFlag(BuildTargets.NullGC))
                     NullGC.Build(gConfig);
-                if (bTargets.HasFlag(BuildTargets.CoreCLR))
-                    CoreCLR.Build(gConfig);
+
+                var subsets = bTargets.ToSubSetString();
+                if (!string.IsNullOrEmpty(subsets))
+                    CoreCLR.Build(gConfig, subsets);
 
                 // TODO: Switch to using Embedding Host build to perform the copy instead of this once that lands.
                 NPath artifacts = Artifacts.ConsolidateArtifacts(gConfig);

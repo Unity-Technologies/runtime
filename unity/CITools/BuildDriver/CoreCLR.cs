@@ -6,20 +6,31 @@ using System.Runtime.InteropServices;
 using NiceIO;
 
 namespace BuildDriver;
-public class CoreCLR
+public static class CoreCLR
 {
     private static NPath BuildScript => Paths.RepoRoot.Combine(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "build.cmd" : "build.sh");
 
-    public static void Build(GlobalConfig gConfig)
+    public static string ToSubSetString(this BuildTargets targets)
+    {
+        var subsets = new List<string>();
+        if (targets.HasFlag(BuildTargets.Runtime))
+            subsets.Add("clr");
+
+        if (targets.HasFlag(BuildTargets.ClassLibs))
+            subsets.Add("libs");
+
+        return subsets.AggregateWith("+");
+    }
+
+    public static void Build(GlobalConfig gConfig, string subsets)
     {
         Console.WriteLine("******************************");
         Console.WriteLine("Unity: Building CoreCLR runtime");
         Console.WriteLine("******************************");
 
-
         var args = new List<string>
         {
-            "-subset clr+libs",
+            $"-subset {subsets}",
             $"-a {gConfig.Architecture}",
             $"-c {gConfig.Configuration}",
             $"-v:{Utils.DotNetVerbosity(gConfig.VerbosityLevel)}"
