@@ -151,7 +151,7 @@ static unsafe partial class CoreCLRHost
         [NoManagedWrapper] [NativeCallbackType("MonoDomain*")]
         IntPtr domain,
         [NativeCallbackType("MonoType*")] IntPtr type)
-        => type.TypeFromHandleIntPtr().GetTypeInfo().ToNativeRepresentation();
+        => type.TypeFromHandleIntPtr().ToNativeRepresentation();
 
     static StringPtr StringToPtr(string s)
     {

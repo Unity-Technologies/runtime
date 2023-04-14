@@ -263,7 +263,7 @@ public abstract class BaseEmbeddingApiTests
     public void TypeGetObject(Type type)
     {
         var result = ClrHost.type_get_object(type);
-        Assert.That(result, Is.EqualTo(type.GetTypeInfo()));
+        Assert.That(result, Is.EqualTo(type));
     }
 
     /// <summary>
