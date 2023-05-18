@@ -2111,7 +2111,8 @@ extern "C" EXPORT_API void* EXPORT_CC mono_jit_info_get_code_start(void* jit)
 
 extern "C" EXPORT_API MonoJitInfo* EXPORT_CC mono_jit_info_table_find(MonoDomain* domain, void* ip)
 {
-    ASSERT_NOT_IMPLEMENTED;
+    auto domain_clr = (MonoDomain_clr*)domain;
+    const auto methodDesc = MethodTable::GetMethodDescForSlotAddress((PCODE)ip);
     return NULL;
 }
 
