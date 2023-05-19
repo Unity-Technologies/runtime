@@ -186,6 +186,55 @@ static unsafe partial class CoreCLRHost
         IntPtr field) =>
         FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr(), RuntimeTypeHandle.FromIntPtr(klass)).ToNativeRepresentation();
 
+    // [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
+    public static void field_get_value(
+        [NativeCallbackType("MonoObject*")] IntPtr obj,
+        [NativeCallbackType("MonoClassField*")] IntPtr field,
+        [NativeCallbackType("void*")] void* value)
+    {
+        var fieldInfo = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr()/*,obj.ToManagedRepresentation().GetType().TypeHandle*/);
+        var managedObject = obj.ToManagedRepresentation();
+        var tmp = fieldInfo.GetValue(managedObject);
+        Unsafe.Write(value, tmp);
+        // if(fieldInfo.FieldType.IsValueType)
+        //     Unsafe.Write(value, Unsafe.Unbox<int>(tmp!));
+        // // if(tmp is int i)
+        // //     Unsafe.Write(value, i);
+        // // else
+        //     Unsafe.Write(value, tmp);
+    }
+
+    // [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
+    public static void field_static_get_value(
+        [ManagedWrapperOptions(ManagedWrapperOptions.Exclude)]
+        [NativeCallbackType("MonoVTable*")] IntPtr obj,
+        [NativeCallbackType("MonoClassField*")] IntPtr field,
+        [NativeCallbackType("void*")]
+        // [ManagedWrapperOptions(ManagedWrapperOptions.Custom, "ref object")]
+        void* value)
+    {
+        var fieldInfo = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr());
+        var tmp = fieldInfo.GetValue(null);
+        Unsafe.Write(value, tmp);
+    }
+
+    // [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
+    public static void field_set_value(
+        [NativeCallbackType("MonoObject*")] IntPtr obj,
+        [NativeCallbackType("MonoClassField*")] IntPtr field,
+        [NativeCallbackType("void*")]
+        [ManagedWrapperOptions(ManagedWrapperOptions.Custom, "object")]
+        void* value)
+    {
+        var fieldInfo = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr());
+        var managedObject = obj.ToManagedRepresentation();
+        // Unsafe.Read<>()
+        // object tmp = Unsafe.As<object>(Unsafe.AsRef<object>(value));
+        // object tmp = Unsafe.AsRef<object>(value);
+        object tmp = Unsafe.Read<object>(value);
+        fieldInfo.SetValue(managedObject, tmp);
+    }
+
     static StringPtr StringToPtr(string s)
     {
         // Return raw object pointer for now with the NullGC.

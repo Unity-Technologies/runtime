@@ -6,6 +6,9 @@ namespace UnityEmbedHost.Tests;
 class Mammal : Animal, IMammal
 {
     public int EyeCount = 2;
+
+    public int LegCount = 4;
+
     public void BreathAir()
     {
     }
@@ -13,9 +16,13 @@ class Mammal : Animal, IMammal
 
 class Cat : Mammal, ICat
 {
+    public static int NumberOfCats = 4;
+
     public int EarCount = 0;
 
     public static int StaticField = 0;
+
+    public string Name = "Lion";
 
     public void Meow()
     {
@@ -28,6 +35,7 @@ class CatOnlyInterface : ICat
 
 class Rock : IRock
 {
+    public object RockField;
 }
 
 class Animal : IAnimal
@@ -61,10 +69,19 @@ struct MyStruct
 
 struct ValueMammal : IMammal
 {
+    public int LegCount;
+    public int EyeCount;
+
+    public ValueMammal()
+    {
+        EyeCount = 2;
+        LegCount = 4;
+    }
 }
 
 struct ValueCat : ICat
 {
+    public static int NumberOfCats = 4;
 }
 
 struct ValueRock : IRock

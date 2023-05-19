@@ -1013,6 +1013,28 @@ TEST(mono_field_get_value_can_get_value_field)
     CHECK_EQUAL((void*)23, returnValue);
 }
 
+TEST(mono_field_get_value_can_get_value_field_on_struct)
+{
+    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestStructWithFields");
+    GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
+
+
+    GET_AND_CHECK(method, mono_class_get_method_from_name(klass, "SetupFields", 0));
+    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "x"));
+    size_t field0_offset = mono_field_get_offset(field0);
+    auto structInObject = (MonoObject*)((char*)obj + field0_offset);
+    if (g_Mode == CoreCLR)
+        mono_runtime_invoke_with_nested_object(method, structInObject, obj, nullptr, nullptr);
+    else
+        mono_runtime_invoke(method, structInObject, nullptr, nullptr);
+
+    GET_AND_CHECK(field, mono_class_get_field_from_name(klass, "y"));
+
+    MonoObject* returnValue = NULL;
+    mono_field_get_value(obj, field, &returnValue);
+    CHECK_EQUAL((void*)456, returnValue);
+}
+
 TEST(mono_field_get_offset_retrieves_field_offset_from_struct)
 {
     MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestStructWithFields");

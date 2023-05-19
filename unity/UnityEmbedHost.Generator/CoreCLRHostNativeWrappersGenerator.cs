@@ -73,6 +73,7 @@ namespace Unity.CoreCLRHelpers;
         string sourceBegin = @"
 // Auto-generated code
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Unity.CoreCLRHelpers;
 ";
@@ -88,13 +89,44 @@ namespace Unity.CoreCLRHelpers;
             var apiName = useNativeName ? methodSymbol.NativeWrapperName() : methodSymbol.Name;
             string signature = FormatMethodParametersForManagedWrapperMethodSignature(methodSymbol);
             sb.AppendLine($"    public {ManagedWrapperType(methodSymbol.ReturnType, methodSymbol.GetReturnTypeAttributes())} {methodSymbol.Name}({signature})");
-            sb.AppendLine($"        => {FormatManagedCast(methodSymbol)}{apiClassName}.{apiName}({FormatMethodParametersNamesForNiceManaged(methodSymbol)}){FormatToManagedRepresentation(methodSymbol)};");
+            sb.AppendLine("    {");
+
+            // var fixedInformation = FormatFixedParametersForNative(methodSymbol);
+            // if (!string.IsNullOrEmpty(fixedInformation))
+            //     sb.AppendLine("        {");
+            // sb.AppendLine(fixedInformation);
+
+
+            sb.Append("         ");
+            if (!methodSymbol.ReturnsVoid)
+                sb.Append("return ");
+            sb.AppendLine($"{FormatManagedCast(methodSymbol)}{apiClassName}.{apiName}({FormatMethodParametersNamesForNiceManaged(methodSymbol)}){FormatToManagedRepresentation(methodSymbol)};");
+            // if (!string.IsNullOrEmpty(fixedInformation))
+            //     sb.AppendLine("        }");
+            sb.AppendLine("    }");
             sb.AppendLine();
         }
 
         sb.Append("}");
         context.AddSource(generatedFileName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
+    }
+
+    static string FormatFixedParametersForNative(IMethodSymbol methodSymbol)
+    {
+        var fixedParameters = methodSymbol.Parameters
+            .Where(p => p.ManagedWrapperOptions() != ManagedWrapperOptions.Exclude && NeedsFixed(p))
+            .ToArray();
+        if (fixedParameters.Length == 0)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+        foreach (var p in fixedParameters)
+        {
+            sb.AppendLine($"fixed (void* {p.Name}Native = {p.Name})");
+        }
+
+        return sb.ToString();
     }
 
     static IEnumerable<IMethodSymbol> MethodsToGenerateWrappersFor(IMethodSymbol[] callbackMethods)
@@ -108,6 +140,17 @@ namespace Unity.CoreCLRHelpers;
 
     static string ManagedWrapperType(IParameterSymbol parameterSymbol)
         => ManagedWrapperType(parameterSymbol.Type, parameterSymbol.GetAttributes());
+
+    static bool NeedsFixed(IParameterSymbol parameterSymbol)
+    {
+        switch (ManagedWrapperType(parameterSymbol.Type, parameterSymbol.GetAttributes()))
+        {
+            case "ref object":
+                return true;
+        }
+
+        return false;
+    }
 
     static string ManagedWrapperType(ITypeSymbol typeSymbol, ImmutableArray<AttributeData> providerAttributes)
     {
@@ -135,6 +178,8 @@ namespace Unity.CoreCLRHelpers;
                 return "System.Reflection.MethodInfo";
             case "MonoReflectionField*":
                 return "System.Reflection.FieldInfo";
+            case "void*":
+                return "ref object";
         }
 
         return typeSymbol.ToString();
@@ -162,6 +207,7 @@ namespace Unity.CoreCLRHelpers;
         {
             case "MonoObject*":
             case "MonoArray*":
+            // case "void*":
                 return $"{parameterSymbol.Name}.ToNativeRepresentation()";
             case "MonoClass*":
             case "MonoType*":
@@ -170,6 +216,10 @@ namespace Unity.CoreCLRHelpers;
                 return $"{parameterSymbol.Name}.MethodHandleIntPtr()";
             case "MonoClassField*":
                 return $"{parameterSymbol.Name}.FieldHandleIntPtr()";
+            case "void*":
+                return $"Unsafe.AsPointer(ref {parameterSymbol.Name})";
+                // return $"(void*){parameterSymbol.Name}.ToNativeRepresentation()";
+            // return $"{parameterSymbol.Name}Native";
         }
 
         return parameterSymbol.Name;
