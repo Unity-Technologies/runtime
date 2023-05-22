@@ -195,15 +195,21 @@ static unsafe partial class CoreCLRHost
         var fieldInfo = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr()/*,obj.ToManagedRepresentation().GetType().TypeHandle*/);
         var managedObject = obj.ToManagedRepresentation();
         var tmp = fieldInfo.GetValue(managedObject);
-        Unsafe.Write(value, tmp);
+        if (!fieldInfo.FieldType.IsValueType)
+            Unsafe.Write(value, tmp);
+        // else
+        // {
+        //     Unsafe.Write(value, Unsafe.Unbox<int>(tmp!));
+        // }
         // if(fieldInfo.FieldType.IsValueType)
         //     Unsafe.Write(value, Unsafe.Unbox<int>(tmp!));
-        // // if(tmp is int i)
-        // //     Unsafe.Write(value, i);
-        // // else
+        if (tmp is int i)
+            Unsafe.Write(value, i);
+        // else
         //     Unsafe.Write(value, tmp);
     }
 
+    // TODO : Don't need
     // [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
     public static void field_static_get_value(
         [ManagedWrapperOptions(ManagedWrapperOptions.Exclude)]
@@ -223,16 +229,28 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoObject*")] IntPtr obj,
         [NativeCallbackType("MonoClassField*")] IntPtr field,
         [NativeCallbackType("void*")]
-        [ManagedWrapperOptions(ManagedWrapperOptions.Custom, "object")]
-        void* value)
+        // [ManagedWrapperOptions(ManagedWrapperOptions.Custom, "object")]
+        [ManagedWrapperOptions(ManagedWrapperOptions.AsIs)]
+        IntPtr grr)
     {
         var fieldInfo = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr());
         var managedObject = obj.ToManagedRepresentation();
         // Unsafe.Read<>()
         // object tmp = Unsafe.As<object>(Unsafe.AsRef<object>(value));
         // object tmp = Unsafe.AsRef<object>(value);
-        object tmp = Unsafe.Read<object>(value);
-        fieldInfo.SetValue(managedObject, tmp);
+        // object tmp = Unsafe.Read<object>(value);
+        // if(fieldInfo.FieldType == typeof(int))
+        if (!fieldInfo.FieldType.IsValueType)
+            fieldInfo.SetValue(managedObject, grr.ToManagedRepresentation());
+        // else if (fieldInfo.FieldType == typeof(int))
+        // {
+        //     int tmp = Unsafe.Read<int>((void*)grr);
+        //     fieldInfo.SetValue(managedObject, tmp);
+        // }
+        else
+        {
+            fieldInfo.SetValue(managedObject, value_box(IntPtr.Zero, fieldInfo.FieldType.TypeHandleIntPtr(), grr).ToManagedRepresentation());
+        }
     }
 
     static StringPtr StringToPtr(string s)

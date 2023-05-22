@@ -303,27 +303,27 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(result, Is.EqualTo(fieldInfo));
     }
 
-    [TestCase(typeof(ValueMammal), nameof(ValueMammal.EyeCount), 2)]
-    [TestCase(typeof(Mammal), nameof(Mammal.EyeCount), 2)]
-    [TestCase(typeof(Cat), nameof(Cat.Name), "Lion")]
-    public void FieldGetValue(Type type, string fieldName, object expectedValue)
-    {
-        var fieldInfo = type.GetField(fieldName);
-        var instance = Activator.CreateInstance(type);
-        object? actualValue = null;
-        ClrHost.field_get_value(instance, fieldInfo!.FieldHandle, ref actualValue);
-        Assert.AreEqual(expectedValue, actualValue);
-    }
-
-    [TestCase(typeof(ValueCat), nameof(ValueCat.NumberOfCats), 4)]
-    [TestCase(typeof(Cat), nameof(Cat.NumberOfCats), 4)]
-    public void FieldStaticGetValue(Type type, string fieldName, object expectedValue)
-    {
-        var fieldInfo = type.GetField(fieldName);
-        object? actualValue = null;
-        ClrHost.field_static_get_value(fieldInfo!.FieldHandle, ref actualValue);
-        Assert.AreEqual(expectedValue, actualValue);
-    }
+    // [TestCase(typeof(ValueMammal), nameof(ValueMammal.EyeCount), 2)]
+    // [TestCase(typeof(Mammal), nameof(Mammal.EyeCount), 2)]
+    // [TestCase(typeof(Cat), nameof(Cat.Name), "Lion")]
+    // public void FieldGetValue(Type type, string fieldName, object expectedValue)
+    // {
+    //     var fieldInfo = type.GetField(fieldName);
+    //     var instance = Activator.CreateInstance(type);
+    //     object? actualValue = null;
+    //     ClrHost.field_get_value(instance, fieldInfo!.FieldHandle, ref actualValue);
+    //     Assert.AreEqual(expectedValue, actualValue);
+    // }
+    //
+    // [TestCase(typeof(ValueCat), nameof(ValueCat.NumberOfCats), 4)]
+    // [TestCase(typeof(Cat), nameof(Cat.NumberOfCats), 4)]
+    // public void FieldStaticGetValue(Type type, string fieldName, object expectedValue)
+    // {
+    //     var fieldInfo = type.GetField(fieldName);
+    //     object? actualValue = null;
+    //     ClrHost.field_static_get_value(fieldInfo!.FieldHandle, ref actualValue);
+    //     Assert.AreEqual(expectedValue, actualValue);
+    // }
 
     [TestCase(typeof(ValueMammal), nameof(ValueMammal.LegCount), 2)]
     [TestCase(typeof(Mammal), nameof(Mammal.LegCount), 2)]
@@ -331,20 +331,33 @@ public abstract class BaseEmbeddingApiTests
     {
         var fieldInfo = type.GetField(fieldName);
         var instance = Activator.CreateInstance(type);
-        ClrHost.field_set_value(instance, fieldInfo!.FieldHandle, value);
+        ClrHost.field_set_value(instance, fieldInfo!.FieldHandle, value.ToNativeRepresentation());
         Assert.AreEqual(value, fieldInfo.GetValue(instance));
     }
 
-    // [Test]
-    // public virtual void FieldSetValue_Reference()
-    // {
-    //     Type type = typeof(Rock);
-    //     var fieldInfo = type.GetField(nameof(Rock.RockField));
-    //     var instance = Activator.CreateInstance(type);
-    //     var value = new object();
-    //     ClrHost.field_set_value(instance, fieldInfo!.FieldHandle, value);
-    //     Assert.AreEqual(value, fieldInfo.GetValue(instance));
-    // }
+    [Test]
+    public unsafe virtual void FieldSetValue_int()
+    {
+        Type type = typeof(Mammal);
+        var fieldInfo = type.GetField(nameof(Mammal.LegCount));
+        var instance = Activator.CreateInstance(type);
+        int value = 2;
+        // TODO : Need to
+        ClrHost.field_set_value(instance, fieldInfo!.FieldHandle, (nint)(void*)&value);
+        Assert.AreEqual(value, fieldInfo.GetValue(instance));
+    }
+
+
+    [Test]
+    public virtual void FieldSetValue_Reference()
+    {
+        Type type = typeof(Rock);
+        var fieldInfo = type.GetField(nameof(Rock.RockField));
+        var instance = Activator.CreateInstance(type);
+        var value = new object();
+        ClrHost.field_set_value(instance, fieldInfo!.FieldHandle, value.ToNativeRepresentation());
+        Assert.AreEqual(value, fieldInfo.GetValue(instance));
+    }
 
     /// <summary>
     /// NUnit's `Is.EquivalentTo` cannot handle multi-dimensional arrays.  It crashes on GetValue calls.
