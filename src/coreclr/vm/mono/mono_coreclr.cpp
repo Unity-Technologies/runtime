@@ -7,9 +7,11 @@
 #include "../../gc/objecthandle.h"
 #include "assembly.hpp"
 #include "assemblynative.hpp"
+#include "../callhelpers.h"
 #include "caparser.h"
 #include "ecall.h"
 #include "mscoree.h"
+#include "../object.h"
 #include "stringliteralmap.h"
 #include "threadlocalpoolallocator.h"
 #include "threads.h"
@@ -2432,7 +2434,7 @@ extern "C" EXPORT_API MonoMethod* EXPORT_CC mono_object_get_virtual_method(MonoO
         return method;
 
     MonoClass_clr* klass_clr = (MonoClass_clr*)klass;
-    
+
     MonoMethod_clr* m2 = MemberLoader::FindMethodByName(klass_clr, mono_method_get_name(method));
 
     if (!m2)
@@ -3516,9 +3518,30 @@ extern "C" EXPORT_API void EXPORT_CC mono_unity_root_domain_mempool_chunk_foreac
     ASSERT_NOT_IMPLEMENTED;
 }
 
-extern "C" EXPORT_API void EXPORT_CC mono_unity_runtime_set_main_args(int, const char* argv[])
+extern "C" EXPORT_API void EXPORT_CC mono_unity_runtime_set_main_args(int argc, const char* argv[])
 {
-    // NOP
+    GCX_COOP();
+    const char* emptyarg = "";
+    const char* exePathUtf8 = (argc > 0) ? argv[0] : emptyarg;
+    const char ** executableArgumentsUtf8 = (argc > 0) ? argv + 1 : &emptyarg;
+    argc = max(0, argc -1);
+
+    SString exePathSString(SString::Utf8, exePathUtf8);
+    PCWSTR* argvUtf16 = new PCWSTR[argc];
+    for (int i = 0; i < argc; i++)
+    {
+        SString sstring(SString::Utf8, executableArgumentsUtf8[i]);
+        argvUtf16[i] = sstring.GetUnicode();
+    }
+
+    PTRARRAYREF result;
+    PREPARE_NONVIRTUAL_CALLSITE(METHOD__ENVIRONMENT__INITIALIZE_COMMAND_LINE_ARGS);
+    DECLARE_ARGHOLDER_ARRAY(args, 3);
+    args[ARGNUM_0] = PTR_TO_ARGHOLDER(exePathSString.GetUnicode());
+    args[ARGNUM_1] = DWORD_TO_ARGHOLDER(argc);
+    args[ARGNUM_2] = PTR_TO_ARGHOLDER(argvUtf16);
+    CALL_MANAGED_METHOD_RETREF(result, PTRARRAYREF, args);
+    delete[] argvUtf16;
 }
 
 extern "C" EXPORT_API void EXPORT_CC mono_unity_set_data_dir (const char * dir)
