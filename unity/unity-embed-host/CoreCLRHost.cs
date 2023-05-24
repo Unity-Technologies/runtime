@@ -161,6 +161,43 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoType*")] IntPtr type)
         => type.TypeFromHandleIntPtr().ToNativeRepresentation();
 
+    delegate string[] InitCommandLineArgsMethod(char* exePath, int argc, char** argv);
+    [return: NativeCallbackType("void")]
+    public static void unity_runtime_set_main_args(
+        [NativeCallbackType("int")] int argc,
+        [NativeCallbackType("const char**")] sbyte** argv)
+        {
+			var method = typeof(Environment).GetMethod("InitializeCommandLineArgs",
+                BindingFlags.NonPublic | BindingFlags.Static,
+                null,
+                CallingConventions.Standard,
+                new Type[]{typeof(char*), typeof(int), typeof(char**)},
+                new []{new ParameterModifier(3)});
+            var methodInvoker = method.CreateDelegate(typeof(InitCommandLineArgsMethod), null) as InitCommandLineArgsMethod;
+
+            var executable = argc > 0 ? new string(argv[0]) : "";
+            var arguments = new char* [argc > 0 ? argc - 1 : 0];
+            var argumentPins = new GCHandle[arguments.Length];
+			argc = Math.Max(argc - 1, 0);
+            for (int i = 0; i < arguments.Length; ++i)
+            {
+				var str = new string(argv[i+1]);
+                argumentPins[i] = GCHandle.Alloc(str, GCHandleType.Pinned);
+                arguments[i] = (char*)argumentPins[i].AddrOfPinnedObject().ToPointer();
+            }
+
+            fixed(char* exe = executable)
+            fixed(char** pArgv = arguments)
+            {
+                methodInvoker.Invoke(exe, argc, pArgv);
+            }
+
+            foreach (var pin in argumentPins)
+            {
+                pin.Free();
+            }
+        }
+
     static StringPtr StringToPtr(string s)
     {
         // Return raw object pointer for now with the NullGC.
