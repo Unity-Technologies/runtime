@@ -95,6 +95,13 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("const char*")] sbyte* name,
         bool ignoreCase)
     {
+        if (image == IntPtr.Zero)
+            throw new ArgumentNullException(nameof(image));
+        if (name_space == null)
+            throw new ArgumentNullException(nameof(name_space));
+        if (name == null)
+            throw new ArgumentNullException(nameof(name));
+
         Assembly assembly = image.AssemblyFromGCHandleIntPtr();
         var ns = new string(name_space);
         var klass_name = new string(name);
@@ -126,6 +133,8 @@ static unsafe partial class CoreCLRHost
     [return: NativeCallbackType("MonoImage*")]
     public static IntPtr class_get_image([NativeCallbackType("MonoClass*")] IntPtr klass)
     {
+        if (klass == IntPtr.Zero)
+            throw new ArgumentNullException(nameof(klass));
         var type = klass.TypeFromHandleIntPtr();
         return GetPairForAssembly(type.Assembly).handle;
     }
@@ -154,7 +163,11 @@ static unsafe partial class CoreCLRHost
 
     [return: NativeCallbackType("MonoAssembly*")]
     public static IntPtr assembly_loaded([NativeCallbackType("MonoAssemblyName*")] MonoAssemblyName* aname)
-        => image_loaded(aname->name);
+    {
+        if (aname == null)
+            throw new ArgumentNullException(nameof(aname));
+        return image_loaded(aname->name);
+    }
 
     [return: NativeCallbackType("MonoImage*")]
     [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
@@ -253,7 +266,11 @@ static unsafe partial class CoreCLRHost
     [NativeFunction("coreclr_array_length")]
     [return: NativeCallbackType("int")]
     public static int array_length([NativeCallbackType("MonoArray*")] IntPtr array)
-        => ((Array)array.ToManagedRepresentation()).Length;
+    {
+        if (array == IntPtr.Zero)
+            throw new ArgumentNullException(nameof(array));
+        return ((Array)array.ToManagedRepresentation()).Length;
+    }
 
     [return: NativeCallbackType("MonoObject*")]
     public static IntPtr value_box(
@@ -364,7 +381,11 @@ static unsafe partial class CoreCLRHost
         IntPtr domain,
         [NativeCallbackType("MonoAssembly*")]
         IntPtr assembly)
-        => assembly.AssemblyFromGCHandleIntPtr().ToNativeRepresentation();
+    {
+        if (assembly == IntPtr.Zero)
+            throw new ArgumentNullException(nameof(assembly));
+        return assembly.AssemblyFromGCHandleIntPtr().ToNativeRepresentation();
+    }
 
     static void Log(string message)
     {
