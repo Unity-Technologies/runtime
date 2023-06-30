@@ -3,6 +3,7 @@
 
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using NUnit.Framework;
@@ -911,5 +912,24 @@ public abstract class BaseEmbeddingApiTests
         foreach(var value in arr)
             result.Add(value);
         return result;
+    }
+
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    private static unsafe void AssignString(void* buffer, char* str, int len)
+    {
+        *(void**)buffer = (void*)Marshal.StringToHGlobalUni(new string(str, 0, len));
+    }
+
+    [TestCase(typeof(Mammal), nameof(Mammal.BreathAir), false, "UnityEmbedHost.Tests.Mammal:BreathAir")]
+    [TestCase(typeof(Animal), nameof(Animal.Feed), true, "UnityEmbedHost.Tests.Animal:Feed (System.Object,System.Object&)")]
+    public unsafe void MethodGetFullNameWorks(Type type, string methodName, bool withSignature, string expectedName)
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_method_full_name(type.GetMethod(methodName)!.MethodHandle, withSignature, &buffer, &AssignString);
+
+        string? methodFullName = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        Assert.That(methodFullName, Is.EqualTo(expectedName));
     }
 }

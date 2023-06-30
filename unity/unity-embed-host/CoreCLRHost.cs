@@ -726,6 +726,39 @@ static unsafe partial class CoreCLRHost
         return GC.MaxGeneration;
     }
 
+    [NativeFunction("coreclr_method_full_name")]
+    public static void coreclr_method_full_name(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        bool signature,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString )
+    {
+        MethodBase mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
+        StringBuilder retVal = null;
+        if (mb != null)
+        {
+            retVal = new StringBuilder();
+            if (!string.IsNullOrEmpty(mb.ReflectedType?.Namespace))
+                retVal.Append($"{mb.ReflectedType?.Namespace}.");
+            retVal.Append($"{mb.ReflectedType?.Name}:{mb.Name}");
+            if (signature)
+            {
+                ParameterInfo[] param = mb.GetParameters();
+                retVal.Append(" (");
+                if (param.Length > 0)
+                {
+                    retVal.Append($"{param[0].ParameterType.FullName}");
+                    for (int i = 1; i < param.Length; i++)
+                        retVal.Append($",{param[i].ParameterType.FullName}");
+                }
+                retVal.Append(")");
+            }
+        }
+
+        fixed(char* p = retVal!.ToString())
+            assignString(buffer, p, retVal.Length);
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);
