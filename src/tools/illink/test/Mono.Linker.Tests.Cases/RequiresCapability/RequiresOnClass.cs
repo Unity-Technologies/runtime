@@ -39,6 +39,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			KeepFieldOnAttribute ();
 			AttributeParametersAndProperties.Test ();
 			MembersOnClassWithRequires<int>.Test ();
+			ConstFieldsOnClassWithRequires.Test ();
 		}
 
 		[RequiresUnreferencedCode ("Message for --ClassWithRequires--")]
@@ -534,16 +535,16 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			[ExpectedWarning ("IL3050", "BaseWithoutRequiresOnType.Method()", ProducedBy = Tool.NativeAot)]
 			[ExpectedWarning ("IL2026", "BaseWithoutRequiresOnType.Method()")]
 			[ExpectedWarning ("IL3050", "BaseWithoutRequiresOnType.Method()", ProducedBy = Tool.NativeAot)]
-			// ILLink skips warnings for base method overrides, assuming it is covered by RUC on the base method.
-			[ExpectedWarning ("IL2026", "DerivedWithRequiresOnType.Method()", ProducedBy = Tool.Analyzer | Tool.NativeAot)]
-			[ExpectedWarning ("IL3050", "DerivedWithRequiresOnType.Method()", ProducedBy = Tool.NativeAot)]
+			// https://github.com/dotnet/linker/issues/2533
+			[ExpectedWarning ("IL2026", "DerivedWithRequiresOnType.Method()", ProducedBy = Tool.Analyzer)]
 			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method(Int32)")]
 			[ExpectedWarning ("IL3050", "InterfaceWithoutRequires.Method(Int32)", ProducedBy = Tool.NativeAot)]
 			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method()")]
 			[ExpectedWarning ("IL3050", "InterfaceWithoutRequires.Method()", ProducedBy = Tool.NativeAot)]
 			[ExpectedWarning ("IL2026", "ImplementationWithRequiresOnType.Method()")]
 			[ExpectedWarning ("IL3050", "ImplementationWithRequiresOnType.Method()", ProducedBy = Tool.NativeAot)]
-			// ILLink skips warnings for interface overrides, assuming it is covered by RUC on the interface method.
+			// https://github.com/dotnet/linker/issues/2533
+			// NativeAOT has a correct override resolution and in this case the method is not an override - so it should warn
 			[ExpectedWarning ("IL2026", "ImplementationWithRequiresOnType.Method(Int32)", ProducedBy = Tool.Analyzer | Tool.NativeAot)]
 			[ExpectedWarning ("IL3050", "ImplementationWithRequiresOnType.Method(Int32)", ProducedBy = Tool.NativeAot)]
 			// ILLink incorrectly skips warnings for derived method, under the assumption that
@@ -551,8 +552,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			// is unannotated (and the mismatch produces no warning because the derived
 			// type has RUC).
 			// https://github.com/dotnet/linker/issues/2533
-			[ExpectedWarning ("IL2026", "DerivedWithRequiresOnTypeOverBaseWithNoRequires.Method()", ProducedBy = Tool.Analyzer | Tool.NativeAot)]
-			[ExpectedWarning ("IL3050", "DerivedWithRequiresOnTypeOverBaseWithNoRequires.Method()", ProducedBy = Tool.NativeAot)]
+			[ExpectedWarning ("IL2026", "DerivedWithRequiresOnTypeOverBaseWithNoRequires.Method()", ProducedBy = Tool.Analyzer)]
 			static void TestDAMAccess ()
 			{
 				// Warns because BaseWithoutRequiresOnType.Method has Requires on the method
@@ -783,13 +783,13 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
 			[RequiresUnreferencedCode ("This class is dangerous")]
 			[RequiresDynamicCode ("This class is dangerous")]
-			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseField", ProducedBy = Tool.Trimmer)]
+			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseField", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 			class DAMAnnotatedClass : BaseForDAMAnnotatedClass
 			{
-				[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicField", ProducedBy = Tool.Trimmer)]
+				[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicField", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 				public static int publicField;
 
-				[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privatefield", ProducedBy = Tool.Trimmer)]
+				[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privatefield", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 				static int privatefield;
 			}
 
@@ -801,7 +801,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.All)]
 			class DAMAnnotatedClassAccessedFromRUCScope
 			{
-				[ExpectedWarning ("IL2112", "DAMAnnotatedClassAccessedFromRUCScope.RUCMethod", ProducedBy = Tool.Trimmer)]
+				[ExpectedWarning ("IL2112", "DAMAnnotatedClassAccessedFromRUCScope.RUCMethod", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 				[RequiresUnreferencedCode ("--RUCMethod--")]
 				public static void RUCMethod () { }
 			}
@@ -1013,21 +1013,21 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			[DynamicallyAccessedMembers (DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
 			[RequiresUnreferencedCode ("This class is dangerous")]
 			[RequiresDynamicCode ("This class is dangerous")]
-			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseProperty.get", ProducedBy = Tool.Trimmer)]
-			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseProperty.set", ProducedBy = Tool.Trimmer)]
+			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseProperty.get", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
+			[ExpectedWarning ("IL2113", "BaseForDAMAnnotatedClass.baseProperty.set", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 			class DAMAnnotatedClass : BaseForDAMAnnotatedClass
 			{
 				public static int publicProperty {
-					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicProperty.get", ProducedBy = Tool.Trimmer)]
+					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicProperty.get", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 					get;
-					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicProperty.set", ProducedBy = Tool.Trimmer)]
+					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.publicProperty.set", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 					set;
 				}
 
 				static int privateProperty {
-					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privateProperty.get", ProducedBy = Tool.Trimmer)]
+					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privateProperty.get", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 					get;
-					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privateProperty.set", ProducedBy = Tool.Trimmer)]
+					[ExpectedWarning ("IL2112", "DAMAnnotatedClass.privateProperty.set", ProducedBy = Tool.Trimmer | Tool.NativeAot)]
 					set;
 				}
 			}
@@ -1054,18 +1054,25 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 
 			// `field` cannot be used as named attribute argument because is static, and if accessed via
 			// a property the property will be the one generating the warning, but then the warning will
-			// be suppresed by the Requires on the declaring type
+			// be suppressed by the Requires on the declaring type
 			public int PropertyOnAttribute {
 				get { return field; }
 				set { field = value; }
 			}
 		}
 
-		// https://github.com/dotnet/runtime/issues/82447
 		[AttributeWithRequires (PropertyOnAttribute = 42)]
-		[ExpectedWarning ("IL2026", "AttributeWithRequires.AttributeWithRequires()", ProducedBy = Tool.Trimmer | Tool.Analyzer)]
-		[ExpectedWarning ("IL3050", "AttributeWithRequires.AttributeWithRequires()", ProducedBy = Tool.Analyzer)]
-		static void KeepFieldOnAttribute () { }
+		[ExpectedWarning ("IL2026", "AttributeWithRequires.AttributeWithRequires()")]
+		[ExpectedWarning ("IL3050", "AttributeWithRequires.AttributeWithRequires()", ProducedBy = Tool.Analyzer | Tool.NativeAot)]
+		static void KeepFieldOnAttributeInner () { }
+
+		static void KeepFieldOnAttribute ()
+		{
+			KeepFieldOnAttributeInner ();
+
+			// NativeAOT only considers attribute on reflection visible members
+			typeof (RequiresOnClass).GetMethod (nameof (KeepFieldOnAttributeInner), BindingFlags.NonPublic | BindingFlags.Static).Invoke (null, new object[] { });
+		}
 
 		public class AttributeParametersAndProperties
 		{
@@ -1166,9 +1173,8 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 					}
 				}
 
-				// https://github.com/dotnet/runtime/issues/82447
 				// NOTE: The enclosing RUC does not apply to nested types.
-				[ExpectedWarning ("IL2026", "--RequiresOnCtorAttribute--", ProducedBy = Tool.Trimmer | Tool.Analyzer)]
+				[ExpectedWarning ("IL2026", "--RequiresOnCtorAttribute--")]
 				[RequiresOnCtor]
 				public class ClassWithAttribute
 				{
@@ -1221,6 +1227,51 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				var g = new GenericClassWithWarningWithRequires<int> ();
 				var h = new ClassWithWarningWithRequires ();
 				var j = new GenericAnnotatedWithWarningWithRequires<int> ();
+			}
+		}
+
+		class ConstFieldsOnClassWithRequires
+		{
+			[RequiresUnreferencedCode ("--ConstClassWithRequires--")]
+			[RequiresDynamicCode ("--ConstClassWithRequires--")]
+			class ConstClassWithRequires
+			{
+				public const string Message = "Message";
+				public const int Number = 42;
+
+				public static void Method () { }
+			}
+
+			[ExpectedWarning ("IL2026", "--ConstClassWithRequires--", nameof (ConstClassWithRequires.Method))]
+			[ExpectedWarning ("IL3050", "--ConstClassWithRequires--", nameof (ConstClassWithRequires.Method), ProducedBy = Tool.Analyzer | Tool.NativeAot)]
+			static void TestClassWithRequires ()
+			{
+				var a = ConstClassWithRequires.Message;
+				var b = ConstClassWithRequires.Number;
+
+				ConstClassWithRequires.Method ();
+			}
+
+			[RequiresUnreferencedCode (ConstClassWithRequiresUsingField.Message)]
+			[RequiresDynamicCode (ConstClassWithRequiresUsingField.Message)]
+			class ConstClassWithRequiresUsingField
+			{
+				public const string Message = "--ConstClassWithRequiresUsingField--";
+
+				public static void Method () { }
+			}
+
+			[ExpectedWarning ("IL2026", "--ConstClassWithRequiresUsingField--", nameof (ConstClassWithRequiresUsingField.Method))]
+			[ExpectedWarning ("IL3050", "--ConstClassWithRequiresUsingField--", nameof (ConstClassWithRequiresUsingField.Method), ProducedBy = Tool.Analyzer | Tool.NativeAot)]
+			static void TestClassUsingFieldInAttribute ()
+			{
+				ConstClassWithRequiresUsingField.Method ();
+			}
+
+			public static void Test ()
+			{
+				TestClassWithRequires ();
+				TestClassUsingFieldInAttribute ();
 			}
 		}
 	}

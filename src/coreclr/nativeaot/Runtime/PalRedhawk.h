@@ -780,21 +780,14 @@ REDHAWK_PALIMPORT void PalPrintFatalError(const char* message);
 REDHAWK_PALIMPORT int32_t __cdecl _stricmp(const char *string1, const char *string2);
 #endif // TARGET_UNIX
 
-#ifdef UNICODE
-#define _tcsicmp _wcsicmp
-#define _tcscat wcscat
-#define _tcslen wcslen
-#else
-#define _tcsicmp _stricmp
-#define _tcscat strcat
-#define _tcslen strlen
-#endif
-
 #if defined(HOST_X86) || defined(HOST_AMD64)
 
 #ifdef TARGET_UNIX
 // MSVC directly defines intrinsics for __cpuid and __cpuidex matching the below signatures
 // We define matching signatures for use on Unix platforms.
+//
+// IMPORTANT: Unlike MSVC, Unix does not explicitly zero ECX for __cpuid
+
 REDHAWK_PALIMPORT void __cpuid(int cpuInfo[4], int function_id);
 REDHAWK_PALIMPORT void __cpuidex(int cpuInfo[4], int function_id, int subFunction_id);
 #else

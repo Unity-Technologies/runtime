@@ -384,7 +384,7 @@ private:
         }
 
         GenTree* dst = m_compiler->gtNewLclvNode(lclNum, varDsc->TypeGet());
-        GenTree* asg = m_compiler->gtNewBlkOpNode(dst, src);
+        GenTree* asg = m_compiler->gtNewAssignNode(dst, src);
 
         // If inlinee was comma, new inlinee is (, , , lcl = inlinee).
         if (inlinee->OperIs(GT_COMMA))
@@ -393,15 +393,8 @@ private:
             asg                      = inlinee;
         }
 
-        // Block morphing does not support (promoted) locals under commas, as such, instead of "COMMA(asg, lcl)" we
-        // do "OBJ(COMMA(asg, ADDR(LCL)))". TODO-1stClassStructs: improve block morphing and delete this workaround.
-        //
-        GenTree* lcl  = m_compiler->gtNewLclvNode(lclNum, varDsc->TypeGet());
-        GenTree* addr = m_compiler->gtNewOperNode(GT_ADDR, TYP_I_IMPL, lcl);
-        addr          = m_compiler->gtNewOperNode(GT_COMMA, addr->TypeGet(), asg, addr);
-        GenTree* obj  = m_compiler->gtNewObjNode(varDsc->GetLayout(), addr);
-
-        return obj;
+        GenTree* lcl = m_compiler->gtNewLclvNode(lclNum, varDsc->TypeGet());
+        return m_compiler->gtNewOperNode(GT_COMMA, lcl->TypeGet(), asg, lcl);
     }
 #endif // FEATURE_MULTIREG_RET
 
@@ -759,7 +752,7 @@ void Compiler::fgMorphCallInline(GenTreeCall* call, InlineResult* inlineResult)
 {
     bool inliningFailed = false;
 
-    InlineCandidateInfo* inlCandInfo = call->gtInlineCandidateInfo;
+    InlineCandidateInfo* inlCandInfo = call->GetInlineCandidateInfo();
 
     // Is this call an inline candidate?
     if (call->IsInlineCandidate())
@@ -785,7 +778,7 @@ void Compiler::fgMorphCallInline(GenTreeCall* call, InlineResult* inlineResult)
 #ifdef DEBUG
                 // In debug we always put all inline attempts into the inline tree.
                 InlineContext* ctx =
-                    m_inlineStrategy->NewContext(call->gtInlineCandidateInfo->inlinersContext, fgMorphStmt, call);
+                    m_inlineStrategy->NewContext(call->GetInlineCandidateInfo()->inlinersContext, fgMorphStmt, call);
                 ctx->SetFailed(inlineResult);
 #endif
             }
@@ -1052,7 +1045,7 @@ void Compiler::fgInvokeInlineeCompiler(GenTreeCall* call, InlineResult* inlineRe
     inlineInfo.hasSIMDTypeArgLocalOrReturn = false;
 #endif // FEATURE_SIMD
 
-    InlineCandidateInfo* inlineCandidateInfo = call->gtInlineCandidateInfo;
+    InlineCandidateInfo* inlineCandidateInfo = call->GetInlineCandidateInfo();
     noway_assert(inlineCandidateInfo);
     // Store the link to inlineCandidateInfo into inlineInfo
     inlineInfo.inlineCandidateInfo = inlineCandidateInfo;
@@ -1135,8 +1128,6 @@ void Compiler::fgInvokeInlineeCompiler(GenTreeCall* call, InlineResult* inlineRe
                 compileFlagsForInlinee.Clear(JitFlags::JIT_FLAG_DEBUG_EnC);
                 compileFlagsForInlinee.Clear(JitFlags::JIT_FLAG_REVERSE_PINVOKE);
                 compileFlagsForInlinee.Clear(JitFlags::JIT_FLAG_TRACK_TRANSITIONS);
-
-                compileFlagsForInlinee.Set(JitFlags::JIT_FLAG_SKIP_VERIFICATION);
 
 #ifdef DEBUG
                 if (pParam->pThis->verbose)
@@ -1454,6 +1445,10 @@ void Compiler::fgInsertInlineeBlocks(InlineInfo* pInlineInfo)
 
     lvaGenericsContextInUse |= InlineeCompiler->lvaGenericsContextInUse;
 
+#ifdef TARGET_ARM64
+    info.compNeedsConsecutiveRegisters |= InlineeCompiler->info.compNeedsConsecutiveRegisters;
+#endif
+
     // If the inlinee compiler encounters switch tables, disable hot/cold splitting in the root compiler.
     // TODO-CQ: Implement hot/cold splitting of methods with switch tables.
     if (InlineeCompiler->fgHasSwitch && opts.compProcedureSplitting)
@@ -1644,44 +1639,21 @@ Statement* Compiler::fgInlinePrependStatements(InlineInfo* inlineInfo)
                 if ((argSingleUseNode != nullptr) && !(argSingleUseNode->gtFlags & GTF_VAR_CLONED) && argIsSingleDef)
                 {
                     // Change the temp in-place to the actual argument.
-                    // We currently do not support this for struct arguments, so it must not be a GT_OBJ.
-                    assert(argNode->gtOper != GT_OBJ);
+                    // We currently do not support this for struct arguments, so it must not be a GT_BLK.
+                    assert(argNode->gtOper != GT_BLK);
                     argSingleUseNode->ReplaceWith(argNode, this);
                     continue;
                 }
                 else
                 {
-                    // We're going to assign the argument value to the
-                    // temp we use for it in the inline body.
-                    const unsigned  tmpNum  = argInfo.argTmpNum;
-                    const var_types argType = lclVarInfo[argNum].lclTypeInfo;
+                    // We're going to assign the argument value to the temp we use for it in the inline body.
+                    GenTree* store = gtNewTempAssign(argInfo.argTmpNum, argNode);
 
-                    // Create the temp assignment for this argument
-                    CORINFO_CLASS_HANDLE structHnd = NO_CLASS_HANDLE;
+                    newStmt = gtNewStmt(store, callDI);
+                    fgInsertStmtAfter(block, afterStmt, newStmt);
+                    afterStmt = newStmt;
 
-                    if (varTypeIsStruct(argType))
-                    {
-                        structHnd = gtGetStructHandleIfPresent(argNode);
-                        noway_assert((structHnd != NO_CLASS_HANDLE) || (argType != TYP_STRUCT));
-                    }
-
-                    // Unsafe value cls check is not needed for
-                    // argTmpNum here since in-linee compiler instance
-                    // would have iterated over these and marked them
-                    // accordingly.
-                    impAssignTempGen(tmpNum, argNode, structHnd, CHECK_SPILL_NONE, &afterStmt, callDI, block);
-
-                    // We used to refine the temp type here based on
-                    // the actual arg, but we now do this up front, when
-                    // creating the temp, over in impInlineFetchArg.
-                    CLANG_FORMAT_COMMENT_ANCHOR;
-
-#ifdef DEBUG
-                    if (verbose)
-                    {
-                        gtDispStmt(afterStmt);
-                    }
-#endif // DEBUG
+                    DISPSTMT(afterStmt);
                 }
             }
             else if (argInfo.argIsByRefToStructLocal)
@@ -1703,9 +1675,9 @@ Statement* Compiler::fgInlinePrependStatements(InlineInfo* inlineInfo)
                     newStmt     = nullptr;
                     bool append = true;
 
-                    if (argNode->gtOper == GT_OBJ || argNode->gtOper == GT_MKREFANY)
+                    if (argNode->gtOper == GT_BLK || argNode->gtOper == GT_MKREFANY)
                     {
-                        // Don't put GT_OBJ node under a GT_COMMA.
+                        // Don't put GT_BLK node under a GT_COMMA.
                         // Codegen can't deal with it.
                         // Just hang the address here in case there are side-effect.
                         newStmt = gtNewStmt(gtUnusedValNode(argNode->AsOp()->gtOp1), callDI);
@@ -1870,31 +1842,16 @@ Statement* Compiler::fgInlinePrependStatements(InlineInfo* inlineInfo)
                     continue;
                 }
 
-                var_types lclTyp = (var_types)lvaTable[tmpNum].lvType;
+                var_types lclTyp = tmpDsc->TypeGet();
                 noway_assert(lclTyp == lclVarInfo[lclNum + inlineInfo->argCnt].lclTypeInfo);
 
-                if (!varTypeIsStruct(lclTyp))
-                {
-                    // Unsafe value cls check is not needed here since in-linee compiler instance would have
-                    // iterated over locals and marked accordingly.
-                    impAssignTempGen(tmpNum, gtNewZeroConNode(genActualType(lclTyp)), NO_CLASS_HANDLE, CHECK_SPILL_NONE,
-                                     &afterStmt, callDI, block);
-                }
-                else
-                {
-                    tree = gtNewBlkOpNode(gtNewLclvNode(tmpNum, lclTyp), gtNewIconNode(0));
+                tree = gtNewTempAssign(tmpNum, (lclTyp == TYP_STRUCT) ? gtNewIconNode(0) : gtNewZeroConNode(lclTyp));
 
-                    newStmt = gtNewStmt(tree, callDI);
-                    fgInsertStmtAfter(block, afterStmt, newStmt);
-                    afterStmt = newStmt;
-                }
+                newStmt = gtNewStmt(tree, callDI);
+                fgInsertStmtAfter(block, afterStmt, newStmt);
+                afterStmt = newStmt;
 
-#ifdef DEBUG
-                if (verbose)
-                {
-                    gtDispStmt(afterStmt);
-                }
-#endif // DEBUG
+                DISPSTMT(afterStmt);
             }
         }
     }
