@@ -108,6 +108,8 @@ abstract class Animal : IAnimal
     public void InterfaceMethodOnIAnimalWithParameters(string p) => throw new NotImplementedException();
 
     public void InterfaceMethodOnIAnimalWithParameters(int p, int p2) => throw new NotImplementedException();
+
+    public void Feed(Object food, out Object fullness) => throw new NotImplementedException();
 }
 
 class NoInterfaces
