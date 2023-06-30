@@ -279,18 +279,6 @@ TEST(mono_class_get_method_from_name_returns_method)
     CHECK(klass == mono_method_get_class(method));
 }
 
-TEST(mono_method_full_name_returns_full_name)
-{
-    const char* methodname = "StaticMethodWithObjectOutArg";
-    MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, methodname, 2));
-    CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg", mono_method_full_name(method, false)) == 0);
-    if (g_Mode == CoreCLR)
-        CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg (System.Object,System.Object&)", mono_method_full_name(method, true)) == 0);
-    else
-        CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg (object,object&)", mono_method_full_name(method, true)) == 0);
-}
-
 TEST(mono_class_get_method_from_name_returns_null_if_method_does_not_exist)
 {
     MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);

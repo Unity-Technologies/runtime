@@ -34,6 +34,7 @@ EXPORTS
         coreclr_array_length
         coreclr_class_from_systemtypeinstance
         coreclr_image_get_custom_attribute_data
+        coreclr_method_full_name
         mono_add_internal_call
         mono_array_addr_with_size
         mono_array_class_get
@@ -173,7 +174,6 @@ EXPORTS
         mono_metadata_decode_row
         mono_metadata_signature_equal
         mono_metadata_type_equal
-        mono_method_full_name
         mono_method_get_class
         mono_method_get_last_managed
         mono_method_get_name

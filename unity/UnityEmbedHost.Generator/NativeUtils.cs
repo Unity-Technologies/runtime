@@ -85,6 +85,8 @@ static class NativeUtils
                 return "const char";
             case "UInt16":
                 return "const guint16";
+            case "Void":
+                return "void";
         }
 
         return $"UNHANDLED_MANAGED_WAS_{type.Name}";
