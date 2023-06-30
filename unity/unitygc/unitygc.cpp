@@ -756,6 +756,23 @@ public:
         sInfo->allocated = allocated;
     }
 
+    virtual int RefreshMemoryLimit()
+    {
+        return 0;
+    }
+
+    virtual enable_no_gc_region_callback_status EnableNoGCRegionCallback(NoGCRegionCallbackFinalizerWorkItem* callback, uint64_t callback_threshold)
+    {
+        return enable_no_gc_region_callback_status::succeed;
+    }
+
+    // Get extra work for the finalizer
+    virtual FinalizerWorkItem* GetExtraWorkForFinalization()
+    {
+        assert(0);
+        return NULL;
+    }
+
     /*
     ===========================================================================
     Routines for informing the GC about which events are enabled.
