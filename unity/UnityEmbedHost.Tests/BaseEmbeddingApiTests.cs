@@ -620,8 +620,8 @@ public abstract class BaseEmbeddingApiTests
     [TestCase(typeof(GenericAnimal<int, string>), true)]
     public void ClassIsGenericReturnsProperValue(Type klass, bool expectedResult)
     {
-        bool isEnum = ClrHost.class_is_generic(klass);
-        Assert.That(isEnum, Is.EqualTo(expectedResult));
+        bool isGeneric = ClrHost.class_is_generic(klass);
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
     }
 
     static List<object?> FlattenedArray(Array arr)
