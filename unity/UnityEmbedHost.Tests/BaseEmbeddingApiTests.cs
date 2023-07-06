@@ -616,6 +616,20 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(actualFlat, Is.EquivalentTo(expectedFlat));
     }
 
+    [TestCase(typeof(Cat),     typeof(Animal),  true,   true)]
+    [TestCase(typeof(Cat),     typeof(Animal),  false,  true)]
+    [TestCase(typeof(Animal),  typeof(IAnimal), false, false)]
+    [TestCase(typeof(Animal),  typeof(IAnimal), true,   true)]
+    [TestCase(typeof(IAnimal), typeof(Animal),  true,  false)]
+    [TestCase(typeof(IAnimal), typeof(Animal),  false, false)]
+    [TestCase(typeof(Animal),  typeof(Cat),     true,  false)]
+    [TestCase(typeof(Animal),  typeof(Cat),     false, false)]
+    public void ClassIsSubclassOfReturnsProperValue(Type klass, Type parentClass, bool check_interfaces, bool expectedResult)
+    {
+        bool isSubclass = ClrHost.class_is_subclass_of(klass, parentClass, check_interfaces);
+        Assert.That(isSubclass, Is.EqualTo(expectedResult));
+    }
+
     static List<object?> FlattenedArray(Array arr)
     {
         var result = new List<object?>();

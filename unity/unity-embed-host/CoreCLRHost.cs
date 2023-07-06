@@ -499,6 +499,29 @@ static unsafe partial class CoreCLRHost
 
         return IntPtr.Zero;
     }
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_subclass_of(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
+        [NativeCallbackType("MonoClass*")] IntPtr parent_class,
+        [NativeCallbackType("bool")] bool check_interfaces)
+    {
+        Type tClass = klass.TypeFromHandleIntPtr();
+        Type tParentClass = parent_class.TypeFromHandleIntPtr();
+
+        if (tClass == null || tParentClass == null)
+        {
+            return false;
+        }
+
+        bool isSubclass = false;
+        if(check_interfaces)
+        {
+            isSubclass = tParentClass.IsAssignableFrom(tClass);
+        }
+
+        return isSubclass || tClass.IsSubclassOf(tParentClass);
+    }
+
 
     static void Log(string message)
     {
