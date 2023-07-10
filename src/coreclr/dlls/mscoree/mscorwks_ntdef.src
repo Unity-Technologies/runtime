@@ -35,6 +35,7 @@ EXPORTS
         coreclr_class_from_systemtypeinstance
         coreclr_image_get_custom_attribute_data
         coreclr_method_full_name
+        coreclr_type_get_name_full
         mono_add_internal_call
         mono_array_addr_with_size
         mono_array_class_get

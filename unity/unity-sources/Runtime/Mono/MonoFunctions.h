@@ -7,6 +7,7 @@
 #endif
 
 typedef UNUSED_SYMBOL void(*MonoUnityExceptionFunc) (MonoObject* exc);
+typedef UNUSED_SYMBOL void (*AssignString) (void* buffer, void* utf16, int len);
 
 // If you add functions to this file you also need to expose them in MonoBundle.exp
 // Otherwise they wont be exported in the web plugin!
@@ -76,6 +77,7 @@ DO_API(void, mono_method_desc_free, (MonoMethodDesc * desc))
 DO_API(gboolean, mono_type_generic_inst_is_valuetype, (MonoType*))
 #endif
 DO_API(char*, mono_type_get_name_full, (MonoType * type, MonoTypeNameFormat format))
+DO_API(void, coreclr_type_get_name_full, (MonoType * type, MonoTypeNameFormat format, void* buffer, AssignString assign))
 
 DO_API(const char*, mono_field_get_name, (MonoClassField * field))
 DO_API(MonoClass*, mono_field_get_parent, (MonoClassField * field))
@@ -84,7 +86,6 @@ DO_API(gboolean, mono_type_is_byref, (MonoType * type))
 DO_API(guint32, mono_type_get_attrs, (MonoType * type))
 DO_API(int, mono_type_get_type, (MonoType * type))
 DO_API(const char*, mono_method_get_name, (MonoMethod * method))
-typedef UNUSED_SYMBOL void (*AssignString) (void* buffer, void* utf16, int len);
 DO_API(void, coreclr_method_full_name, (MonoMethod* method, gboolean signature, void* buffer, AssignString assign))
 DO_API(MonoImage*, mono_assembly_get_image, (MonoAssembly * assembly))
 DO_API(MonoClass*, mono_method_get_class, (MonoMethod * method))

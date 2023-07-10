@@ -530,6 +530,40 @@ static unsafe partial class CoreCLRHost
             assignString(buffer, p, foo.Length);
     }
 
+    [NativeFunction("coreclr_type_get_name_full")]
+    public static void coreclr_type_get_name_full(
+        [NativeCallbackType("MonoType*")] IntPtr type,
+        [NativeCallbackType("MonoTypeNameFormat")] MonoTypeNameFormat format,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
+    {
+        Type t = type.TypeFromHandleIntPtr();
+        string retVal = "";
+        switch (format)
+        {
+            case MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION:
+                retVal = t.ToString();
+                break;
+            case MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED:
+                retVal = t.AssemblyQualifiedName;
+                break;
+        }
+
+        fixed(char* p = retVal)
+            assignString(buffer, p, retVal?.Length ?? 0);
+    }
+
+    [NativeFunction("coreclr_class_get_name")]
+    public static void coreclr_class_get_name(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
+    {
+        string retVal = klass.TypeFromHandleIntPtr().Name;
+        fixed(char* p = retVal)
+            assignString(buffer, p, retVal?.Length ?? 0);
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);
