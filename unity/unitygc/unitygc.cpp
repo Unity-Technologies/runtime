@@ -769,7 +769,7 @@ public:
     // Get extra work for the finalizer
     virtual FinalizerWorkItem* GetExtraWorkForFinalization()
     {
-        assert(0);
+        //assert(0);
         return NULL;
     }
 
