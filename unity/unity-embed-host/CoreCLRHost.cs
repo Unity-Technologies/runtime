@@ -505,7 +505,7 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
         Type t = klass.TypeFromHandleIntPtr();
-        return t?.IsGenericType??false;
+        return t.IsGenericType;
     }
 
     static void Log(string message)
