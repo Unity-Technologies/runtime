@@ -505,9 +505,9 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
         Type t = klass.TypeFromHandleIntPtr();
-        return t.IsGenericType;
+        return t.IsGenericTypeDefinition;
     }
-  
+
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_enum(
         [NativeCallbackType("MonoClass*")] IntPtr klass)

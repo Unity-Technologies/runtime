@@ -618,7 +618,8 @@ public abstract class BaseEmbeddingApiTests
 
     [TestCase(typeof(Animal),                        false)]
     [TestCase(typeof(List<>),                         true)]
-    [TestCase(typeof(GenericAnimal<int, string>),     true)]
+    [TestCase(typeof(GenericAnimal<, >),              true)]
+    [TestCase(typeof(GenericAnimal<int, string>),    false)]
 #pragma warning disable CS8500
     [TestCase(typeof(GenericAnimal<int, string>*),   false)]
 #pragma warning restore CS8500
