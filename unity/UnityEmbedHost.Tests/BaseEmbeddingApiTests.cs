@@ -672,4 +672,16 @@ public abstract class BaseEmbeddingApiTests
         Marshal.FreeHGlobal((IntPtr)buffer);
         Assert.That(typeName, Is.EqualTo(expectedString));
     }
+
+    [TestCase(typeof(Mammal), "UnityEmbedHost.Tests")]
+    [TestCase(typeof(string), "System")]
+    [TestCase(typeof(Socket), "System.Net.Sockets")]
+    public unsafe void ClassGetNameSpaceWorks(Type klass, string expectedString)
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_class_get_namespace(klass, &buffer, &AssignString);
+        string? typeName = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+        Assert.That(typeName, Is.EqualTo(expectedString));
+    }
 }

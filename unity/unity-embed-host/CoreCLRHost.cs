@@ -564,6 +564,17 @@ static unsafe partial class CoreCLRHost
             assignString(buffer, p, retVal?.Length ?? 0);
     }
 
+    [NativeFunction("coreclr_class_get_namespace")]
+    public static void coreclr_class_get_namespace(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
+    {
+        string retVal = klass.TypeFromHandleIntPtr().Namespace;
+        fixed(char* p = retVal)
+            assignString(buffer, p, retVal?.Length ?? 0);
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);
