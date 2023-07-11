@@ -619,9 +619,9 @@ public abstract class BaseEmbeddingApiTests
     [TestCase(typeof(Animal),                        false)]
     [TestCase(typeof(List<>),                         true)]
     [TestCase(typeof(GenericAnimal<int, string>),     true)]
-#pragma warning disable cs8500
+#pragma warning disable CS8500
     [TestCase(typeof(GenericAnimal<int, string>*),   false)]
-#pragma warning restore cs8500
+#pragma warning restore CS8500
     [TestCase(typeof(GenericAnimal<int, string>[]),  false)]
     public void ClassIsGenericReturnsProperValue(Type klass, bool expectedResult)
     {
