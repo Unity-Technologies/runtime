@@ -530,7 +530,7 @@ static unsafe partial class CoreCLRHost
             assignString(buffer, p, foo.Length);
     }
 
-    [NativeFunction("coreclr_type_get_name_full")]
+    [NativeFunction("coreclr_type_get_name_full", NativeFunctionOptions.SignatureOnly)]
     public static void coreclr_type_get_name_full(
         [NativeCallbackType("MonoType*")] IntPtr type,
         [NativeCallbackType("MonoTypeNameFormat")] MonoTypeNameFormat format,
@@ -547,6 +547,20 @@ static unsafe partial class CoreCLRHost
             case MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED:
                 retVal = t.AssemblyQualifiedName;
                 break;
+            case MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED:
+                {
+                    retVal = t.AssemblyQualifiedName;
+                    int versionIndex, bracket;
+                    while ((versionIndex = retVal!.IndexOf("Version=", StringComparison.Ordinal) - 2) >= 0)
+                    {
+                        bracket = retVal.IndexOf(']', versionIndex);
+                        if (bracket > 0)
+                            retVal = retVal.Remove(versionIndex, bracket - versionIndex);
+                        else
+                            retVal = retVal.Remove(versionIndex);
+                    }
+                    break;
+                }
         }
 
         fixed(char* p = retVal)

@@ -645,9 +645,7 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(methodFullName, Is.EqualTo(expectedName));
     }
 
-    [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_IL, "System.Collections.Generic.List<System.Collections.Generic.List<System.Int32>>")]
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION, "System.Collections.Generic.List`1[System.Collections.Generic.List`1[System.Int32]]")]
-    [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_FULL_NAME, "System.Collections.Generic.List`1[[System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]")]
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED, "System.Collections.Generic.List`1[[System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e")]
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED, "System.Collections.Generic.List`1[[System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib]], System.Private.CoreLib]], System.Private.CoreLib")]
     [TestCase(typeof(int[]), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED, "System.Int32[], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e")]

@@ -754,8 +754,7 @@ void AssignCoreString(void* buffer, void* utf16, int len)
     if (utf16 != NULL)
     {
         char* str = (char*)buffer;
-        SString sstr;
-        ((StringObject*)utf16)->GetSString(sstr);
+        SString sstr((WCHAR*)utf16, len);
         str = _strdup(sstr.GetUTF8());
     }
 }
@@ -3185,6 +3184,8 @@ extern "C" EXPORT_API void EXPORT_CC coreclr_method_full_name(MonoMethod* method
 extern "C" EXPORT_API void EXPORT_CC coreclr_type_get_name_full(MonoType* type, MonoTypeNameFormat format, void* buffer, AssignString assignString)
 {
     GCX_PREEMP(); // temporary until we sort out our GC thread model
+    if (format == MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_IL || format == MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_FULL_NAME)
+        ASSERT_NOT_IMPLEMENTED;
     return g_HostStruct->coreclr_type_get_name_full(type, format, buffer, assignString);
 }
 
