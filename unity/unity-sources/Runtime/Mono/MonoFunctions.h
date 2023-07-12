@@ -80,6 +80,7 @@ DO_API(char*, mono_type_get_name_full, (MonoType * type, MonoTypeNameFormat form
 DO_API(void, coreclr_type_get_name_full, (MonoType * type, MonoTypeNameFormat format, void* buffer, AssignString assign))
 
 DO_API(const char*, mono_field_get_name, (MonoClassField * field))
+DO_API(void, coreclr_field_get_name, (MonoClassField* field, void* buffer, AssignString assign))
 DO_API(MonoClass*, mono_field_get_parent, (MonoClassField * field))
 DO_API(MonoType*, mono_field_get_type, (MonoClassField * field))
 DO_API(gboolean, mono_type_is_byref, (MonoType * type))

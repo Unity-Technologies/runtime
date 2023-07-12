@@ -589,6 +589,18 @@ static unsafe partial class CoreCLRHost
             assignString(buffer, p, retVal?.Length ?? 0);
     }
 
+    [NativeFunction("coreclr_field_get_name")]
+    public static void coreclr_field_get_name(
+        [NativeCallbackType("MonoClassField*")] IntPtr field,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
+
+    {
+        string retVal = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr()).Name;
+        fixed(char* p = retVal)
+            assignString(buffer, p, retVal?.Length ?? 0);
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);

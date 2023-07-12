@@ -21,6 +21,7 @@ coreclr_array_length
 coreclr_class_from_systemtypeinstance
 coreclr_class_get_name
 coreclr_class_get_namespace
+coreclr_field_get_name
 coreclr_image_get_custom_attribute_data
 coreclr_method_full_name
 coreclr_type_get_name_full

@@ -682,4 +682,14 @@ public abstract class BaseEmbeddingApiTests
         Marshal.FreeHGlobal((IntPtr)buffer);
         Assert.That(typeName, Is.EqualTo(expectedString));
     }
+
+    [TestCase(typeof(Mammal), nameof(Mammal.EyeCount))]
+    public unsafe void FieldGetNameWorks(Type type, string fieldName)
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_field_get_name(type.GetField(fieldName)!.FieldHandle, &buffer, &AssignString);
+        string? fName = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+        Assert.That(fName, Is.EqualTo(fieldName));
+    }
 }
