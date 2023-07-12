@@ -629,6 +629,41 @@ public abstract class BaseEmbeddingApiTests
         bool isSubclass = ClrHost.class_is_subclass_of(klass, parentClass, check_interfaces);
         Assert.That(isSubclass, Is.EqualTo(expectedResult));
     }
+  
+    [TestCase(typeof(Animal),                        false)]
+    [TestCase(typeof(List<>),                         true)]
+    [TestCase(typeof(GenericAnimal<, >),              true)]
+    [TestCase(typeof(GenericAnimal<int, string>),    false)]
+#pragma warning disable CS8500
+    [TestCase(typeof(GenericAnimal<int, string>*),   false)]
+#pragma warning restore CS8500
+    [TestCase(typeof(GenericAnimal<int, string>[]),  false)]
+    public void ClassIsGenericReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isGeneric = ClrHost.class_is_generic(klass);
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(List<>),                       false)]
+    public void ClassIsGenericByRefReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isGeneric = ClrHost.class_is_generic(klass.MakeByRefType());
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+  
+    [TestCase(typeof(Classification),                    true)]
+    [TestCase(typeof(Classification*),                  false)]
+    [TestCase(typeof(Classification[]),                 false)]
+    [TestCase(typeof(Animal),                           false)]
+    [TestCase(typeof(IAnimal),                          false)]
+    [TestCase(typeof(GenericAnimal<int, string>),       false)]
+    [TestCase(typeof(StructContainingOnlyAnEnum),       false)]
+    [TestCase(typeof(StructContainingOnlyAnEnum.AnEnum), true)]
+    public void ClassIsEnumReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isEnum = ClrHost.class_is_enum(klass);
+        Assert.That(isEnum, Is.EqualTo(expectedResult));
+    }
 
     [TestCase(typeof(Animal),                              false)]
     [TestCase(typeof(GenericAnimal<Classification, bool>), false)]
