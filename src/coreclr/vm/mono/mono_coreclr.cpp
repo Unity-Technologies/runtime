@@ -768,9 +768,8 @@ extern "C" EXPORT_API const char* EXPORT_CC mono_class_get_name(MonoClass *klass
 
 extern "C" EXPORT_API const char* EXPORT_CC mono_class_get_namespace(MonoClass *klass)
 {
-	MonoClass_clr* clazz = (MonoClass_clr*)klass;
-	LPCUTF8 name, namespaze;
-	clazz->GetMDImport()->GetNameOfTypeDef(clazz->GetCl(), &name, &namespaze);
+	char* namespaze;
+    coreclr_class_get_namespace(klass, &namespaze, AssignCoreString);
     return namespaze;
 }
 
@@ -2587,29 +2586,10 @@ extern "C" EXPORT_API char* EXPORT_CC mono_type_get_name(MonoType *type)
 extern "C" EXPORT_API char* EXPORT_CC mono_type_get_name_full(MonoType *type, MonoTypeNameFormat monoFormat)
 {
     TRACE_API("%p %d", type, format);
-
-    DWORD format = TypeString::FormatBasic;
-    switch (monoFormat)
-    {
-        case MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_IL:
-            // The closest managed equivalent is Type.ToString()
-            format = TypeString::FormatNamespace;
-            break;
-        case MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED:
-            // The managed equivalent is Type.AssemblyQualifiedName
-            format = TypeString::FormatNamespace | TypeString::FormatAssembly | TypeString::FormatFullInst;
-            break;
-
-        default:
-            ASSERT_NOT_IMPLEMENTED;
-            return NULL;
-    }
-
-    TypeHandle handle = TypeHandle::FromPtr((PTR_VOID)type);
-    SString ssBuf;
-    TypeString::AppendType(ssBuf, handle, format);
-
-    return _strdup(ssBuf.GetUTF8());
+    char* type_name;
+    coreclr_type_get_name_full(type, monoFormat, &type_name, AssignCoreString);
+    return type_name;
+    
 }
 
 extern "C" EXPORT_API int EXPORT_CC mono_type_get_num_generic_args(MonoType *type)
