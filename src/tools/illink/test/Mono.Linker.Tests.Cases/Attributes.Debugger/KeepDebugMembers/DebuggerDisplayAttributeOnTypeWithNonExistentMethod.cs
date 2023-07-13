@@ -3,7 +3,7 @@
 using System.Diagnostics;
 using Mono.Linker.Tests.Cases.Expectations.Assertions;
 
-namespace Mono.Linker.Tests.Cases.Attributes.Debugger
+namespace Mono.Linker.Tests.Cases.Attributes.Debugger.KeepDebugMembers
 {
 	public class DebuggerDisplayAttributeOnTypeWithNonExistentMethod
 	{
