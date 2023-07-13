@@ -645,6 +645,20 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(methodFullName, Is.EqualTo(expectedName));
     }
 
+    [TestCase(typeof(Mammal), nameof(Mammal.BreathAir))]
+    [TestCase(typeof(Animal), nameof(Animal.Feed))]
+    [TestCase(typeof(Socket), nameof(Socket.BeginReceiveFrom))]
+    public unsafe void MethodGetNameWorks(Type type, string methodName)
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_method_get_name(type.GetMethod(methodName)!.MethodHandle, &buffer, &AssignString);
+
+        string? name = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        Assert.That(name, Is.EqualTo(methodName));
+    }
+
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION, "System.Collections.Generic.List`1[System.Collections.Generic.List`1[System.Int32]]")]
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED, "System.Collections.Generic.List`1[[System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e")]
     [TestCase(typeof(List<List<int>>), MonoTypeNameFormat.MONO_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED, "System.Collections.Generic.List`1[[System.Collections.Generic.List`1[[System.Int32, System.Private.CoreLib]], System.Private.CoreLib]], System.Private.CoreLib")]

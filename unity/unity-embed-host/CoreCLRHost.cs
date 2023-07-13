@@ -530,6 +530,17 @@ static unsafe partial class CoreCLRHost
             assignString(buffer, p, foo.Length);
     }
 
+    [NativeFunction("coreclr_method_get_name")]
+    public static void coreclr_method_get_name(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        [NativeCallbackType("void*")] void* buffer,
+        [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
+    {
+        string retVal = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr())?.Name ?? "";
+        fixed (char* p = retVal)
+            assignString(buffer, p, retVal.Length);
+    }
+
     [NativeFunction("coreclr_type_get_name_full", NativeFunctionOptions.SignatureOnly)]
     public static void coreclr_type_get_name_full(
         [NativeCallbackType("MonoType*")] IntPtr type,
