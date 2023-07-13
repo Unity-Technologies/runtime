@@ -499,6 +499,7 @@ static unsafe partial class CoreCLRHost
 
         return IntPtr.Zero;
     }
+
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_subclass_of(
         [NativeCallbackType("MonoClass*")] IntPtr klass,
@@ -512,6 +513,15 @@ static unsafe partial class CoreCLRHost
         {
             return false;
         }
+        if (tClass == tParentClass)
+        {
+            return true;
+        }
+        if (tClass.IsArray && tParentClass.IsArray)
+        {
+            return tClass.GetArrayRank() == tParentClass.GetArrayRank() &&
+                   tClass.GetElementType() == tParentClass.GetElementType();
+        }
 
         bool isSubclass = false;
         if(check_interfaces)
@@ -521,7 +531,6 @@ static unsafe partial class CoreCLRHost
 
         return isSubclass || tClass.IsSubclassOf(tParentClass);
     }
-
 
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_generic(
@@ -538,7 +547,7 @@ static unsafe partial class CoreCLRHost
         Type t = klass.TypeFromHandleIntPtr();
         return t.IsEnum;
     }
-  
+
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_valuetype(
         [NativeCallbackType("MonoClass*")] IntPtr klass)
