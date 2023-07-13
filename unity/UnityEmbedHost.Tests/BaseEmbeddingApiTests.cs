@@ -932,4 +932,18 @@ public abstract class BaseEmbeddingApiTests
 
         Assert.That(methodFullName, Is.EqualTo(expectedName));
     }
+
+    [TestCase(typeof(Mammal), nameof(Mammal.BreathAir))]
+    [TestCase(typeof(Animal), nameof(Animal.Feed))]
+    [TestCase(typeof(Socket), nameof(Socket.BeginReceiveFrom))]
+    public unsafe void MethodGetNameWorks(Type type, string methodName)
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_method_get_name(type.GetMethod(methodName)!.MethodHandle, &buffer, &AssignString);
+
+        string? name = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        Assert.That(name, Is.EqualTo(methodName));
+    }
 }
