@@ -608,39 +608,39 @@ static unsafe partial class CoreCLRHost
         return t.IsValueType;
     }
 
-    private static ConcurrentDictionary<Type, bool> s_isBlittableCache = new ConcurrentDictionary<Type, bool>();
+    private static ConcurrentDictionary<IntPtr, bool> s_isBlittableCache = new ConcurrentDictionary<IntPtr, bool>();
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_blittable(
         [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
         bool isBlittable = false;
-        Type t = klass.TypeFromHandleIntPtr();
 
-        if (s_isBlittableCache.TryGetValue(t, out isBlittable))
+        if (s_isBlittableCache.TryGetValue(klass, out isBlittable))
         {
             return isBlittable;
         }
 
+        Type t = klass.TypeFromHandleIntPtr();
+
         if (!t.IsValueType)
         {
-            s_isBlittableCache[t] = false;
+            s_isBlittableCache[klass] = false;
             return false;
         }
 
         try
         {
             object tInstance = FormatterServices.GetUninitializedObject(t);
-            Type asmClass = Type.GetType("System.Runtime.InteropServices.Marshal");
-            MethodInfo methodInfo = asmClass.GetMethod("IsPinnable", BindingFlags.Static | BindingFlags.NonPublic);
-            var ret = methodInfo.Invoke(null, new object[] { tInstance });
-            isBlittable = (bool)ret;
+            GCHandle.Alloc(tInstance, GCHandleType.Pinned).Free();
+            //if we succeed in getting a pinned gcHandle, Type is not blittable
+            isBlittable = true;
         }
         catch (Exception)
         {
             // Assume type is not blittable
         }
 
-        s_isBlittableCache[t] = isBlittable;
+        s_isBlittableCache[klass] = isBlittable;
         return isBlittable;
     }
 
