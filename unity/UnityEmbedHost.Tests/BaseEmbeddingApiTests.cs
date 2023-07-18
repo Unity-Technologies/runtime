@@ -729,6 +729,17 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(isValueType, Is.EqualTo(expectedResult));
     }
 
+    [TestCase(typeof(Animal),                                true)]
+    [TestCase(typeof(GenericAnimal<Classification, bool>),  false)]
+    [TestCase(typeof(ValueMammal*),                         false)]
+    [TestCase(typeof(ValueMammal),                          false)]
+    [TestCase(typeof(Classification),                       false)]
+    public void UnityClassIsAbstractReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isAbstract = ClrHost.unity_class_is_abstract(klass);
+        Assert.That(isAbstract, Is.EqualTo(expectedResult));
+    }
+
     static List<object?> FlattenedArray(Array arr)
     {
         var result = new List<object?>();

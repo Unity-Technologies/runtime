@@ -607,6 +607,14 @@ static unsafe partial class CoreCLRHost
         return t.IsValueType;
     }
 
+    [return: NativeCallbackType("gboolean")]
+    public static bool unity_class_is_abstract(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsAbstract;
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);
