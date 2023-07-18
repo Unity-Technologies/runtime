@@ -632,7 +632,7 @@ static unsafe partial class CoreCLRHost
         {
             object tInstance = FormatterServices.GetUninitializedObject(t);
             GCHandle.Alloc(tInstance, GCHandleType.Pinned).Free();
-            //if we succeed in getting a pinned gcHandle, Type is not blittable
+            //if we succeed in getting a pinned gcHandle, Type is blittable
             isBlittable = true;
         }
         catch (Exception)
