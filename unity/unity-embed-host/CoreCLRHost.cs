@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -607,12 +608,49 @@ static unsafe partial class CoreCLRHost
         return t.IsValueType;
     }
 
+
     [return: NativeCallbackType("gboolean")]
     public static bool unity_class_is_abstract(
         [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
         Type t = klass.TypeFromHandleIntPtr();
         return t.IsAbstract;
+    }
+  
+    private static ConcurrentDictionary<IntPtr, bool> s_isBlittableCache = new ConcurrentDictionary<IntPtr, bool>();
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_blittable(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        bool isBlittable = false;
+
+        if (s_isBlittableCache.TryGetValue(klass, out isBlittable))
+        {
+            return isBlittable;
+        }
+
+        Type t = klass.TypeFromHandleIntPtr();
+
+        if (!t.IsValueType)
+        {
+            s_isBlittableCache[klass] = false;
+            return false;
+        }
+
+        try
+        {
+            object tInstance = FormatterServices.GetUninitializedObject(t);
+            GCHandle.Alloc(tInstance, GCHandleType.Pinned).Free();
+            //if we succeed in getting a pinned gcHandle, Type is blittable
+            isBlittable = true;
+        }
+        catch (Exception)
+        {
+            // Assume type is not blittable
+        }
+
+        s_isBlittableCache[klass] = isBlittable;
+        return isBlittable;
     }
 
     static void Log(string message)

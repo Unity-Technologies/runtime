@@ -729,6 +729,7 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(isValueType, Is.EqualTo(expectedResult));
     }
 
+
     [TestCase(typeof(Animal),                                true)]
     [TestCase(typeof(GenericAnimal<Classification, bool>),  false)]
     [TestCase(typeof(ValueMammal*),                         false)]
@@ -738,6 +739,24 @@ public abstract class BaseEmbeddingApiTests
     {
         bool isAbstract = ClrHost.unity_class_is_abstract(klass);
         Assert.That(isAbstract, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(int),           true)]
+    [TestCase(typeof(bool),          true)]
+    [TestCase(typeof(char),          true)]
+    [TestCase(typeof(string),       false)]
+    [TestCase(typeof(MyStruct),      true)]
+    [TestCase(typeof(Cat),          false)]
+    [TestCase(typeof(RockLover),    false)]
+    [TestCase(typeof(Classification),true)]
+    [TestCase(typeof(IntPtr),        true)]
+    [TestCase(typeof(int*),         false)]
+    [TestCase(typeof(List<>),       false)]
+    [TestCase(typeof(List<int>),    false)]
+    public void ClassIsBlittableReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isBlittable = ClrHost.class_is_blittable(klass);
+        Assert.That(isBlittable, Is.EqualTo(expectedResult));
     }
 
     static List<object?> FlattenedArray(Array arr)
