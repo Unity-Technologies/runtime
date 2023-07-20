@@ -779,7 +779,7 @@ public abstract class BaseEmbeddingApiTests
     {
         var baseMethodInfo = objType.FindInstanceMethodByName(methodName, parameters);
 
-        bool isGeneric = ClrHost.unity_method_is_generic(baseMethodInfo.MethodHandle);
+        bool isGeneric = ClrHost.unity_mono_method_is_generic(baseMethodInfo.MethodHandle);
         Assert.That(isGeneric, Is.EqualTo(expectedResult));
     }
 
