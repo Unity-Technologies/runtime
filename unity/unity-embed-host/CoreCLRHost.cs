@@ -671,6 +671,19 @@ static unsafe partial class CoreCLRHost
         return metBase.IsGenericMethodDefinition;
     }
 
+    [return: NativeCallbackType("gint64")]
+    public static long gc_get_heap_size()
+    {
+        var info = GC.GetGCMemoryInfo();
+        return info.HeapSizeBytes;
+    }
+
+    [return: NativeCallbackType("gint64")]
+    public static long gc_get_used_size()
+    {
+        return GC.GetTotalMemory(false);
+    }
+
     static void Log(string message)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(message);

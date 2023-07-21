@@ -783,6 +783,30 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(isGeneric, Is.EqualTo(expectedResult));
     }
 
+    [Test]
+    public void GcGetHeapSizeReturnsProperValue()
+    {
+        GC.Collect();
+        long heapSize = ClrHost.gc_get_heap_size();
+        Assert.NotZero(heapSize);
+        int[] data = new int[1024 * 1024 * 100];
+        GC.Collect();
+        long heapSizeAfterBigAlloc = ClrHost.gc_get_heap_size();
+        Assert.Greater(heapSizeAfterBigAlloc, heapSize);
+    }
+
+    [Test]
+    public void GcGetUsedSizeReturnsProperValue()
+    {
+        GC.Collect();
+        long usedSize = ClrHost.gc_get_used_size();
+        Assert.NotZero(usedSize);
+        int[] data = new int[1024 * 1024 * 100];
+        GC.Collect();
+        long usedSizeAfterBigAlloc = ClrHost.gc_get_used_size();
+        Assert.Greater(usedSizeAfterBigAlloc, usedSize);
+    }
+
     static List<object?> FlattenedArray(Array arr)
     {
         var result = new List<object?>();
