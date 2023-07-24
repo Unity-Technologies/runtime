@@ -789,10 +789,11 @@ public abstract class BaseEmbeddingApiTests
         GC.Collect(0,GCCollectionMode.Forced, true);
         long heapSize = ClrHost.gc_get_heap_size();
         Assert.NotZero(heapSize);
-        int[] data = new int[1024 * 1024 * 100];
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
         GC.Collect();
-        long heapSizeAfterBigAlloc = ClrHost.gc_get_heap_size();
-        Assert.Greater(heapSizeAfterBigAlloc, heapSize);
+        heapSize = ClrHost.gc_get_heap_size();
+        Assert.Greater(heapSize, dataSize * sizeof(int));
         GC.KeepAlive(data);
     }
 
@@ -802,10 +803,13 @@ public abstract class BaseEmbeddingApiTests
         GC.Collect(0,GCCollectionMode.Forced, true);
         long usedSize = ClrHost.gc_get_used_size();
         Assert.NotZero(usedSize);
-        int[] data = new int[1024 * 1024 * 100];
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
         GC.Collect();
-        long usedSizeAfterBigAlloc = ClrHost.gc_get_used_size();
-        Assert.Greater(usedSizeAfterBigAlloc, usedSize);
+        usedSize = ClrHost.gc_get_used_size();
+        long heapSize = ClrHost.gc_get_heap_size();
+        Assert.Greater(usedSize, dataSize * sizeof(int));
+        Assert.GreaterOrEqual(heapSize, usedSize);
         GC.KeepAlive(data);
     }
 
