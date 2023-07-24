@@ -793,6 +793,7 @@ public abstract class BaseEmbeddingApiTests
         GC.Collect();
         long heapSizeAfterBigAlloc = ClrHost.gc_get_heap_size();
         Assert.Greater(heapSizeAfterBigAlloc, heapSize);
+        GC.KeepAlive(data);
     }
 
     [Test]
@@ -805,6 +806,7 @@ public abstract class BaseEmbeddingApiTests
         GC.Collect();
         long usedSizeAfterBigAlloc = ClrHost.gc_get_used_size();
         Assert.Greater(usedSizeAfterBigAlloc, usedSize);
+        GC.KeepAlive(data);
     }
 
     static List<object?> FlattenedArray(Array arr)
