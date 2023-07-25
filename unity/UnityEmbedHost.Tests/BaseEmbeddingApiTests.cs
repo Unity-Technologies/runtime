@@ -685,6 +685,16 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(typeName, Is.EqualTo(expectedString));
     }
 
+    [Test]
+    public unsafe void ArrayWithNonZeroLowerBoundsWorks()
+    {
+        byte* buffer = null;
+        ClrHost.coreclr_class_get_name(Mammal.EyeArray.GetType(), &buffer, &AssignString);
+        string? typeName = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+        Assert.That(typeName, Is.EqualTo("Int32[*]"));
+    }
+
     [TestCase(typeof(Mammal), "UnityEmbedHost.Tests")]
     [TestCase(typeof(string), "System")]
     [TestCase(typeof(Socket), "System.Net.Sockets")]
@@ -698,10 +708,11 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [TestCase(typeof(Mammal), nameof(Mammal.EyeCount))]
+    [TestCase(typeof(GenericCat<int, int>), nameof(GenericCat<int,int>.FieldOnGenericAnimal))]
     public unsafe void FieldGetNameWorks(Type type, string fieldName)
     {
         byte* buffer = null;
-        ClrHost.coreclr_field_get_name(type.GetField(fieldName)!.FieldHandle, &buffer, &AssignString);
+        ClrHost.coreclr_field_get_name(type, type.GetField(fieldName)!.FieldHandle, &buffer, &AssignString);
         string? fName = Marshal.PtrToStringUni((IntPtr)buffer);
         Marshal.FreeHGlobal((IntPtr)buffer);
         Assert.That(fName, Is.EqualTo(fieldName));

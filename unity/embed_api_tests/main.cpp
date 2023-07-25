@@ -339,7 +339,7 @@ TEST(mono_type_get_name_full_returns_il_name)
 {
     MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
     GET_AND_CHECK(type, mono_class_get_type(klass));
-    GET_AND_CHECK(name , mono_type_get_name_full(type, MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_IL));
+    GET_AND_CHECK(name , mono_type_get_name_full(type, MonoTypeNameFormat::MONO_TYPE_NAME_FORMAT_REFLECTION));
     CHECK(strcmp("TestDll.TestClass", name) == 0);
     mono_unity_g_free(name);
 }
@@ -743,7 +743,7 @@ TEST(mono_class_get_fields_retrieves_all_fields)
     MonoClassField* field;
     while ((field = mono_class_get_fields(klass, &ptr)) != nullptr)
     {
-        GET_AND_CHECK(fieldname, mono_field_get_name(field));
+        GET_AND_CHECK(fieldname, mono_field_get_name(klass, field));
         CHECK(strcmp("System.Int32", mono_type_get_name(mono_field_get_type(field))) == 0);
         fieldnames += fieldname;
         count++;
@@ -759,11 +759,11 @@ TEST(can_get_type_of_generic_field)
 
     gpointer ptr = nullptr;
     GET_AND_CHECK(field, mono_class_get_fields(klass, &ptr));
-    CHECK(strcmp("genericField", mono_field_get_name(field)) == 0);
+    CHECK(strcmp("genericField", mono_field_get_name(klass, field)) == 0);
     CHECK(strcmp("T", mono_type_get_name(mono_field_get_type(field))) == 0);
     field = mono_class_get_fields(klass, &ptr);
     CHECK(field != NULL);
-    CHECK(strcmp("genericArrayField", mono_field_get_name(field)) == 0);
+    CHECK(strcmp("genericArrayField", mono_field_get_name(klass, field)) == 0);
     CHECK(strcmp("T[]", mono_type_get_name(mono_field_get_type(field))) == 0);
     field = mono_class_get_fields(klass, &ptr);
     CHECK(field == NULL);
@@ -780,7 +780,7 @@ TEST(can_get_type_of_generic_instance_field)
     gpointer ptr = nullptr;
     GET_AND_CHECK(field, mono_class_get_fields(klass, &ptr));
     CHECK(field != NULL);
-    CHECK(strcmp("genericField", mono_field_get_name(field)) == 0);
+    CHECK(strcmp("genericField", mono_field_get_name(klass, field)) == 0);
     if (g_Mode == CoreCLR )
     {
         CHECK(strcmp("System.String", mono_type_get_name(mono_field_get_type_specific(field, klass))) == 0);
@@ -790,7 +790,7 @@ TEST(can_get_type_of_generic_instance_field)
         CHECK(strcmp("System.String", mono_type_get_name(mono_field_get_type(field))) == 0);
     field = mono_class_get_fields(klass, &ptr);
     CHECK(field != NULL);
-    CHECK(strcmp("genericArrayField", mono_field_get_name(field)) == 0);
+    CHECK(strcmp("genericArrayField", mono_field_get_name(klass, field)) == 0);
     if (g_Mode == CoreCLR )
     {
         CHECK(strcmp("System.String[]", mono_type_get_name(mono_field_get_type_specific(field, klass))) == 0);
@@ -1224,7 +1224,10 @@ TEST(mono_array_class_get_creates_array_class)
     CHECK_EQUAL(int32Class, mono_class_get_element_class(arrayInt32Class));
     CHECK_EQUAL(int64Class, mono_class_get_element_class(arrayInt64Class));
 
-    CHECK_EQUAL_STR("Int32[]", mono_class_get_name(arrayInt32Class));
+    if (g_Mode == CoreCLR)
+        CHECK_EQUAL_STR("Int32[*]", mono_class_get_name(arrayInt32Class));
+    else
+        CHECK_EQUAL_STR("Int32[]", mono_class_get_name(arrayInt32Class));
     CHECK_EQUAL_STR("Int64[,]", mono_class_get_name(arrayInt64Class));
 }
 

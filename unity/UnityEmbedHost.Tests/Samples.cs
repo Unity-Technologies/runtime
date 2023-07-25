@@ -34,6 +34,9 @@ class Bacon
 class Mammal : Animal, IMammal
 {
     public int EyeCount = 2;
+
+    public static Array EyeArray = Array.CreateInstance(typeof(int), new int[1] { 3 }, new int[1] { 2 });
+
     public void BreathAir()
     {
     }
@@ -133,6 +136,8 @@ class ImposterCat
 
 class GenericCat<T, K> : GenericAnimal<T, K>
 {
+    public int FieldOnGenericAnimal = 0;
+
     public override void InterfaceMethodOnIGenericAnimal() => throw new NotImplementedException();
 
     public override void VirtualMethodOnGenericAnimal() => throw new NotImplementedException();

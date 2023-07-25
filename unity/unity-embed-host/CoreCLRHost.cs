@@ -602,14 +602,21 @@ static unsafe partial class CoreCLRHost
 
     [NativeFunction("coreclr_field_get_name")]
     public static void coreclr_field_get_name(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
         [NativeCallbackType("MonoClassField*")] IntPtr field,
         [NativeCallbackType("void*")] void* buffer,
         [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
 
     {
-        string retVal = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr()).Name;
-        fixed(char* p = retVal)
-            assignString(buffer, p, retVal?.Length ?? 0);
+        try
+        {
+            string retVal = FieldInfo.GetFieldFromHandle(field.FieldHandleFromHandleIntPtr(), RuntimeTypeHandle.FromIntPtr(klass)).Name;
+            fixed (char* p = retVal)
+                assignString(buffer, p, retVal.Length);
+        }catch(Exception ex){
+            Log($"Exception! {ex}");
+        }
+
     }
 
     static void Log(string message)
