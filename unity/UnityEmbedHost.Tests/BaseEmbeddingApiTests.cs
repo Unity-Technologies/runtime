@@ -784,10 +784,16 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [Test]
+    [Timeout(5000)]
     public void GcGetHeapSizeReturnsProperValue()
     {
         GC.Collect(0,GCCollectionMode.Forced, true);
         long heapSize = ClrHost.gc_get_heap_size();
+        while (heapSize == 0)
+        {
+            Thread.Sleep(0);
+            heapSize = ClrHost.gc_get_used_size();
+        }
         Assert.NotZero(heapSize);
         int dataSize = 1024 * 1024 * 100;
         int[] data = new int[dataSize];
@@ -798,10 +804,18 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [Test]
+    [Timeout(5000)]
     public void GcGetUsedSizeReturnsProperValue()
     {
         GC.Collect(0,GCCollectionMode.Forced, true);
+
         long usedSize = ClrHost.gc_get_used_size();
+        while (usedSize == 0)
+        {
+            Thread.Sleep(0);
+            usedSize = ClrHost.gc_get_used_size();
+        }
+
         Assert.NotZero(usedSize);
         int dataSize = 1024 * 1024 * 100;
         int[] data = new int[dataSize];
