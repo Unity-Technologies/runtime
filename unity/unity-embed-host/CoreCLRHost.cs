@@ -616,7 +616,7 @@ static unsafe partial class CoreCLRHost
         Type t = klass.TypeFromHandleIntPtr();
         return t.IsAbstract;
     }
-  
+
     private static ConcurrentDictionary<IntPtr, bool> s_isBlittableCache = new ConcurrentDictionary<IntPtr, bool>();
     [return: NativeCallbackType("gboolean")]
     public static bool class_is_blittable(
@@ -681,7 +681,9 @@ static unsafe partial class CoreCLRHost
     [return: NativeCallbackType("gint64")]
     public static long gc_get_used_size()
     {
-        return GC.GetTotalMemory(false);
+        var info = GC.GetGCMemoryInfo();
+        var heapSz =  info.HeapSizeBytes;
+        return heapSz - info.FragmentedBytes;
     }
 
     static void Log(string message)

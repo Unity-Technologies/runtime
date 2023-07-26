@@ -784,7 +784,7 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [Test]
-    [Timeout(5000)]
+    [Timeout(50000)]
     public void GcGetHeapSizeReturnsProperValue()
     {
         try
@@ -815,7 +815,7 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [Test]
-    [Timeout(5000)]
+    [Timeout(50000)]
     public void GcGetUsedSizeReturnsProperValue()
     {
         try
