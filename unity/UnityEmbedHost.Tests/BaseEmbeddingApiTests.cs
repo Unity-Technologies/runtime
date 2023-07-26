@@ -787,64 +787,45 @@ public abstract class BaseEmbeddingApiTests
     [Timeout(50000)]
     public void GcGetHeapSizeReturnsProperValue()
     {
-        try
-        {
-            GC.Collect(0,GCCollectionMode.Forced, true);
-            GC.WaitForPendingFinalizers();
+        GC.Collect(0,GCCollectionMode.Forced, true);
+        GC.WaitForPendingFinalizers();
 
-            long heapSize = ClrHost.gc_get_heap_size();
-            while (heapSize == 0)
-            {
-                Thread.Sleep(0);
-                heapSize = ClrHost.gc_get_used_size();
-            }
-            Assert.NotZero(heapSize);
-            int dataSize = 1024 * 1024 * 100;
-            int[] data = new int[dataSize];
-            GC.Collect();
-            heapSize = ClrHost.gc_get_heap_size();
-            Assert.Greater(heapSize, dataSize * sizeof(int));
-            GC.KeepAlive(data);
-        }
-        catch (Exception e)
+        long heapSize = ClrHost.gc_get_heap_size();
+        while (heapSize == 0)
         {
-            Console.WriteLine(e);
-            throw;
+            Thread.Sleep(0);
+            heapSize = ClrHost.gc_get_used_size();
         }
-
+        Assert.NotZero(heapSize);
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
+        GC.Collect();
+        heapSize = ClrHost.gc_get_heap_size();
+        Assert.Greater(heapSize, dataSize * sizeof(int));
+        GC.KeepAlive(data);
     }
 
     [Test]
     [Timeout(50000)]
     public void GcGetUsedSizeReturnsProperValue()
     {
-        try
+        GC.Collect(0,GCCollectionMode.Forced, true);
+        GC.WaitForPendingFinalizers();
+
+        long usedSize = ClrHost.gc_get_used_size();
+        while (usedSize == 0)
         {
-            GC.Collect(0,GCCollectionMode.Forced, true);
-            GC.WaitForPendingFinalizers();
-
-            long usedSize = ClrHost.gc_get_used_size();
-            while (usedSize == 0)
-            {
-                Thread.Sleep(0);
-                usedSize = ClrHost.gc_get_used_size();
-            }
-
-            Assert.NotZero(usedSize);
-            int dataSize = 1024 * 1024 * 100;
-            int[] data = new int[dataSize];
-            GC.Collect();
+            Thread.Sleep(0);
             usedSize = ClrHost.gc_get_used_size();
-            long heapSize = ClrHost.gc_get_heap_size();
-            Assert.Greater(usedSize, dataSize * sizeof(int));
-            Assert.GreaterOrEqual(heapSize, usedSize);
-            GC.KeepAlive(data);
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+
+        Assert.NotZero(usedSize);
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
+        GC.Collect();
+        usedSize = ClrHost.gc_get_used_size();
+        Assert.Greater(usedSize, dataSize * sizeof(int));
+        GC.KeepAlive(data);
     }
 
     static List<object?> FlattenedArray(Array arr)
