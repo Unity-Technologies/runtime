@@ -791,7 +791,7 @@ public abstract class BaseEmbeddingApiTests
     {
         var baseMethodInfo = objType.FindInstanceMethodByName(methodName, parameters);
 
-        bool isInflated = ClrHost.unity_mono_method_is_inflated(baseMethodInfo.MethodHandle);
+        bool isInflated = ClrHost.unity_mono_method_is_inflated_specific(baseMethodInfo.MethodHandle, objType);
         Assert.That(isInflated, Is.EqualTo(false));
 
         try
@@ -804,7 +804,7 @@ public abstract class BaseEmbeddingApiTests
             }
 
             var inflatedMethod = baseMethodInfo.MakeGenericMethod(inflateType);
-            isInflated = ClrHost.unity_mono_method_is_inflated(inflatedMethod.MethodHandle);
+            isInflated = ClrHost.unity_mono_method_is_inflated_specific(inflatedMethod.MethodHandle, objType);
         }
         catch (Exception)
         {
@@ -812,6 +812,16 @@ public abstract class BaseEmbeddingApiTests
             isInflated = false;
         }
 
+        Assert.That(isInflated, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(GenericCat<,>), nameof(IGenericAnimal<int , int>.InterfaceMethodOnIGenericAnimal), null, true)]
+    public void UnityMethodIsInflatedReturnsProperValueForNonGenericMethod(Type objType, string methodName, Type[]? parameters, bool expectedResult)
+    {
+        var instance   = objType.MakeGenericType(new Type[] { typeof(int), typeof(int) });
+        var baseMethodInfo = instance.FindInstanceMethodByName(methodName, parameters);
+
+        bool isInflated = ClrHost.unity_mono_method_is_inflated_specific(baseMethodInfo.MethodHandle, instance);
         Assert.That(isInflated, Is.EqualTo(expectedResult));
     }
 

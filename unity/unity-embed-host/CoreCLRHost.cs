@@ -671,13 +671,18 @@ static unsafe partial class CoreCLRHost
         return metBase.IsGenericMethodDefinition;
     }
 
-    [NativeFunction(nameof(unity_mono_method_is_inflated))]
+    [NativeFunction(nameof(unity_mono_method_is_inflated_specific))]
     [return: NativeCallbackType("gboolean")]
-    public static bool unity_mono_method_is_inflated(
-        [NativeCallbackType("MonoMethod*")] IntPtr method)
+    public static bool unity_mono_method_is_inflated_specific(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
-        MethodBase metBase = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
-        return !metBase.IsGenericMethodDefinition && metBase.IsGenericMethod;
+        // Note: In Mono, a non-generic method in an inflated class is considered inflated.
+        var classHandle = RuntimeTypeHandle.FromIntPtr(klass);
+        var type = Type.GetTypeFromHandle(classHandle);
+        MethodBase metBase = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), classHandle);
+        bool parentClassIsInflated = type != null && !type.IsGenericTypeDefinition && type.IsGenericType;
+        return metBase.IsConstructedGenericMethod || parentClassIsInflated;
     }
 
     static void Log(string message)
