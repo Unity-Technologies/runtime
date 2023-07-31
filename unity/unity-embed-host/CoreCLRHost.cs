@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -311,8 +312,6 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("MonoType*")] IntPtr type)
         => type.TypeFromHandleIntPtr().ToNativeRepresentation();
 
-    // Keeping for reference for the move to C#
-    // Currently Type is not loaded
     [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
     [return: NativeCallbackType("MonoClass*")]
     public static IntPtr unity_class_get(
@@ -322,16 +321,23 @@ static unsafe partial class CoreCLRHost
         Assembly assembly = image.AssemblyFromGCHandleIntPtr();
         // Cache module acquisition to avoid unnecessary allocation of Module[]
         var assemblyInfo = GetInfoForAssembly(assembly);
-        var typeHandle = assemblyInfo.module.ModuleHandle.GetRuntimeTypeHandleFromMetadataToken((int)token);
-        // TODO: Remove MethodBase.GetMethodFromHandle(methodHandle) part once we move method and type utilities to C#
-        // https://jira.unity3d.com/browse/VM-2081
-        // We have to load method and types currently as the native methods don't enforce loading
-        // (e.g. reinterpret_cast<MonoClass_clr*>(klass)->GetParentMethodTable() in mono_class_get_parent may crash if klass is not fully loaded)
-        // and adding loading boilerplate is roughly equivalent of moving implementation to C#
-        return Type.GetTypeFromHandle(typeHandle).TypeHandleIntPtr();
+        try
+        {
+            var typeHandle = assemblyInfo.module.ModuleHandle.GetRuntimeTypeHandleFromMetadataToken((int)token);
+            // TODO: Remove MethodBase.GetMethodFromHandle(methodHandle) part once we move method and type utilities to C#
+            // https://jira.unity3d.com/browse/VM-2081
+            // We have to load method and types currently as the native methods don't enforce loading
+            // (e.g. reinterpret_cast<MonoClass_clr*>(klass)->GetParentMethodTable() in mono_class_get_parent may crash if klass is not fully loaded)
+            // and adding loading boilerplate is roughly equivalent of moving implementation to C#
+            return Type.GetTypeFromHandle(typeHandle).TypeHandleIntPtr();
+        }
+        catch (FileNotFoundException e)
+        {
+            Log($"mono_unity_class_get: Unable to find {e.FileName} when resolving TypeDef {token} in {assembly.Location}");
+            return IntPtr.Zero;
+        }
     }
 
-    // Keeping for reference for the move to C#
     [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
     [return: NativeCallbackType("MonoMethod*")]
     public static IntPtr get_method(
@@ -342,13 +348,51 @@ static unsafe partial class CoreCLRHost
         Assembly assembly = image.AssemblyFromGCHandleIntPtr();
         // Cache module acquisition to avoid unnecessary allocation of Module[]
         var assemblyInfo = GetInfoForAssembly(assembly);
-        var methodHandle = assemblyInfo.module.ModuleHandle.GetRuntimeMethodHandleFromMetadataToken((int)token);
-        // TODO: Remove MethodBase.GetMethodFromHandle(methodHandle) part once we move method and type utilities to C#
-        // https://jira.unity3d.com/browse/VM-2081
-        // We have to load method and types currently as the native methods don't enforce loading
-        // (e.g. reinterpret_cast<MonoClass_clr*>(klass)->GetParentMethodTable() in mono_class_get_parent may crash if klass is not fully loaded)
-        // and adding loading boilerplate is roughly equivalent of moving implementation to C#
-        return MethodBase.GetMethodFromHandle(methodHandle).MethodHandle.MethodHandleIntPtr();
+        try
+        {
+            var methodHandle = assemblyInfo.module.ModuleHandle.GetRuntimeMethodHandleFromMetadataToken((int)token);
+            // TODO: Remove MethodBase.GetMethodFromHandle(methodHandle) part once we move method and type utilities to C#
+            // https://jira.unity3d.com/browse/VM-2081
+            // We have to load method and types currently as the native methods don't enforce loading
+            // (e.g. reinterpret_cast<MonoClass_clr*>(klass)->GetParentMethodTable() in mono_class_get_parent may crash if klass is not fully loaded)
+            // and adding loading boilerplate is roughly equivalent of moving implementation to C#
+            return MethodBase.GetMethodFromHandle(methodHandle).MethodHandle.MethodHandleIntPtr();
+        }
+        catch (FileNotFoundException e)
+        {
+            Log($"mono_get_method: Unable to find {e.FileName} when resolving MethodDef {token} in {assembly.Location}");
+            return IntPtr.Zero;
+        }
+    }
+
+    [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
+    [return: NativeCallbackType("MonoClassField*")]
+    public static unsafe IntPtr unity_field_from_token_checked(
+        [NativeCallbackType("MonoImage*")] IntPtr image,
+        uint token,
+        [NativeCallbackType("MonoClass**")] IntPtr retklass)
+    {
+        Assembly assembly = image.AssemblyFromGCHandleIntPtr();
+        // Cache module acquisition to avoid unnecessary allocation of Module[]
+        var assemblyInfo = GetInfoForAssembly(assembly);
+        try
+        {
+            RuntimeFieldHandle fieldHandle = assemblyInfo.module.ModuleHandle.GetRuntimeFieldHandleFromMetadataToken((int)token);
+            FieldInfo fieldInfo = FieldInfo.GetFieldFromHandle(fieldHandle);
+            *(nint*)retklass = fieldInfo.FieldType.TypeHandleIntPtr();
+            return fieldHandle.FieldHandleIntPtr();
+        }
+        catch (ArgumentException e)
+        {
+            // ArgumentException is thrown when the field belongs to a generic type.
+            // Ignoring the error for now.
+            return IntPtr.Zero;
+        }
+        catch (FileNotFoundException e)
+        {
+            Log($"mono_unity_field_from_token_checked: Unable to find {e.FileName} when resolving Field {token} in {assembly.Location}");
+            return IntPtr.Zero;
+        }
     }
 
     [return: NativeCallbackType("MonoObject*")]
@@ -498,6 +542,164 @@ static unsafe partial class CoreCLRHost
         }
 
         return IntPtr.Zero;
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_subclass_of(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
+        [NativeCallbackType("MonoClass*")] IntPtr parent_class,
+        [NativeCallbackType("gboolean")] bool check_interfaces)
+    {
+        Type tClass = klass.TypeFromHandleIntPtr();
+        Type tParentClass = parent_class.TypeFromHandleIntPtr();
+
+        if (tClass == null || tParentClass == null)
+        {
+            return false;
+        }
+        if (tClass == tParentClass)
+        {
+            return true;
+        }
+        if (tClass.IsArray && tParentClass.IsArray)
+        {
+            return tClass.GetArrayRank() == tParentClass.GetArrayRank() &&
+                   tClass.GetElementType() == tParentClass.GetElementType();
+        }
+
+        bool isSubclass = false;
+        if(check_interfaces)
+        {
+            isSubclass = tParentClass.IsAssignableFrom(tClass);
+        }
+
+        return isSubclass || tClass.IsSubclassOf(tParentClass);
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_generic(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsGenericTypeDefinition;
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_inflated(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return !t.IsGenericTypeDefinition && t.IsGenericType;
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_enum(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsEnum;
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_valuetype(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsValueType;
+    }
+
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool unity_class_is_abstract(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsAbstract;
+    }
+
+    private static ConcurrentDictionary<IntPtr, bool> s_isBlittableCache = new ConcurrentDictionary<IntPtr, bool>();
+    [return: NativeCallbackType("gboolean")]
+    public static bool class_is_blittable(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        bool isBlittable = false;
+
+        if (s_isBlittableCache.TryGetValue(klass, out isBlittable))
+        {
+            return isBlittable;
+        }
+
+        Type t = klass.TypeFromHandleIntPtr();
+
+        if (!t.IsValueType)
+        {
+            s_isBlittableCache[klass] = false;
+            return false;
+        }
+
+        try
+        {
+            object tInstance = FormatterServices.GetUninitializedObject(t);
+            GCHandle.Alloc(tInstance, GCHandleType.Pinned).Free();
+            //if we succeed in getting a pinned gcHandle, Type is blittable
+            isBlittable = true;
+        }
+        catch (Exception)
+        {
+            // Assume type is not blittable
+        }
+
+        s_isBlittableCache[klass] = isBlittable;
+        return isBlittable;
+    }
+
+    [return: NativeCallbackType("gboolean")]
+    public static bool unity_class_is_interface(
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        Type t = klass.TypeFromHandleIntPtr();
+        return t.IsInterface;
+    }
+
+    [NativeFunction(nameof(unity_mono_method_is_generic_specific))]
+    [return: NativeCallbackType("gboolean")]
+    public static bool unity_mono_method_is_generic_specific(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        var classHandle = RuntimeTypeHandle.FromIntPtr(klass);
+        MethodBase metBase = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), classHandle);
+
+        return metBase.IsGenericMethodDefinition;
+    }
+
+    [NativeFunction(nameof(unity_mono_method_is_inflated_specific))]
+    [return: NativeCallbackType("gboolean")]
+    public static bool unity_mono_method_is_inflated_specific(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        [NativeCallbackType("MonoClass*")] IntPtr klass)
+    {
+        // Note: In Mono, a non-generic method in an inflated class is considered inflated.
+        var classHandle = RuntimeTypeHandle.FromIntPtr(klass);
+        var type = Type.GetTypeFromHandle(classHandle);
+        MethodBase metBase = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), classHandle);
+        bool parentClassIsInflated = type != null && !type.IsGenericTypeDefinition && type.IsGenericType;
+        return metBase.IsConstructedGenericMethod || parentClassIsInflated;
+    }
+
+    [return: NativeCallbackType("gint64")]
+    public static long gc_get_heap_size()
+    {
+        var info = GC.GetGCMemoryInfo();
+        return info.HeapSizeBytes;
+    }
+
+    [return: NativeCallbackType("gint64")]
+    public static long gc_get_used_size()
+    {
+        var info = GC.GetGCMemoryInfo();
+        var heapSz =  info.HeapSizeBytes;
+        return heapSz - info.FragmentedBytes;
     }
 
     static void Log(string message)

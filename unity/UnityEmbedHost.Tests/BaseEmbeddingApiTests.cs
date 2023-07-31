@@ -451,6 +451,29 @@ public abstract class BaseEmbeddingApiTests
     }
 
     [TestCase(typeof(object))]
+    [TestCase(typeof(Bacon))]
+    [TestCase(typeof(Mammal))]
+    [TestCase(typeof(Cat))]
+    [TestCase(typeof(Rock))]
+    [TestCase(typeof(CatOnlyInterface))]
+    public unsafe void FieldGet(Type type)
+    {
+        // Test only methods on the type itself to ensure they belong to the same module
+        var typeFields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        foreach (var f in typeFields)
+        {
+            var token = f.MetadataToken;
+            var expectedFieldHandle = f.FieldHandle;
+            Type expectedType = f.FieldType;
+            IntPtr actualTypeHandleIntPtr = IntPtr.Zero;
+            var actual = ClrHost.unity_field_from_token_checked(ClrHost.class_get_image(type), (uint)token,  new IntPtr(&actualTypeHandleIntPtr));
+            Assert.NotNull(actual);
+            Assert.AreEqual(expectedFieldHandle, actual);
+            Assert.AreEqual(expectedType, actualTypeHandleIntPtr.TypeFromHandleIntPtr());
+        }
+    }
+
+    [TestCase(typeof(object))]
     [TestCase(typeof(Mammal))]
     [TestCase(typeof(Socket))]
     public void ClassGetImage(Type type)
@@ -614,6 +637,247 @@ public abstract class BaseEmbeddingApiTests
         var expectedFlat = FlattenedArray(expected);
         var actualFlat = FlattenedArray(actual);
         Assert.That(actualFlat, Is.EquivalentTo(expectedFlat));
+    }
+
+    [TestCase(typeof(Cat),                     typeof(Animal),                     true,   true)]
+    [TestCase(typeof(Cat),                     typeof(Animal),                     false,  true)]
+    [TestCase(typeof(Cat[]),                   typeof(Animal[]),                   false, false)]
+    [TestCase(typeof(Cat[]),                   typeof(Animal[]),                   true,  false)]
+    [TestCase(typeof(Cat[]),                   typeof(Animal),                     false, false)]
+    [TestCase(typeof(Animal),                  typeof(IAnimal),                    false, false)]
+    [TestCase(typeof(Animal),                  typeof(IAnimal),                    true,   true)]
+    [TestCase(typeof(Animal[]),                typeof(IAnimal[]),                  true,  false)]
+    [TestCase(typeof(IAnimal),                 typeof(Animal),                     true,  false)]
+    [TestCase(typeof(IAnimal),                 typeof(Animal),                     false, false)]
+    [TestCase(typeof(Animal),                  typeof(Cat),                        true,  false)]
+    [TestCase(typeof(Animal),                  typeof(Cat),                        false, false)]
+    [TestCase(typeof(GenericCat<, >),          typeof(GenericAnimal<, >),          true,  false)]
+    [TestCase(typeof(GenericCat<int, string>), typeof(GenericAnimal<int, string>), false,  true)]
+    [TestCase(typeof(GenericCat<int, string>), typeof(GenericAnimal<, >),          false, false)]
+    [TestCase(typeof(GenericCat<int, string>), typeof(GenericAnimal<bool, int>),   false, false)]
+    public void ClassIsSubclassOfReturnsProperValue(Type klass, Type parentClass, bool check_interfaces, bool expectedResult)
+    {
+        bool isSubclass = ClrHost.class_is_subclass_of(klass, parentClass, check_interfaces);
+        Assert.That(isSubclass, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(Animal),                        false)]
+    [TestCase(typeof(List<>),                         true)]
+    [TestCase(typeof(GenericAnimal<, >),              true)]
+    [TestCase(typeof(GenericAnimal<int, string>),    false)]
+#pragma warning disable CS8500
+    [TestCase(typeof(GenericAnimal<int, string>*),   false)]
+#pragma warning restore CS8500
+    [TestCase(typeof(GenericAnimal<int, string>[]),  false)]
+    public void ClassIsGenericReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isGeneric = ClrHost.class_is_generic(klass);
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(List<>),                       false)]
+    public void ClassIsGenericByRefReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isGeneric = ClrHost.class_is_generic(klass.MakeByRefType());
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(Animal),                        false)]
+    [TestCase(typeof(List<>),                        false)]
+    [TestCase(typeof(List<string>),                   true)]
+    [TestCase(typeof(GenericAnimal<, >),             false)]
+    [TestCase(typeof(GenericAnimal<int, string>),     true)]
+#pragma warning disable CS8500
+    [TestCase(typeof(GenericAnimal<int, string>*),   false)]
+#pragma warning restore CS8500
+    [TestCase(typeof(GenericAnimal<int, string>[]),  false)]
+    public void ClassIsInflatedReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isInflated = ClrHost.class_is_inflated(klass);
+        Assert.That(isInflated, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(Classification),                    true)]
+    [TestCase(typeof(Classification*),                  false)]
+    [TestCase(typeof(Classification[]),                 false)]
+    [TestCase(typeof(Animal),                           false)]
+    [TestCase(typeof(IAnimal),                          false)]
+    [TestCase(typeof(GenericAnimal<int, string>),       false)]
+    [TestCase(typeof(StructContainingOnlyAnEnum),       false)]
+    [TestCase(typeof(StructContainingOnlyAnEnum.AnEnum), true)]
+    public void ClassIsEnumReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isEnum = ClrHost.class_is_enum(klass);
+        Assert.That(isEnum, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(Animal),                              false)]
+    [TestCase(typeof(GenericAnimal<Classification, bool>), false)]
+    [TestCase(typeof(ValueMammal*),                        false)]
+    [TestCase(typeof(ValueMammal),                          true)]
+    [TestCase(typeof(Classification),                       true)]
+    public void ClassIsValuetypeReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isValueType = ClrHost.class_is_valuetype(klass);
+        Assert.That(isValueType, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(ValueMammal), false)]
+    public void ClassIsValuetypeByRefReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isValueType = ClrHost.class_is_valuetype(klass.MakeByRefType());
+        Assert.That(isValueType, Is.EqualTo(expectedResult));
+    }
+
+
+    [TestCase(typeof(Animal),                                true)]
+    [TestCase(typeof(GenericAnimal<Classification, bool>),  false)]
+    [TestCase(typeof(ValueMammal*),                         false)]
+    [TestCase(typeof(ValueMammal),                          false)]
+    [TestCase(typeof(Classification),                       false)]
+    public void UnityClassIsAbstractReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isAbstract = ClrHost.unity_class_is_abstract(klass);
+        Assert.That(isAbstract, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(int),           true)]
+    [TestCase(typeof(bool),          true)]
+    [TestCase(typeof(char),          true)]
+    [TestCase(typeof(string),       false)]
+    [TestCase(typeof(MyStruct),      true)]
+    [TestCase(typeof(Cat),          false)]
+    [TestCase(typeof(RockLover),    false)]
+    [TestCase(typeof(Classification),true)]
+    [TestCase(typeof(IntPtr),        true)]
+    [TestCase(typeof(int*),         false)]
+    [TestCase(typeof(List<>),       false)]
+    [TestCase(typeof(List<int>),    false)]
+    public void ClassIsBlittableReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isBlittable = ClrHost.class_is_blittable(klass);
+        Assert.That(isBlittable, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(Animal),                               false)]
+    [TestCase(typeof(GenericAnimal<Classification, bool>),  false)]
+    [TestCase(typeof(ValueMammal),                          false)]
+    [TestCase(typeof(ValueMammal*),                         false)]
+    [TestCase(typeof(IAnimal),                               true)]
+    [TestCase(typeof(Classification),                       false)]
+    public void UnityClassIsInterfaceReturnsProperValue(Type klass, bool expectedResult)
+    {
+        bool isInterface = ClrHost.unity_class_is_interface(klass);
+        Assert.That(isInterface, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(RockLover), nameof(RockLover.GenericMethod), null,  true)]
+    [TestCase(typeof(Cat),       nameof(Cat.Meow),                null, false)]
+    [TestCase(typeof(Cat),       nameof(Cat.VirtualMethodOnCat),  null, false)]
+    [TestCase(typeof(Cat),       nameof(Cat.AbstractOnAnimal),    null, false)]
+    public void UnityMethodIsGenericReturnsProperValue(Type objType, string methodName, Type[]? parameters, bool expectedResult)
+    {
+        var baseMethodInfo = objType.FindInstanceMethodByName(methodName, parameters);
+
+        bool isGeneric = ClrHost.unity_mono_method_is_generic_specific(baseMethodInfo.MethodHandle, objType);
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(GenericCat<,>), nameof(IGenericAnimal<int , int>.InterfaceMethodOnIGenericAnimal), null, false)]
+    public void UnityMethodIsGenericInGenericClassReturnsProperValue(Type objType, string methodName, Type[]? parameters, bool expectedResult)
+    {
+        var instance   = objType.MakeGenericType(new Type[] { typeof(int), typeof(int) });
+        var baseMethodInfo = instance.FindInstanceMethodByName(methodName, parameters);
+
+        bool isGeneric = ClrHost.unity_mono_method_is_generic_specific(baseMethodInfo.MethodHandle, objType);
+        Assert.That(isGeneric, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(RockLover), nameof(RockLover.GenericMethod), null,  true)]
+    [TestCase(typeof(Cat),       nameof(Cat.Meow),                null, false)]
+    [TestCase(typeof(Cat),       nameof(Cat.VirtualMethodOnCat),  null, false)]
+    [TestCase(typeof(Cat),       nameof(Cat.AbstractOnAnimal),    null, false)]
+    public void UnityMethodIsInflatedReturnsProperValue(Type objType, string methodName, Type[]? parameters, bool expectedResult)
+    {
+        var baseMethodInfo = objType.FindInstanceMethodByName(methodName, parameters);
+
+        bool isInflated = ClrHost.unity_mono_method_is_inflated_specific(baseMethodInfo.MethodHandle, objType);
+        Assert.That(isInflated, Is.EqualTo(false));
+
+        try
+        {
+            // Attempt to inflate the method with bool type args
+            Type[] inflateType = baseMethodInfo.GetGenericArguments();
+            for (int i = 0; i < inflateType.Length; ++i)
+            {
+                inflateType[i] = typeof(bool);
+            }
+
+            var inflatedMethod = baseMethodInfo.MakeGenericMethod(inflateType);
+            isInflated = ClrHost.unity_mono_method_is_inflated_specific(inflatedMethod.MethodHandle, objType);
+        }
+        catch (Exception)
+        {
+            // can't inflate
+            isInflated = false;
+        }
+
+        Assert.That(isInflated, Is.EqualTo(expectedResult));
+    }
+
+    [TestCase(typeof(GenericCat<,>), nameof(IGenericAnimal<int , int>.InterfaceMethodOnIGenericAnimal), null, true)]
+    public void UnityMethodIsInflatedReturnsProperValueForNonGenericMethod(Type objType, string methodName, Type[]? parameters, bool expectedResult)
+    {
+        var instance   = objType.MakeGenericType(new Type[] { typeof(int), typeof(int) });
+        var baseMethodInfo = instance.FindInstanceMethodByName(methodName, parameters);
+
+        bool isInflated = ClrHost.unity_mono_method_is_inflated_specific(baseMethodInfo.MethodHandle, instance);
+        Assert.That(isInflated, Is.EqualTo(expectedResult));
+    }
+
+    [Test]
+    [Timeout(50000)]
+    public void GcGetHeapSizeReturnsProperValue()
+    {
+        GC.Collect(0,GCCollectionMode.Forced, true);
+        GC.WaitForPendingFinalizers();
+
+        long heapSize = ClrHost.gc_get_heap_size();
+        while (heapSize == 0)
+        {
+            Thread.Sleep(0);
+            heapSize = ClrHost.gc_get_used_size();
+        }
+        Assert.NotZero(heapSize);
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
+        GC.Collect();
+        heapSize = ClrHost.gc_get_heap_size();
+        Assert.Greater(heapSize, dataSize * sizeof(int));
+        GC.KeepAlive(data);
+    }
+
+    [Test]
+    [Timeout(50000)]
+    public void GcGetUsedSizeReturnsProperValue()
+    {
+        GC.Collect(0,GCCollectionMode.Forced, true);
+        GC.WaitForPendingFinalizers();
+
+        long usedSize = ClrHost.gc_get_used_size();
+        while (usedSize == 0)
+        {
+            Thread.Sleep(0);
+            usedSize = ClrHost.gc_get_used_size();
+        }
+
+        Assert.NotZero(usedSize);
+        int dataSize = 1024 * 1024 * 100;
+        int[] data = new int[dataSize];
+        GC.Collect();
+        usedSize = ClrHost.gc_get_used_size();
+        Assert.Greater(usedSize, dataSize * sizeof(int));
+        GC.KeepAlive(data);
     }
 
     static List<object?> FlattenedArray(Array arr)
