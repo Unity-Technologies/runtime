@@ -687,7 +687,7 @@ static unsafe partial class CoreCLRHost
         return metBase.IsConstructedGenericMethod || parentClassIsInflated;
     }
 
-    [return: NativeCallbackType("gint32")]
+    [return: NativeCallbackType("int")]
     public static int class_get_rank(
         [NativeCallbackType("MonoClass*")] IntPtr klass)
     {
