@@ -9,6 +9,18 @@ class FooParentAttribute : Attribute
 class FooAttribute : FooParentAttribute
 { }
 
+enum Classification
+{
+    Bovine,
+    Feline,
+    Avian
+}
+
+struct StructContainingOnlyAnEnum
+{
+    public enum AnEnum{AnEnumValue, AnotherEnumValue}
+}
+
 [Obsolete]
 [Foo]
 class Bacon
@@ -88,6 +100,17 @@ class CatOnlyInterface : ICat
 
 class Rock : IRock
 {
+}
+
+struct RockLover
+{
+    public Rock FavoriteRock = new Rock();
+
+    public void GenericMethod<T>() { }
+
+    public RockLover()
+    {
+    }
 }
 
 abstract class Animal : IAnimal
