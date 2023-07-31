@@ -23,7 +23,13 @@ namespace System.Globalization
         {
             _isAsciiEqualityOrdinal = GetIsAsciiEqualityOrdinal(interopCultureName);
             if (!GlobalizationMode.Invariant)
+            {
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS || TARGET_BROWSER
+                if (GlobalizationMode.Hybrid)
+                    return;
+#endif
                  _sortHandle = SortHandleCache.GetCachedSortHandle(interopCultureName);
+            }
         }
 
         private bool GetIsAsciiEqualityOrdinal(string interopCultureName)
@@ -78,6 +84,10 @@ namespace System.Globalization
                 fixed (char* pSource = &MemoryMarshal.GetReference(source))
                 fixed (char* pTarget = &MemoryMarshal.GetReference(target))
                 {
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                    if (GlobalizationMode.Hybrid)
+                        return IndexOfCoreNative(pTarget, target.Length, pSource, source.Length, options, fromBeginning, matchLengthPtr);
+#endif
                     if (fromBeginning)
                         return Interop.Globalization.IndexOf(_sortHandle, pTarget, target.Length, pSource, source.Length, options, matchLengthPtr);
                     else
@@ -104,14 +114,14 @@ namespace System.Globalization
                 char* a = ap;
                 char* b = bp;
 
-                if (target.IndexOfAnyExcept(s_nonSpecialAsciiChars) >= 0)
+                if (target.ContainsAnyExcept(s_nonSpecialAsciiChars))
                 {
                     goto InteropCall;
                 }
 
                 if (target.Length > source.Length)
                 {
-                    if (source.IndexOfAnyExcept(s_nonSpecialAsciiChars) >= 0)
+                    if (source.ContainsAnyExcept(s_nonSpecialAsciiChars))
                     {
                         goto InteropCall;
                     }
@@ -188,13 +198,14 @@ namespace System.Globalization
 #if TARGET_BROWSER
                 if (GlobalizationMode.Hybrid)
                 {
-                    int result = Interop.JsGlobalization.IndexOf(out string exceptionMessage, m_name, b, target.Length, a, source.Length, options, fromBeginning);
-                    if (!string.IsNullOrEmpty(exceptionMessage))
-                    {
-                        throw new Exception(exceptionMessage);
-                    }
+                    int result = Interop.JsGlobalization.IndexOf(m_name, b, target.Length, a, source.Length, options, fromBeginning, out int exception, out object ex_result);
+                    if (exception != 0)
+                        throw new Exception((string)ex_result);
                     return result;
                 }
+#elif TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return IndexOfCoreNative(b, target.Length, a, source.Length, options, fromBeginning, matchLengthPtr);
 #endif
                 if (fromBeginning)
                     return Interop.Globalization.IndexOf(_sortHandle, b, target.Length, a, source.Length, options, matchLengthPtr);
@@ -216,14 +227,14 @@ namespace System.Globalization
                 char* a = ap;
                 char* b = bp;
 
-                if (target.IndexOfAnyExcept(s_nonSpecialAsciiChars) >= 0)
+                if (target.ContainsAnyExcept(s_nonSpecialAsciiChars))
                 {
                     goto InteropCall;
                 }
 
                 if (target.Length > source.Length)
                 {
-                    if (source.IndexOfAnyExcept(s_nonSpecialAsciiChars) >= 0)
+                    if (source.ContainsAnyExcept(s_nonSpecialAsciiChars))
                     {
                         goto InteropCall;
                     }
@@ -288,7 +299,15 @@ namespace System.Globalization
             InteropCall:
 #if TARGET_BROWSER
                 if (GlobalizationMode.Hybrid)
-                    return Interop.JsGlobalization.IndexOf(out string exceptionMessage, m_name, b, target.Length, a, source.Length, options, fromBeginning);
+                {
+                    int result = Interop.JsGlobalization.IndexOf(m_name, b, target.Length, a, source.Length, options, fromBeginning, out int exception, out object ex_result);
+                    if (exception != 0)
+                        throw new Exception((string)ex_result);
+                    return result;
+                }
+#elif TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return IndexOfCoreNative(b, target.Length, a, source.Length, options, fromBeginning, matchLengthPtr);
 #endif
                 if (fromBeginning)
                     return Interop.Globalization.IndexOf(_sortHandle, b, target.Length, a, source.Length, options, matchLengthPtr);
@@ -318,6 +337,10 @@ namespace System.Globalization
                 fixed (char* pSource = &MemoryMarshal.GetReference(source)) // could be null (or otherwise unable to be dereferenced)
                 fixed (char* pPrefix = &MemoryMarshal.GetReference(prefix))
                 {
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                    if (GlobalizationMode.Hybrid)
+                        return NativeStartsWith(pPrefix, prefix.Length, pSource, source.Length, options);
+#endif
                     return Interop.Globalization.StartsWith(_sortHandle, pPrefix, prefix.Length, pSource, source.Length, options, matchLengthPtr);
                 }
             }
@@ -397,6 +420,10 @@ namespace System.Globalization
                 return true;
 
             InteropCall:
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return NativeStartsWith(bp, prefix.Length, ap, source.Length, options);
+#endif
                 return Interop.Globalization.StartsWith(_sortHandle, bp, prefix.Length, ap, source.Length, options, matchLengthPtr);
             }
         }
@@ -465,6 +492,10 @@ namespace System.Globalization
                 return true;
 
             InteropCall:
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return NativeStartsWith(bp, prefix.Length, ap, source.Length, options);
+#endif
                 return Interop.Globalization.StartsWith(_sortHandle, bp, prefix.Length, ap, source.Length, options, matchLengthPtr);
             }
         }
@@ -490,6 +521,10 @@ namespace System.Globalization
                 fixed (char* pSource = &MemoryMarshal.GetReference(source)) // could be null (or otherwise unable to be dereferenced)
                 fixed (char* pSuffix = &MemoryMarshal.GetReference(suffix))
                 {
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                    if (GlobalizationMode.Hybrid)
+                        return NativeEndsWith(pSuffix, suffix.Length, pSource, source.Length, options);
+#endif
                     return Interop.Globalization.EndsWith(_sortHandle, pSuffix, suffix.Length, pSource, source.Length, options, matchLengthPtr);
                 }
             }
@@ -570,6 +605,10 @@ namespace System.Globalization
                 return true;
 
             InteropCall:
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return NativeEndsWith(bp, suffix.Length, ap, source.Length, options);
+#endif
                 return Interop.Globalization.EndsWith(_sortHandle, bp, suffix.Length, ap, source.Length, options, matchLengthPtr);
             }
         }
@@ -638,6 +677,10 @@ namespace System.Globalization
                 return true;
 
             InteropCall:
+#if TARGET_OSX || TARGET_MACCATALYST || TARGET_IOS || TARGET_TVOS
+                if (GlobalizationMode.Hybrid)
+                    return NativeEndsWith(bp, suffix.Length, ap, source.Length, options);
+#endif
                 return Interop.Globalization.EndsWith(_sortHandle, bp, suffix.Length, ap, source.Length, options, matchLengthPtr);
             }
         }
