@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -507,27 +508,35 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("void*")] void* buffer,
         [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString )
     {
-        MethodBase mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
-        StringBuilder retVal = null;
-        if (mb != null)
+        try
         {
-            retVal = new StringBuilder($"{mb.ReflectedType?.Namespace}.{mb.ReflectedType?.Name}:{mb.Name}");
-            if (signature)
+            MethodBase mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
+            StringBuilder retVal = null;
+            if (mb != null)
             {
-                ParameterInfo[] param = mb.GetParameters();
-                retVal.Append(" (");
-                if (param.Length > 0)
+                retVal = new StringBuilder($"{mb.ReflectedType?.Namespace}.{mb.ReflectedType?.Name}:{mb.Name}");
+                if (signature)
                 {
-                    retVal.Append($"{param[0].ParameterType.FullName}");
-                    for (int i = 1; i < param.Length; i++)
-                        retVal.Append($",{param[i].ParameterType.FullName}");
+                    ParameterInfo[] param = mb.GetParameters();
+                    retVal.Append(" (");
+                    if (param.Length > 0)
+                    {
+                        retVal.Append($"{param[0].ParameterType.FullName}");
+                        for (int i = 1; i < param.Length; i++)
+                            retVal.Append($",{param[i].ParameterType.FullName}");
+                    }
+                    retVal.Append(")");
                 }
-                retVal.Append(")");
             }
+            string foo = retVal.ToString();
+            fixed(char* p = foo)
+                assignString(buffer, p, foo.Length);
         }
-        string foo = retVal.ToString();
-        fixed(char* p = foo)
-            assignString(buffer, p, foo.Length);
+        catch (Exception e)
+        {
+            Log($"CoreCLR exception! {e}");
+        }
+
     }
 
     [NativeFunction("coreclr_method_get_name")]
@@ -536,9 +545,16 @@ static unsafe partial class CoreCLRHost
         [NativeCallbackType("void*")] void* buffer,
         [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
     {
-        string retVal = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr())?.Name ?? "";
-        fixed (char* p = retVal)
-            assignString(buffer, p, retVal.Length);
+        try
+        {
+            string retVal = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr())?.Name ?? "";
+            fixed (char* p = retVal)
+                assignString(buffer, p, retVal.Length);
+        }
+        catch (Exception e)
+        {
+            Log($"CoreCLR exception! {e}");
+        }
     }
 
     [NativeFunction("coreclr_type_get_name_full", NativeFunctionOptions.SignatureOnly)]
