@@ -728,12 +728,13 @@ static unsafe partial class CoreCLRHost
 
     [NativeFunction("coreclr_method_full_name")]
     public static void coreclr_method_full_name(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
         [NativeCallbackType("MonoMethod*")] IntPtr method,
         bool signature,
         [NativeCallbackType("void*")] void* buffer,
         [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString )
     {
-        MethodBase mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
+        MethodBase mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), RuntimeTypeHandle.FromIntPtr(klass));
         StringBuilder retVal = null;
         if (mb != null)
         {
@@ -761,11 +762,12 @@ static unsafe partial class CoreCLRHost
 
     [NativeFunction("coreclr_method_get_name")]
     public static void coreclr_method_get_name(
+        [NativeCallbackType("MonoClass*")] IntPtr klass,
         [NativeCallbackType("MonoMethod*")] IntPtr method,
         [NativeCallbackType("void*")] void* buffer,
         [NativeCallbackType("AssignString")] delegate* unmanaged[Cdecl]<void*, char*, int, void> assignString)
     {
-        string retVal = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr())?.Name ?? "";
+        string retVal = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), RuntimeTypeHandle.FromIntPtr(klass))?.Name ?? "";
         fixed (char* p = retVal)
             assignString(buffer, p, retVal.Length);
     }

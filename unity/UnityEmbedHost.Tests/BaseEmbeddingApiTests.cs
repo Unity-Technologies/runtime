@@ -451,6 +451,7 @@ public abstract class BaseEmbeddingApiTests
         }
     }
 
+#pragma warning disable CS0612
     [TestCase(typeof(object))]
     [TestCase(typeof(Bacon))]
     [TestCase(typeof(Mammal))]
@@ -473,6 +474,7 @@ public abstract class BaseEmbeddingApiTests
             Assert.AreEqual(expectedType, actualTypeHandleIntPtr.TypeFromHandleIntPtr());
         }
     }
+#pragma warning restore CS0612
 
     [TestCase(typeof(object))]
     [TestCase(typeof(Mammal))]
@@ -922,15 +924,30 @@ public abstract class BaseEmbeddingApiTests
 
     [TestCase(typeof(Mammal), nameof(Mammal.BreathAir), false, "UnityEmbedHost.Tests.Mammal:BreathAir")]
     [TestCase(typeof(Animal), nameof(Animal.Feed), true, "UnityEmbedHost.Tests.Animal:Feed (System.Object,System.Object&)")]
+    [TestCase(typeof(Animal), nameof(Animal.InterfaceMethodOnIAnimal), true, "UnityEmbedHost.Tests.Animal:InterfaceMethodOnIAnimal ()")]
     public unsafe void MethodGetFullNameWorks(Type type, string methodName, bool withSignature, string expectedName)
     {
         byte* buffer = null;
-        ClrHost.coreclr_method_full_name(type.GetMethod(methodName)!.MethodHandle, withSignature, &buffer, &AssignString);
+        ClrHost.coreclr_method_full_name(type, type.GetMethod(methodName)!.MethodHandle, withSignature, &buffer, &AssignString);
 
         string? methodFullName = Marshal.PtrToStringUni((IntPtr)buffer);
         Marshal.FreeHGlobal((IntPtr)buffer);
 
         Assert.That(methodFullName, Is.EqualTo(expectedName));
+    }
+
+    [Test]
+    public unsafe void MethodGetFullNameWorksForGeneric()
+    {
+        byte* buffer = null;
+        GenericCat<int, int> cat = new();
+        string methodName = nameof(cat.InterfaceMethodOnIGenericAnimal);
+        ClrHost.coreclr_method_full_name(cat.GetType(), cat.GetType().GetMethod(methodName)!.MethodHandle, false, &buffer, &AssignString);
+
+        string? name = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        Assert.That(name, Is.EqualTo("UnityEmbedHost.Tests.GenericCat`2:InterfaceMethodOnIGenericAnimal"));
     }
 
     [TestCase(typeof(Mammal), nameof(Mammal.BreathAir))]
@@ -939,7 +956,21 @@ public abstract class BaseEmbeddingApiTests
     public unsafe void MethodGetNameWorks(Type type, string methodName)
     {
         byte* buffer = null;
-        ClrHost.coreclr_method_get_name(type.GetMethod(methodName)!.MethodHandle, &buffer, &AssignString);
+        ClrHost.coreclr_method_get_name(type, type.GetMethod(methodName)!.MethodHandle, &buffer, &AssignString);
+
+        string? name = Marshal.PtrToStringUni((IntPtr)buffer);
+        Marshal.FreeHGlobal((IntPtr)buffer);
+
+        Assert.That(name, Is.EqualTo(methodName));
+    }
+
+    [Test]
+    public unsafe void MethodGetNameWorksForGeneric()
+    {
+        byte* buffer = null;
+        GenericCat<int, int> cat = new();
+        string methodName = nameof(cat.InterfaceMethodOnIGenericAnimal);
+        ClrHost.coreclr_method_get_name(cat.GetType(), cat.GetType().GetMethod(methodName)!.MethodHandle, &buffer, &AssignString);
 
         string? name = Marshal.PtrToStringUni((IntPtr)buffer);
         Marshal.FreeHGlobal((IntPtr)buffer);
