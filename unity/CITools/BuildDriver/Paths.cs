@@ -14,6 +14,8 @@ public class Paths
     public static NPath UnityRoot => RepoRoot.Combine("unity");
     public static NPath UnityGC => UnityRoot.Combine("unitygc");
 
+    public static NPath UnityEmbedProfiler => UnityRoot.Combine("unity-profiler");
+
     public static NPath UnityEmbedApiTests => UnityRoot.Combine("embed_api_tests");
 
     public static NPath UnityEmbedHost => UnityRoot.Combine("unity-embed-host");
@@ -71,6 +73,19 @@ public class Paths
                 return "libunitygc.so";
 
             return "unitygc.dll";
+        }
+    }
+
+    public static string UnityEmbedProfilerFileName
+    {
+        get
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "libunity-profiler.dylib";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "libunity-profiler.so";
+
+            return "unity-profiler.dll";
         }
     }
 }

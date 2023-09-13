@@ -11,6 +11,9 @@ public class Utils
     public static string UnityEmbedHostTfmDirectoryName(GlobalConfig gConfig)
         => Paths.UnityEmbedHost.Combine("bin", gConfig.Configuration).Directories().Single().FileName;
 
+    public static string UnityEmbedProfilerTfmDirectoryName(GlobalConfig gConfig)
+        => Paths.UnityEmbedProfiler.Combine("bin", gConfig.Configuration).Directories().Single().FileName;
+
     public static NPath RuntimeArtifactDirectory(GlobalConfig gConfig)
         => Paths.RepoRoot.Combine("artifacts", "bin",
             $"microsoft.netcore.app.runtime.{Paths.ShortPlatformNameInPaths}-{gConfig.Architecture}", gConfig.Configuration, "runtimes",

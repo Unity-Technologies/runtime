@@ -14,6 +14,7 @@ static class Artifacts
             Utils.UnityTestHostDotNetAppDirectory(gConfig));
 
         CopyUnityEmbedHostToArtifacts(gConfig);
+        CopyUnityEmbedProfilerToArtifacts(gConfig);
 
         Paths.RepoRoot.Combine("LICENSE.TXT").Copy(Utils.RuntimeArtifactDirectory(gConfig).Combine("LICENSE.md"));
 
@@ -31,6 +32,19 @@ static class Artifacts
     {
         foreach (var dest in destinations)
             Paths.UnityGC.Combine(gConfig.Configuration, Paths.UnityGCFileName).Copy(dest);
+    }
+
+    static void CopyUnityEmbedProfilerToArtifacts(GlobalConfig gConfig)
+    {
+        CopyUnityEmbedProfilerTo(gConfig,
+            Utils.RuntimeArtifactDirectory(gConfig).Combine("lib", Utils.UnityEmbedHostTfmDirectoryName(gConfig)),
+            Utils.UnityTestHostDotNetAppDirectory(gConfig));
+    }
+
+    static void CopyUnityEmbedProfilerTo(GlobalConfig gConfig, params NPath[] destinations)
+    {
+        foreach (var dest in destinations)
+            Paths.UnityEmbedProfiler.Combine(gConfig.Configuration, Paths.UnityEmbedProfilerFileName).Copy(dest);
     }
 
     static void CopyUnityEmbedHostTo(GlobalConfig gConfig, params NPath[] destinations)

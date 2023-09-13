@@ -11,6 +11,7 @@ public enum BuildTargets
     ClassLibs = 1 << 1,
     NullGC = 1 << 2,
     EmbeddingHost = 1 << 3,
+    EmbeddingProfiler = 1 << 4,
     CoreCLR = Runtime | ClassLibs,
-    All = CoreCLR | NullGC | EmbeddingHost
+    All = CoreCLR | NullGC | EmbeddingHost | EmbeddingProfiler
 }
