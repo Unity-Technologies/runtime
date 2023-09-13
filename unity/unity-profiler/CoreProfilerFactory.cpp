@@ -52,10 +52,7 @@ HRESULT STDMETHODCALLTYPE CoreProfilerFactory::CreateInstance(IUnknown *pUnkOute
     auto profiler = new (std::nothrow) CoreProfiler();
     if (profiler == nullptr)
         return E_OUTOFMEMORY;
-
-    auto hr = profiler->QueryInterface(riid, ppvObject);
-    profiler->Release();
-    return hr;
+    return profiler->QueryInterface(riid, ppvObject);
 }
 
 HRESULT STDMETHODCALLTYPE CoreProfilerFactory::LockServer(BOOL fLock)

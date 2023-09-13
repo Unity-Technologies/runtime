@@ -153,7 +153,8 @@ public class Program
             {
                 Architecture = architecture ?? GetArchitectures()[0],
                 Configuration = configuration ?? "Release",
-                VerbosityLevel = context.ParseResult.GetValue(verbosityOption)
+                VerbosityLevel = context.ParseResult.GetValue(verbosityOption),
+                BuildTargets = bTargets
             };
 
             // We always need to build the embedding host because on CI we have the build and tests split into separate jobs.  And the way we have artifacts setup,

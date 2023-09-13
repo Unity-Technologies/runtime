@@ -35,12 +35,12 @@ HRESULT STDMETHODCALLTYPE CoreProfiler::Shutdown()
     return NOERROR;
 }
 
-ULONG STDMETHODCALLTYPE CoreProfiler::AddRef(void)
+ULONG STDMETHODCALLTYPE CoreProfiler::AddRef()
 {
     return ++m_RefCount;
 }
 
-ULONG STDMETHODCALLTYPE CoreProfiler::Release(void)
+ULONG STDMETHODCALLTYPE CoreProfiler::Release()
 {
     int count = --m_RefCount;
     if (count <= 0)

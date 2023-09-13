@@ -9,12 +9,18 @@ static class Artifacts
 {
     public static NPath ConsolidateArtifacts(GlobalConfig gConfig)
     {
-        CopyUnityGCTo(gConfig,
-            Utils.RuntimeArtifactDirectory(gConfig).Combine("native"),
-            Utils.UnityTestHostDotNetAppDirectory(gConfig));
+        if (gConfig.BuildTargets.HasFlag(BuildTargets.NullGC))
+        {
+            CopyUnityGCTo(gConfig,
+                Utils.RuntimeArtifactDirectory(gConfig).Combine("native"),
+                Utils.UnityTestHostDotNetAppDirectory(gConfig));
+        }
 
-        CopyUnityEmbedHostToArtifacts(gConfig);
-        CopyUnityEmbedProfilerToArtifacts(gConfig);
+        if (gConfig.BuildTargets.HasFlag(BuildTargets.EmbeddingHost))
+            CopyUnityEmbedHostToArtifacts(gConfig);
+
+        if (gConfig.BuildTargets.HasFlag(BuildTargets.EmbeddingProfiler))
+            CopyUnityEmbedProfilerToArtifacts(gConfig);
 
         Paths.RepoRoot.Combine("LICENSE.TXT").Copy(Utils.RuntimeArtifactDirectory(gConfig).Combine("LICENSE.md"));
 
@@ -37,8 +43,7 @@ static class Artifacts
     static void CopyUnityEmbedProfilerToArtifacts(GlobalConfig gConfig)
     {
         CopyUnityEmbedProfilerTo(gConfig,
-            Utils.RuntimeArtifactDirectory(gConfig).Combine("lib", Utils.UnityEmbedHostTfmDirectoryName(gConfig)),
-            Utils.UnityTestHostDotNetAppDirectory(gConfig));
+            Utils.RuntimeArtifactDirectory(gConfig).Combine("lib", Utils.UnityEmbedHostTfmDirectoryName(gConfig)));
     }
 
     static void CopyUnityEmbedProfilerTo(GlobalConfig gConfig, params NPath[] destinations)

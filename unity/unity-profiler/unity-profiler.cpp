@@ -24,8 +24,10 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID FAR* ppv)
 
     if (rclsid == __uuidof(CoreProfiler))
     {
-        static CoreProfilerFactory factory;
-        return factory.QueryInterface(riid, ppv);
+        auto factory = new (std::nothrow) CoreProfilerFactory();
+        if (factory == nullptr)
+            return E_OUTOFMEMORY;
+        return factory->QueryInterface(riid, ppv);
     }
     return CLASS_E_CLASSNOTAVAILABLE;
 }

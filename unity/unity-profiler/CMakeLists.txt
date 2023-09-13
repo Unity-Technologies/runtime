@@ -55,6 +55,7 @@ endif (CLR_CMAKE_HOST_UNIX)
 # Profiler DLL sources
 set(PROFILER_SOURCES
     unity-profiler.cpp
+    unity-profiler.def
     CoreProfilerFactory.cpp
     CoreProfiler.cpp)
 
