@@ -1,5 +1,6 @@
 #include <windows.h>
 #include "CoreProfilerFactory.h"
+#include "Unity/IProfilerApi.h"
 
 STDAPI_(BOOL) DllMain(HINSTANCE hInstDll, DWORD reason, PVOID)
 {
@@ -35,4 +36,21 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID FAR* ppv)
 STDAPI DllCanUnloadNow()
 {
     return S_OK;
+}
+
+struct TestApi : ScriptingCoreCLR::IProfilerApi
+{
+    virtual void Test() override
+    {
+        OutputDebugString("[PROFILER] TEST API CALL\n");
+    }
+};
+
+STDAPI_(ScriptingCoreCLR::IProfilerApi*) DllGetProfilerApi()
+{
+    static TestApi* s_ProfilerApi = nullptr;
+    if (s_ProfilerApi == nullptr)
+        s_ProfilerApi = new (std::nothrow) TestApi();
+    
+    return s_ProfilerApi;
 }

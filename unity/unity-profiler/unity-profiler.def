@@ -3,3 +3,4 @@ LIBRARY "unity-profiler.dll"
 EXPORTS
     DllCanUnloadNow PRIVATE
     DllGetClassObject PRIVATE
+    DllGetProfilerApi PRIVATE

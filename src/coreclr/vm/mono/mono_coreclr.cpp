@@ -2858,9 +2858,68 @@ extern "C" EXPORT_API void EXPORT_CC mono_unity_gc_handles_foreach_get_target (M
     ASSERT_NOT_IMPLEMENTED;
 }
 
+
+//---------------------------------------------------------------------------------------
+//
+// This is a callback used by the GC when we call GCHeapUtilities::DiagDescrGenerations
+// (from UpdateGenerationBounds() below).  The GC gives us generation information through
+// this callback, which we use to update the GenerationDesc in the corresponding
+// GenerationTable
+//
+// Arguments:
+//      context - The containing GenerationTable
+//      generation - Generation number
+//      rangeStart - Address where generation starts
+//      rangeEnd - Address where generation ends
+//      rangeEndReserved - Address where generation reserved space ends
+//
+class GCHeapRangeCollector
+{
+private:
+    MonoDataFunc m_Callback;
+    void* m_UserData;
+
+    struct HeapChunk
+    {
+	void* start;
+	size_t size;
+    };
+
+public:
+    GCHeapRangeCollector(MonoDataFunc callback, void* userData)
+        : m_Callback(callback)
+        , m_UserData(userData)
+    {
+    }
+
+    static void WalkFunc(void* context, int generation, BYTE* rangeStart, BYTE* rangeEnd, BYTE* rangeEndReserved)
+    {
+        CONTRACT_VOID
+        {
+            NOTHROW;
+            GC_NOTRIGGER;
+            MODE_ANY; // can be called even on GC threads
+            PRECONDITION(CheckPointer(context));
+            PRECONDITION(0 <= generation && generation <= 4);
+            PRECONDITION(CheckPointer(rangeStart));
+            PRECONDITION(CheckPointer(rangeEnd));
+            PRECONDITION(CheckPointer(rangeEndReserved));
+        } CONTRACT_END;
+
+        GCHeapRangeCollector* _self = static_cast<GCHeapRangeCollector*>(context);
+        HeapChunk chunk;
+        chunk.start = rangeStart;
+        chunk.size = rangeEnd - rangeStart;
+        _self->m_Callback(&chunk, _self->m_UserData);
+
+        RETURN;
+    }
+};
+
 extern "C" EXPORT_API void EXPORT_CC mono_unity_gc_heap_foreach (MonoDataFunc callback, void* userData)
 {
-    ASSERT_NOT_IMPLEMENTED;
+    GCHeapRangeCollector context(callback, userData);
+    GCHeapUtilities::GetGCHeap()->DiagDescrGenerations(&GCHeapRangeCollector::WalkFunc, &context);
 }
 
 extern "C" EXPORT_API int EXPORT_CC mono_unity_gc_is_disabled ()
