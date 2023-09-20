@@ -370,13 +370,13 @@ TEST(mono_runtime_object_init_calls_constructor)
     MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "TestClassWithConstructor", "GetI", 0);
     MonoObject* obj = CreateObjectHelper(kTestDLLNameSpace, "TestClassWithConstructor");
     {
-        MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
+        MonoObject* returnValue = unity_mono_runtime_invoke(method, obj, 0, nullptr, nullptr);
         int int_result = *(int*)mono_object_unbox(returnValue);
         CHECK_EQUAL(0, int_result);
     }
     mono_runtime_object_init(ExtractManagedFromHandle(obj));
     {
-        MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
+        MonoObject* returnValue = unity_mono_runtime_invoke(method, obj, 0, nullptr, nullptr);
         int int_result = *(int*)mono_object_unbox(returnValue);
         CHECK_EQUAL(42, int_result);
     }
@@ -385,7 +385,7 @@ TEST(mono_runtime_object_init_calls_constructor)
 TEST(mono_runtime_invoke_can_invoke_static_method_with_no_args)
 {
     MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodReturningInt", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
+    MonoObject* returnValue = unity_mono_runtime_invoke(method, nullptr, 0, nullptr, nullptr);
     int int_result = *(int*)mono_object_unbox(returnValue);
 
     CHECK_EQUAL(42, int_result);
@@ -394,7 +394,7 @@ TEST(mono_runtime_invoke_can_invoke_static_method_with_no_args)
 TEST(mono_runtime_invoke_can_invoke_private_method)
 {
     MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticPrivateMethodReturningInt", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
+    MonoObject* returnValue = unity_mono_runtime_invoke(method, nullptr, 0, nullptr, nullptr);
     int int_result = *(int*)mono_object_unbox(returnValue);
 
     CHECK_EQUAL(42, int_result);
@@ -405,8 +405,12 @@ TEST(mono_runtime_invoke_can_invoke_static_method_with_two_args)
     MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithTwoArgsReturningInt", 2);
     int param1 = 10;
     int param2 = 15;
-    void* params[2] = { &param1, &param2 };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
+    GET_AND_CHECK(int_class, mono_get_int32_class());
+    GET_AND_CHECK(box_param1, mono_value_box(g_domain, int_class, &param1));
+    GET_AND_CHECK(box_param2, mono_value_box(g_domain, int_class, &param2));
+
+    MonoObject* params[2] = { box_param1, box_param2 };
+    MonoObject* returnValue = unity_mono_runtime_invoke(method, nullptr, 2, params, nullptr);
     int int_result = *(int*)mono_object_unbox(returnValue);
 
     CHECK_EQUAL(25, int_result);
@@ -977,14 +981,14 @@ TEST(mono_gc_wbarrier_set_field_can_set_reference_field)
     MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithReferenceField");
     GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
     GET_AND_CHECK(method, mono_class_get_method_from_name(klass, "GetField", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
+    MonoObject* returnValue = unity_mono_runtime_invoke(method, obj,  0, nullptr, nullptr);
     CHECK(returnValue == nullptr);
 
     GET_AND_CHECK(field, mono_class_get_field_from_name(klass, "reference"));
     int field_offset = mono_field_get_offset(field);
     mono_gc_wbarrier_set_field(ExtractManagedFromHandle(obj), (char*)ExtractManagedFromHandle(obj) + field_offset, ExtractManagedFromHandle(obj));
 
-    returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
+    returnValue = unity_mono_runtime_invoke(method, obj, 0, nullptr, nullptr);
     CHECK_EQUAL(ExtractManagedFromHandle(obj), returnValue);
 }
 

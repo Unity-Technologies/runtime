@@ -687,6 +687,47 @@ static unsafe partial class CoreCLRHost
         return metBase.IsConstructedGenericMethod || parentClassIsInflated;
     }
 
+    [NativeFunction(nameof(unity_mono_runtime_invoke))]
+    [return: NativeCallbackType("MonoObject*")]
+    public static IntPtr unity_mono_runtime_invoke(
+        [NativeCallbackType("MonoMethod*")] IntPtr method,
+        [NativeCallbackType("MonoObject*")] IntPtr obj,
+        int nargs,
+        [NativeCallbackType("MonoObject**")] IntPtr args,
+        [NativeCallbackType("MonoException**")] IntPtr exception)
+    {
+        object ret = null;
+        try
+        {
+            MethodBase mb;
+            object targetThis = obj.ToManagedRepresentation();
+            if(targetThis != null)
+                mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr(), targetThis.GetType().TypeHandle);
+            else
+                mb = MethodBase.GetMethodFromHandle(method.MethodHandleFromHandleIntPtr());
+
+            object[] oArgs = nargs > 0 ? new object[nargs] : Array.Empty<object>();
+
+            var argSpan = new Span<IntPtr>(args.ToPointer(), nargs);
+
+            for (int i = 0; i < nargs; i++)
+                oArgs[i] = argSpan[i].ToManagedRepresentation();
+
+            ret = mb.Invoke(targetThis, oArgs);
+        }
+        catch (Exception ex)
+        {
+            if (exception != IntPtr.Zero)
+                new Span<IntPtr>(exception.ToPointer(), 1)[0] = ex.ToNativeRepresentation();
+
+            return IntPtr.Zero;
+        }
+
+        if (exception != IntPtr.Zero)
+            new Span<IntPtr>(exception.ToPointer(), 1)[0] = IntPtr.Zero;
+        return ret.ToNativeRepresentation();
+    }
+
     [return: NativeCallbackType("int")]
     public static int class_get_rank(
         [NativeCallbackType("MonoClass*")] IntPtr klass)
