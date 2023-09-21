@@ -1,23 +1,25 @@
 #include "CoreProfiler.h"
 
+#include <sstream>
+
 CoreProfiler::CoreProfiler()
     : m_RefCount(0)
-    , m_ProfilerInfo(nullptr)
+    , ProfilerInfo(nullptr)
 {
 }
 
 CoreProfiler::~CoreProfiler()
 {
-    if (this->m_ProfilerInfo != nullptr)
+    if (this->ProfilerInfo != nullptr)
     {
-        this->m_ProfilerInfo->Release();
-        this->m_ProfilerInfo = nullptr;
+        this->ProfilerInfo->Release();
+        this->ProfilerInfo = nullptr;
     }
 }
 
 HRESULT STDMETHODCALLTYPE CoreProfiler::Initialize(IUnknown *pUnknown)
 {
-    HRESULT hr = pUnknown->QueryInterface(__uuidof(ICorProfilerInfo8), reinterpret_cast<LPVOID*>(&m_ProfilerInfo));
+    HRESULT hr = pUnknown->QueryInterface(__uuidof(ICorProfilerInfo8), reinterpret_cast<LPVOID*>(&ProfilerInfo));
     if (FAILED(hr))
         return E_FAIL;
 
@@ -26,10 +28,10 @@ HRESULT STDMETHODCALLTYPE CoreProfiler::Initialize(IUnknown *pUnknown)
 
 HRESULT STDMETHODCALLTYPE CoreProfiler::Shutdown()
 {
-    if (this->m_ProfilerInfo != nullptr)
+    if (this->ProfilerInfo != nullptr)
     {
-        this->m_ProfilerInfo->Release();
-        this->m_ProfilerInfo = nullptr;
+        this->ProfilerInfo->Release();
+        this->ProfilerInfo = nullptr;
     }
 
     return NOERROR;
@@ -301,6 +303,14 @@ HRESULT STDMETHODCALLTYPE CoreProfiler::MovedReferences(ULONG cMovedObjectIDRang
 
 HRESULT STDMETHODCALLTYPE CoreProfiler::ObjectAllocated(ObjectID objectId, ClassID classId)
 {
+  // Convert the ObjectID to a string
+    std::wstringstream objectIdStream;
+    objectIdStream << L"Object allocated - Object ID: " << objectId;
+    const std::wstring objectIdString = objectIdStream.str();
+
+    // Output the string
+    OutputDebugStringW(objectIdString.c_str());
+
     return NOERROR;
 }
 

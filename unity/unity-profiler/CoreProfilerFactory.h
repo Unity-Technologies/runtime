@@ -2,6 +2,7 @@
 
 #include <unknwn.h>
 #include <atomic>
+#include "CoreProfiler.h"
 
 class CoreProfilerFactory : public IClassFactory
 {
@@ -11,6 +12,7 @@ private:
 public:
     CoreProfilerFactory();
     virtual ~CoreProfilerFactory();
+    static CoreProfiler* profiler;
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, LPVOID* ppvObj) override;
     ULONG   STDMETHODCALLTYPE AddRef(void) override;

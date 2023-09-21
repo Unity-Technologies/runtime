@@ -1,5 +1,6 @@
 #include "CoreProfilerFactory.h"
-#include "CoreProfiler.h"
+
+CoreProfiler* CoreProfilerFactory::profiler = nullptr;
 
 CoreProfilerFactory::CoreProfilerFactory()
     : m_RefCount(0)
@@ -49,7 +50,7 @@ HRESULT STDMETHODCALLTYPE CoreProfilerFactory::CreateInstance(IUnknown *pUnkOute
         return CLASS_E_NOAGGREGATION;
     }
 
-    auto profiler = new (std::nothrow) CoreProfiler();
+    profiler = new (std::nothrow) CoreProfiler();
     if (profiler == nullptr)
         return E_OUTOFMEMORY;
     return profiler->QueryInterface(riid, ppvObject);

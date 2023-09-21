@@ -8,11 +8,12 @@ class CoreProfiler : public ICorProfilerCallback8
 {
 private:
     std::atomic<int> m_RefCount;
-    ICorProfilerInfo8* m_ProfilerInfo;
 
 public:
     CoreProfiler();
     virtual ~CoreProfiler();
+
+    ICorProfilerInfo* ProfilerInfo;
 
     HRESULT STDMETHODCALLTYPE Initialize(IUnknown* pICorProfilerInfoUnk) override;
     HRESULT STDMETHODCALLTYPE Shutdown() override;

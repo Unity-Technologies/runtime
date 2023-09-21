@@ -44,6 +44,14 @@ struct TestApi : ScriptingCoreCLR::IProfilerApi
     {
         OutputDebugString("[PROFILER] TEST API CALL\n");
     }
+
+    virtual void RunLeakDetection() override
+    {
+        OutputDebugString("[PROFILER] LEAK DETECTION API CALL\n");
+        auto prof = CoreProfilerFactory::profiler;
+        auto info = prof->ProfilerInfo;
+        info->ForceGC();
+    }
 };
 
 STDAPI_(ScriptingCoreCLR::IProfilerApi*) DllGetProfilerApi()
