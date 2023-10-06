@@ -1693,6 +1693,11 @@ extern "C" EXPORT_API void EXPORT_CC mono_unity_initialize_host_apis(initialize_
     hr = init_func(g_HostStruct, (int32_t)sizeof(HostStruct), g_HostStructNative, (int32_t)sizeof(HostStructNative));
 
     AppDomain *pCurDomain = SystemDomain::GetCurrentDomain();
+
+    // Disable Windows message processing during waits
+    // On Windows by default waits will processing some messages (COM, WM_PAINT, ...) leading to reentrancy issues
+    pCurDomain->SetForceTrivialWaitOperations();
+
     gRootDomain = gCurrentDomain = (MonoDomain*)pCurDomain;
 }
 
