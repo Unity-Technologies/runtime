@@ -11,5 +11,14 @@ public class JobConfiguration
     public required Architecture Architecture;
     public required Configuration Configuration;
 
+    /// <summary>
+    /// Excludes configuration from automatic publishing of artifacts to stevedore.
+    /// E.g. if we want to do postprocessing of configuration artifacts in another job.
+    /// </summary>
     public bool ExcludeFromPublishing;
+
+    /// <summary>
+    /// Excludes configuration from being tested as a part of "All CoreCLR Tests" job.
+    /// </summary>
+    public bool ExcludeFromTesting;
 }

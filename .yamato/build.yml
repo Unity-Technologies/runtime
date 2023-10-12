@@ -9,6 +9,8 @@ build_all:
   - path: .yamato/build.yml#build_osx_arm64_release
   - path: .yamato/build.yml#build_osx_x64_debug
   - path: .yamato/build.yml#build_osx_x64_release
+  - path: .yamato/build.yml#build_windows_arm64_debug
+  - path: .yamato/build.yml#build_windows_arm64_release
   - path: .yamato/build.yml#build_windows_x64_debug
   - path: .yamato/build.yml#build_windows_x64_release
   - path: .yamato/build.yml#build_windows_x86_debug
@@ -144,6 +146,48 @@ build_osx_x64_release:
   - ExcludeFromPublishing
   - MacOS
   - Release
+build_windows_arm64_debug:
+  name: Build Windows arm64 Debug
+  agent:
+    image: platform-foundation/coreclr-windows:v0.0.1-1276296
+    type: Unity::VM
+    flavor: b1.xlarge
+  commands:
+  - command: .yamato/scripts/build_yamato.cmd --arch=arm64 --config=Debug
+  artifacts:
+    7z-archives:
+      paths:
+      - artifacts\unity\**
+    build:
+      paths:
+      - artifacts\bin\**
+  variables:
+    ARTIFACT_FILENAME: dotnet-unity-windows-arm64.7z
+  labels:
+  - BuildJob
+  - Debug
+  - Windows
+build_windows_arm64_release:
+  name: Build Windows arm64 Release
+  agent:
+    image: platform-foundation/coreclr-windows:v0.0.1-1276296
+    type: Unity::VM
+    flavor: b1.xlarge
+  commands:
+  - command: .yamato/scripts/build_yamato.cmd --arch=arm64 --config=Release
+  artifacts:
+    7z-archives:
+      paths:
+      - artifacts\unity\**
+    build:
+      paths:
+      - artifacts\bin\**
+  variables:
+    ARTIFACT_FILENAME: dotnet-unity-windows-arm64.7z
+  labels:
+  - BuildJob
+  - Release
+  - Windows
 build_windows_x64_debug:
   name: Build Windows x64 Debug
   agent:

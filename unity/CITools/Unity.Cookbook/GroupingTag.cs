@@ -8,4 +8,5 @@ static class GroupingTag
     public const string TestJob = "TestJob";
     public const string BuildJob = "BuildJob";
     public const string ExcludeFromPublishing = "ExcludeFromPublishing";
+    public const string ExcludeFromTesting = "ExcludeFromTesting";
 }
