@@ -9,6 +9,8 @@ all_class_library_tests:
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_osx_arm64_release
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_osx_x64_debug
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_osx_x64_release
+  - path: .yamato/class-library-tests.yml#test_-_class_library_-_windows_arm64_debug
+  - path: .yamato/class-library-tests.yml#test_-_class_library_-_windows_arm64_release
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_windows_x64_debug
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_windows_x64_release
   - path: .yamato/class-library-tests.yml#test_-_class_library_-_windows_x86_debug
@@ -50,7 +52,9 @@ test_-_class_library_-_osx_arm64_debug:
   dependencies:
   - path: .yamato/build.yml#build_osx_arm64_debug
   labels:
+  - ExcludeFromTesting
   - MacOS
+  - TestJob
 test_-_class_library_-_osx_arm64_release:
   name: Test - Class Library - OSX arm64 Release
   agent:
@@ -62,7 +66,9 @@ test_-_class_library_-_osx_arm64_release:
   dependencies:
   - path: .yamato/build.yml#build_osx_arm64_release
   labels:
+  - ExcludeFromTesting
   - MacOS
+  - TestJob
 test_-_class_library_-_osx_x64_debug:
   name: Test - Class Library - OSX x64 Debug
   agent:
@@ -89,6 +95,34 @@ test_-_class_library_-_osx_x64_release:
   labels:
   - MacOS
   - TestJob
+test_-_class_library_-_windows_arm64_debug:
+  name: Test - Class Library - Windows arm64 Debug
+  agent:
+    image: platform-foundation/coreclr-windows:v0.0.1-1276296
+    type: Unity::VM
+    flavor: b1.xlarge
+  commands:
+  - command: .yamato/scripts/build_yamato.cmd --arch=arm64 --config=Debug --test=classlibs
+  dependencies:
+  - path: .yamato/build.yml#build_windows_arm64_debug
+  labels:
+  - ExcludeFromTesting
+  - TestJob
+  - Windows
+test_-_class_library_-_windows_arm64_release:
+  name: Test - Class Library - Windows arm64 Release
+  agent:
+    image: platform-foundation/coreclr-windows:v0.0.1-1276296
+    type: Unity::VM
+    flavor: b1.xlarge
+  commands:
+  - command: .yamato/scripts/build_yamato.cmd --arch=arm64 --config=Release --test=classlibs
+  dependencies:
+  - path: .yamato/build.yml#build_windows_arm64_release
+  labels:
+  - ExcludeFromTesting
+  - TestJob
+  - Windows
 test_-_class_library_-_windows_x64_debug:
   name: Test - Class Library - Windows x64 Debug
   agent:

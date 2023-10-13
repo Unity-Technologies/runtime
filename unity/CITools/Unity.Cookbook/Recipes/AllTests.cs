@@ -54,7 +54,16 @@ public class AllTests : AggregateRecipeBase
     {
         return JobBuilder.Create(jobName)
             .WithDependencies(_finder
-                .FindByTags(GroupingTag.TestJob, platformTag))
+                .Find(job =>
+                {
+                    if (!job.Tags.Contains(GroupingTag.TestJob) || !job.Tags.Contains(platformTag))
+                        return false;
+
+                    if (job.Tags.Contains(GroupingTag.ExcludeFromTesting))
+                        return false;
+
+                    return true;
+                }))
             .Build();
     }
 

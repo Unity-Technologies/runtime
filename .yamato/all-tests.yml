@@ -48,6 +48,7 @@ build_published:
   name: Build Published
   dependencies:
   - path: .yamato/build.yml#build_linux_x64_release
+  - path: .yamato/build.yml#build_windows_arm64_release
   - path: .yamato/build.yml#build_windows_x64_release
   - path: .yamato/build.yml#build_windows_x86_release
   - path: .yamato/build.yml#generate_osx_x64_arm64
