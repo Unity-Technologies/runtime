@@ -225,11 +225,6 @@ MonoClass* GetClassHelper(const char* namespaze, const char* classname)
     GET_AND_CHECK(klass, mono_class_from_name(image, namespaze, classname));
     return klass;
 }
-MonoMethod* GetMethodHelper(const char* namespaze, const char* classname, const char* methodname, int args)
-{
-    GET_AND_CHECK(method, mono_class_get_method_from_name (GetClassHelper(namespaze, classname), methodname, args));
-    return method;
-}
 
 MonoObject* CreateObjectHelper(const char* namespaze, const char* classname)
 {
@@ -277,34 +272,6 @@ TEST(mono_class_from_returns_null_if_class_does_not_exist)
     GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
     MonoClass* klass = mono_class_from_name(image, kTestDLLNameSpace, kInvalidName);
     CHECK(klass == NULL);
-}
-
-TEST(mono_class_get_method_from_name_returns_method)
-{
-    const char* methodname = "StaticMethodReturningInt";
-    MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, methodname, 0));
-    CHECK(strcmp(methodname, mono_method_get_name(method)) == 0);
-    CHECK(klass == mono_method_get_class(method));
-}
-
-TEST(mono_method_full_name_returns_full_name)
-{
-    const char* methodname = "StaticMethodWithObjectOutArg";
-    MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, methodname, 2));
-    CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg", mono_method_full_name(method, false)) == 0);
-    if (g_Mode == CoreCLR)
-        CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg (System.Object,System.Object&)", mono_method_full_name(method, true)) == 0);
-    else
-        CHECK(strcmp("TestDll.TestClass:StaticMethodWithObjectOutArg (object,object&)", mono_method_full_name(method, true)) == 0);
-}
-
-TEST(mono_class_get_method_from_name_returns_null_if_method_does_not_exist)
-{
-    MonoClass *klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    MonoMethod* method = mono_class_get_method_from_name (klass, kInvalidName, 0);
-    CHECK(method == NULL);
 }
 
 TEST(mono_class_get_property_from_name_returns_static_property)
@@ -365,164 +332,6 @@ TEST(mono_type_get_name_full_returns_il_name)
     mono_unity_g_free(name);
 }
 
-TEST(mono_runtime_object_init_calls_constructor)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "TestClassWithConstructor", "GetI", 0);
-    MonoObject* obj = CreateObjectHelper(kTestDLLNameSpace, "TestClassWithConstructor");
-    {
-        MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
-        int int_result = *(int*)mono_object_unbox(returnValue);
-        CHECK_EQUAL(0, int_result);
-    }
-    mono_runtime_object_init(ExtractManagedFromHandle(obj));
-    {
-        MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
-        int int_result = *(int*)mono_object_unbox(returnValue);
-        CHECK_EQUAL(42, int_result);
-    }
-}
-
-TEST(mono_runtime_invoke_can_invoke_static_method_with_no_args)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodReturningInt", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(mono_runtime_invoke_can_invoke_private_method)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticPrivateMethodReturningInt", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(mono_runtime_invoke_can_invoke_static_method_with_two_args)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithTwoArgsReturningInt", 2);
-    int param1 = 10;
-    int param2 = 15;
-    void* params[2] = { &param1, &param2 };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(25, int_result);
-}
-
-TEST(mono_runtime_invoke_can_invoke_static_method_with_two_float_args)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithTwoArgsReturningFloat", 2);
-    float param1 = 10.0f;
-    float param2 = 15.0f;
-    void* params[2] = { &param1, &param2 };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    float result = *(float*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(25.0f, result);
-}
-
-TEST(mono_runtime_invoke_can_invoke_static_method_returning_object)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithTwoArgsReturningObject", 1);
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-    void* params[1] = { ExtractManagedFromHandle(testObj) };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), returnValue);
-}
-
-TEST(mono_runtime_invoke_can_invoke_instance_method_with_two_float_args)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "MethodWithTwoArgsReturningFloat", 2);
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-    float param1 = 10.0f;
-    float param2 = 15.0f;
-    void* params[2] = { &param1, &param2 };
-    MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(testObj), params, nullptr);
-    float result = *(float*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(25.0f, result);
-}
-
-typedef struct {
-    uint32_t Data1;
-    uint16_t  Data2;
-    uint16_t  Data3;
-    uint8_t  Data4[8];
-} MYGUID;
-
-TEST(mono_runtime_invoke_can_invoke_method_returning_struct)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodReturningGUID", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    MYGUID result = *(MYGUID*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(0x81a130d2, result.Data1);
-}
-
-TEST(mono_runtime_invoke_can_invoke_with_struct_arg)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithGUIDArg", 1);
-    MYGUID guid;
-    memset(&guid, 0, sizeof(guid));
-    guid.Data1 = 123;
-    guid.Data2 = 456;
-    guid.Data3 = 789;
-    void* params[1] = { &guid };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    MYGUID result = *(MYGUID*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(guid.Data1, result.Data1);
-    CHECK_EQUAL(guid.Data2, result.Data2);
-    CHECK_EQUAL(guid.Data3, result.Data3);
-}
-
-TEST(mono_runtime_invoke_can_invoke_with_ptr_arg)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithPtrArg", 1);
-    void* param1 = (void*)0x123456789FFFFLL;
-    void* params[1] = { param1 };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    void* result = *(void**)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(param1, result);
-}
-
-TEST(mono_runtime_invoke_can_invoke_with_out_arg)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithObjectOutArg", 2);
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-    void* param1 = ExtractManagedFromHandle(testObj);
-    void* param2 = nullptr;
-    void* params[2] = { param1, &param2 };
-    mono_runtime_invoke(method, nullptr, params, nullptr);
-
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), param2);
-}
-
-TEST(mono_method_get_object_works)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithObjectOutArg", 2);
-    GET_AND_CHECK(methodInfoClass, mono_class_from_name(mono_get_corlib(), "System.Reflection", "MethodInfo"));
-    GET_AND_CHECK(methodObject, mono_method_get_object(g_domain, method, klass));
-    GET_AND_CHECK(methodObjectClass, mono_object_get_class((MonoObject*)methodObject));
-    CHECK(mono_class_is_subclass_of(methodObjectClass, methodInfoClass, false));
-}
-
-TEST(unity_mono_reflection_method_get_method_works)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithObjectOutArg", 2);
-    GET_AND_CHECK(methodInfoClass, mono_class_from_name(mono_get_corlib(), "System.Reflection", "MethodInfo"));
-    GET_AND_CHECK(methodObject, ExtractManagedFromHandle(mono_method_get_object(g_domain, method, klass)));
-    GET_AND_CHECK(methodFromObject, unity_mono_reflection_method_get_method(methodObject));
-    CHECK_EQUAL(method, methodFromObject);
-}
-
 TEST(mono_object_isinst_works_with_same_class)
 {
     MonoClass *klass = GetClassHelper(kTestDLLNameSpace, "ClassWithNestedClass");
@@ -561,15 +370,6 @@ TEST(mono_class_is_generic_works)
     MonoClass *generic = GetClassHelper(kTestDLLNameSpace, "GenericClass`1");
     CHECK(mono_class_is_generic(generic));
     CHECK(!mono_class_is_generic(nongeneric));
-}
-
-TEST(mono_class_is_blittable_works)
-{
-    CHECK(mono_class_is_blittable(mono_get_int32_class()));
-    // Mono has a different definition of "blittable". This should be fine for now,
-    // as we special-case these in the editor.
-    CHECK_EQUAL(g_Mode == CoreCLR, mono_class_is_blittable(GetClassHelper(kTestDLLNameSpace, "TestStructWithFields")));
-    CHECK(!mono_class_is_blittable(GetClassHelper(kTestDLLNameSpace, "TestClass")));
 }
 
 TEST(mono_class_is_subclass_of_works_with_base_class)
@@ -612,26 +412,6 @@ TEST(mono_assembly_get_object)
     MonoObject *result = mono_assembly_get_object(NULL, forwarderAssembly);
     CHECK(result != NULL);
 }
-
-#if 0 //JON
-TEST(will_find_dependency_assembly_next_to_loaded_assembly)
-{
-    // Calls a method which calls a method from another assembly which we did not explictly load.
-    // We need to make sure that we can load any assemblies next to the one we loaded.
-    std::string testDllPath = abs_path_from_file("../dll-with-dependency/bin/Debug/netcoreapp3.0/dll-with-dependency.dll");
-    GET_AND_CHECK(dll_with_dependency_assembly, mono_domain_assembly_open (g_domain, testDllPath.c_str()));
-    GET_AND_CHECK(dll_with_dependency_image, mono_assembly_get_image(dll_with_dependency_assembly));
-    GET_AND_CHECK(class_with_dependency, mono_class_from_name(dll_with_dependency_image, "dll_with_dependency", "ClassWithDependency"));
-    GET_AND_CHECK(obj, mono_object_new(g_domain, class_with_dependency));
-    mono_runtime_object_init(obj);
-    GET_AND_CHECK(method, mono_class_get_method_from_name (class_with_dependency, "ToString", 0));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (obj, method));
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    char* str = mono_string_to_utf8((MonoString*)returnValue);
-    CHECK_EQUAL("Hello", str);
-    mono_unity_g_free(str);
-}
-#endif
 
 TEST(can_get_types_from_image_table)
 {
@@ -713,45 +493,6 @@ TEST(mono_class_get_flags_works)
         mono_class_get_flags(GetClassHelper(kTestDLLNameSpace, "BaseClass")));
     CHECK_EQUAL(TYPE_ATTRIBUTE_BEFORE_FIELD_INIT,
         mono_class_get_flags(GetClassHelper(kTestDLLNameSpace, "TestAttribute")));
-}
-
-TEST(mono_class_instance_size_works)
-{
-    size_t objectsize = g_Mode == CoreCLR ? 8 : 16;
-    CHECK_EQUAL(objectsize + 1, mono_class_instance_size(mono_get_byte_class()));
-    CHECK_EQUAL(objectsize + 2, mono_class_instance_size(mono_get_int16_class()));
-    CHECK_EQUAL(objectsize + 4, mono_class_instance_size(mono_get_int32_class()));
-    CHECK_EQUAL(objectsize, mono_class_instance_size(mono_get_object_class()));
-    CHECK_EQUAL(objectsize + 12, mono_class_instance_size(GetClassHelper(kTestDLLNameSpace, "TestClassWithFields")));
-}
-
-TEST(can_get_base_classes)
-{
-    CHECK(strcmp("Boolean", mono_class_get_name(mono_get_boolean_class())) == 0);
-    CHECK(strcmp("Char", mono_class_get_name(mono_get_char_class())) == 0);
-    CHECK(strcmp("Byte", mono_class_get_name(mono_get_byte_class())) == 0);
-    CHECK(strcmp("Int16", mono_class_get_name(mono_get_int16_class())) == 0);
-    CHECK(strcmp("Int32", mono_class_get_name(mono_get_int32_class())) == 0);
-    CHECK(strcmp("Int64", mono_class_get_name(mono_get_int64_class())) == 0);
-    CHECK(strcmp("Single", mono_class_get_name(mono_get_single_class())) == 0);
-    CHECK(strcmp("Double", mono_class_get_name(mono_get_double_class())) == 0);
-    CHECK(strcmp("Object", mono_class_get_name(mono_get_object_class())) == 0);
-    CHECK(strcmp("String", mono_class_get_name(mono_get_string_class())) == 0);
-    CHECK(strcmp("Array", mono_class_get_name(mono_get_array_class())) == 0);
-    CHECK(strcmp("Exception", mono_class_get_name(mono_get_exception_class())) == 0);
-}
-
-TEST(mono_string_new_wrapper_creates_valid_string)
-{
-    const char* cstr = "Hello, World!";
-    MonoString *str = mono_string_new_wrapper(cstr);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithStringArg", 1);
-    void* param1 = str;
-    void* params[1] = { ExtractManagedFromHandle(param1) };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    int result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(strlen(cstr), result);
 }
 
 TEST(mono_class_get_fields_retrieves_all_fields)
@@ -865,20 +606,6 @@ TEST(can_get_type_of_generic_parameter)
     }
 }
 
-TEST(mono_field_get_offset_retrieves_field_offset)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithFields");
-    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "x"));
-    GET_AND_CHECK(field1, mono_class_get_field_from_name(klass, "y"));
-    size_t field0_offset = mono_field_get_offset(field0);
-    size_t field1_offset = mono_field_get_offset(field1);
-    GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
-    GET_AND_CHECK(method, mono_class_get_method_from_name(klass, "SetupFields", 0));
-    mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    CHECK_EQUAL(123, *(int*)((char*)ExtractManagedFromHandle(obj) + field0_offset));
-    CHECK_EQUAL(456, *(int*)((char*)ExtractManagedFromHandle(obj) + field1_offset));
-}
-
 TEST(sequential_layout_is_respected)
 {
     // CoreCLR does not respect sequential layout for non-blittable types
@@ -972,40 +699,6 @@ TEST(explicit_layout_is_correctly_calculated_for_derived_class)
     CHECK(field == NULL);
 }
 
-TEST(mono_gc_wbarrier_set_field_can_set_reference_field)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithReferenceField");
-    GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
-    GET_AND_CHECK(method, mono_class_get_method_from_name(klass, "GetField", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    CHECK(returnValue == nullptr);
-
-    GET_AND_CHECK(field, mono_class_get_field_from_name(klass, "reference"));
-    int field_offset = mono_field_get_offset(field);
-    mono_gc_wbarrier_set_field(ExtractManagedFromHandle(obj), (char*)ExtractManagedFromHandle(obj) + field_offset, ExtractManagedFromHandle(obj));
-
-    returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    CHECK_EQUAL(ExtractManagedFromHandle(obj), returnValue);
-}
-
-TEST(mono_field_get_offset_retrieves_field_offset_from_struct)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestStructWithFields");
-    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "x"));
-    GET_AND_CHECK(field1, mono_class_get_field_from_name(klass, "y"));
-    size_t field0_offset = mono_field_get_offset(field0);
-    size_t field1_offset = mono_field_get_offset(field1);
-    GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
-    GET_AND_CHECK(method, mono_class_get_method_from_name(klass, "SetupFields", 0));
-    auto structInObject = (MonoObject*)((char*)ExtractManagedFromHandle(obj) + field0_offset);
-    if (g_Mode == CoreCLR)
-        mono_runtime_invoke_with_nested_object(method, structInObject, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    else
-        mono_runtime_invoke(method, structInObject, nullptr, nullptr);
-    CHECK_EQUAL(123, *(int*)((char*)ExtractManagedFromHandle(obj) + field0_offset));
-    CHECK_EQUAL(456, *(int*)((char*)ExtractManagedFromHandle(obj) + field1_offset));
-}
-
 TEST(mono_field_get_flags_works)
 {
     MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithFields");
@@ -1049,161 +742,6 @@ TEST(mono_class_get_methods_retrieves_all_methods)
 
     CHECK_EQUAL(4, count);
     CHECK_EQUAL("ABC.ctor", methodnames);
-}
-
-TEST(mono_method_signature_gets_parameters_from_static_method)
-{
-    GET_AND_CHECK(method, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithObjectOutArg", 2));
-    GET_AND_CHECK(signature, mono_method_signature(method));
-	CHECK_EQUAL(2, mono_signature_get_param_count(signature));
-    GET_AND_CHECK(returnType, mono_signature_get_return_type(signature));
-    CHECK_EQUAL(MONO_TYPE_VOID, mono_type_get_type(returnType));
-    CHECK(!mono_signature_is_instance(signature));
-    gpointer iter = NULL;
-    MonoType *paramType = mono_signature_get_params(signature, &iter);
-    CHECK_EQUAL(MONO_TYPE_OBJECT, mono_type_get_type(paramType));
-    CHECK(mono_type_is_byref(paramType) == false);
-    paramType = mono_signature_get_params(signature, &iter);
-    CHECK_EQUAL(MONO_TYPE_OBJECT, mono_type_get_type(paramType));
-    CHECK(mono_type_is_byref(paramType) == true);
-    paramType = mono_signature_get_params(signature, &iter);
-    CHECK(paramType == nullptr);
-}
-
-TEST(mono_method_signature_gets_parameters_from_instance_method)
-{
-    GET_AND_CHECK(method, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "MethodWithTwoArgsReturningFloat", 2));
-    GET_AND_CHECK(signature, mono_method_signature(method));
-	CHECK_EQUAL(2, mono_signature_get_param_count(signature));
-    GET_AND_CHECK(returnType, mono_signature_get_return_type(signature));
-    CHECK_EQUAL(MONO_TYPE_R4, mono_type_get_type(returnType));
-    CHECK(mono_signature_is_instance(signature));
-    gpointer iter = NULL;
-    MonoType *paramType = mono_signature_get_params(signature, &iter);
-    CHECK_EQUAL(MONO_TYPE_R4, mono_type_get_type(paramType));
-    paramType = mono_signature_get_params(signature, &iter);
-    CHECK_EQUAL(MONO_TYPE_R4, mono_type_get_type(paramType));
-    paramType = mono_signature_get_params(signature, &iter);
-    CHECK(paramType == nullptr);
-}
-
-TEST(mono_metadata_signature_equal_can_compare_signatures)
-{
-    GET_AND_CHECK(method1, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "MethodWithTwoArgsReturningFloat", 2));
-    GET_AND_CHECK(signature1, mono_method_signature(method1));
-    GET_AND_CHECK(method2, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "AnotherMethodWithTwoArgsReturningFloat", 2));
-    GET_AND_CHECK(signature2, mono_method_signature(method2));
-    GET_AND_CHECK(method3, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithTwoArgsReturningFloat", 2));
-    GET_AND_CHECK(signature3, mono_method_signature(method3));
-    GET_AND_CHECK(method4, GetMethodHelper(kTestDLLNameSpace, kTestClassName, "MethodWithTwoArgsReturningInt", 2));
-    GET_AND_CHECK(signature4, mono_method_signature(method4));
-
-    CHECK(mono_metadata_signature_equal(signature1, signature1));
-    CHECK(mono_metadata_signature_equal(signature1, signature2));
-    CHECK(!mono_metadata_signature_equal(signature1, signature3));
-    CHECK(!mono_metadata_signature_equal(signature1, signature4));
-}
-
-TEST(mono_object_get_virtual_method_can_call_virtual_method)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, "BaseClass", "Method", 0);
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "InheritedClass");
-    GET_AND_CHECK(obj, mono_object_new(g_domain, inherited));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (obj, method));
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(mono_object_get_virtual_method_can_call_interface_method)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, "TestInterface", "Method", 0);
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "ClassImplementingInterface");
-    GET_AND_CHECK(obj, mono_object_new(g_domain, inherited));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (obj, method));
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(mono_object_get_virtual_method_can_call_explicit_interface_method)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, "TestInterface", "Method", 0);
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "ClassExplicitlyImplementingInterface");
-    GET_AND_CHECK(obj, mono_object_new(g_domain, inherited));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (obj, method));
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(can_call_method_on_member_struct)
-{
-    MonoMethod *method1 = GetMethodHelper(kTestDLLNameSpace, "TestStructWithFields", "SetupFields", 0);
-    MonoMethod *method2 = GetMethodHelper(kTestDLLNameSpace, "TestStructWithFields", "SumFields", 0);
-    MonoClass *klass = GetClassHelper(kTestDLLNameSpace, "ClassWithStructFields");
-    GET_AND_CHECK(obj, mono_object_new(g_domain, klass));
-    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "a"));
-    int field0_offset = mono_field_get_offset(field0);
-    MonoObject* embeddedObjectA = (MonoObject*)((char*)ExtractManagedFromHandle(obj) + field0_offset);
-    MonoObject* returnValue;
-    if (g_Mode == Mono)
-    {
-        mono_runtime_invoke(method1, embeddedObjectA, nullptr, nullptr);
-        returnValue = mono_runtime_invoke(method2, embeddedObjectA, nullptr, nullptr);
-    }
-    else
-    {
-        mono_runtime_invoke_with_nested_object(method1, embeddedObjectA, ExtractManagedFromHandle(obj), nullptr, nullptr);
-        returnValue = mono_runtime_invoke_with_nested_object(method2, embeddedObjectA, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    }
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(579, int_result);
-}
-
-TEST(mono_object_get_virtual_method_can_call_interface_method_on_struct)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, "TestInterface", "Method", 0);
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "StructImplementingInterface");
-    MonoMethod *setupmethod = GetMethodHelper(kTestDLLNameSpace, "StructImplementingInterface", "Setup", 0);
-    MonoMethod *setupmethod2 = GetMethodHelper(kTestDLLNameSpace, "StructImplementingInterface", "Method", 0);
-    GET_AND_CHECK(obj, mono_object_new(g_domain, inherited));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (obj, method));
-    mono_runtime_invoke(setupmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    mono_runtime_invoke(setupmethod2, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-}
-
-
-// the call to mono_object_get_virtual_method cannot properly lookup explicit interface imlpementations
-
-TEST(mono_object_get_virtual_method_can_call_explicit_interface_method_on_struct)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, "TestInterface", "Method", 0);
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "StructExplicitlyImplementingInterface");
-    MonoMethod *setupmethod = GetMethodHelper(kTestDLLNameSpace, "StructExplicitlyImplementingInterface", "Setup", 0);
-    MonoMethod *setupmethod2 = GetMethodHelper(kTestDLLNameSpace, "StructExplicitlyImplementingInterface", "TestDll.TestInterface.Method", 0);
-    GET_AND_CHECK(obj, mono_object_new(g_domain, inherited));
-    GET_AND_CHECK(virtualmethod, mono_object_get_virtual_method (ExtractManagedFromHandle(obj), method));
-    mono_runtime_invoke(setupmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    mono_runtime_invoke(setupmethod2, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    MonoObject* returnValue = mono_runtime_invoke(virtualmethod, ExtractManagedFromHandle(obj), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-}
-
-
-TEST(mono_type_is_byref_works)
-{
-    MonoMethod *method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodWithObjectOutArg", 2);
-    GET_AND_CHECK(signature, mono_method_signature(method));
-    gpointer iter = NULL;
-    MonoType *paramType = mono_signature_get_params(signature, &iter);
-    CHECK(!mono_type_is_byref(paramType));
-    paramType = mono_signature_get_params(signature, &iter);
-    CHECK(mono_type_is_byref(paramType));
 }
 
 TEST(mono_get_corlib_returns_corlib_image)
@@ -1295,47 +833,6 @@ TEST(mono_gchandle_new_weakref_creates_weakref)
 
     mono_gchandle_free_v2(handle1);
     mono_gchandle_free_v2(handle2);
-}
-
-TEST(mono_gchandle_compatible_with_managed)
-{
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "GCHandleGetTarget", 1);
-    void* args[1];
-    MonoObject* returnValue;
-
-    // Normal
-    uintptr_t handle_normal = mono_gchandle_new_v2(testObj, false);
-    CHECK(handle_normal != 0);
-    args[0] = (void*)&handle_normal;
-    returnValue = mono_runtime_invoke(method, nullptr, args, nullptr);
-    CHECK(ExtractManagedFromHandle(testObj) == returnValue);
-    mono_gchandle_free_v2(handle_normal);
-
-    // Pinned
-    uintptr_t handle_pinned = mono_gchandle_new_v2(testObj, true);
-    CHECK(handle_pinned != 0);
-    args[0] = (void*)&handle_pinned;
-    returnValue = mono_runtime_invoke(method, nullptr, args, nullptr);
-    CHECK(ExtractManagedFromHandle(testObj) == returnValue);
-    mono_gchandle_free_v2(handle_pinned);
-}
-
-TEST(mono_gchandle_compatible_with_native)
-{
-    MonoObject* testObj = (MonoObject*)mono_string_new_wrapper("Test String");
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "GCHandleAlloc", 2);
-    int32_t handleType = 3; // pinned
-    void* args[2] = {(void*)ExtractManagedFromHandle(testObj), (void*)&handleType};
-
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, args, nullptr);
-    uintptr_t handle_pinned = *(uintptr_t*)mono_object_unbox(returnValue);
-    CHECK(handle_pinned != 0);
-
-    MonoObject* target = mono_gchandle_get_target_v2(handle_pinned);
-    CHECK(ExtractManagedFromHandle(testObj) == ExtractManagedFromHandle(target));
-
-    mono_gchandle_free_v2(handle_pinned);
 }
 
 #if WIN32
@@ -1437,19 +934,6 @@ TEST(mono_unity_gc_disable_can_be_nested)
 
 #endif
 
-TEST(mono_class_enum_basetype_works)
-{
-    MonoClass *testEnum = GetClassHelper(kTestDLLNameSpace, "TestEnum");
-    GET_AND_CHECK(testEnumType, mono_class_enum_basetype(testEnum));
-    GET_AND_CHECK(testEnumBaseClass, mono_type_get_class(testEnumType));
-    CHECK_EQUAL(mono_get_int32_class(), testEnumBaseClass);
-
-    MonoClass *testEnumCustomSize = GetClassHelper(kTestDLLNameSpace, "TestEnumCustomSize");
-    GET_AND_CHECK(testEnumCustomSizeType, mono_class_enum_basetype(testEnumCustomSize));
-    GET_AND_CHECK(testEnumCustomSizeBaseClass, mono_type_get_class(testEnumCustomSizeType));
-    CHECK_EQUAL(mono_get_byte_class(), testEnumCustomSizeBaseClass);
-}
-
 int GetCoreLibClassTypeHelper(const char* namespaze, const char* name)
 {
     GET_AND_CHECK(klass, mono_class_from_name(mono_get_corlib(), namespaze, name));
@@ -1541,21 +1025,6 @@ TEST(mono_class_set_userdata_can_be_retrieved)
     CHECK_EQUAL(&userData, *(int**)(((char*)klass) + mono_class_get_userdata_offset()));
 }
 
-TEST(mono_value_box_works)
-{
-    bool b = true;
-    GET_AND_CHECK(bool_class, mono_get_boolean_class());
-    GET_AND_CHECK(bool_obj, mono_value_box(g_domain, bool_class, &b));
-    CHECK_EQUAL(bool_class, mono_object_get_class(bool_obj));
-    CHECK_EQUAL(b, *(bool*)mono_object_unbox(ExtractManagedFromHandle(bool_obj)));
-
-    int i = 23;
-    GET_AND_CHECK(int_class, mono_get_int32_class());
-    GET_AND_CHECK(int_obj, mono_value_box(g_domain, int_class, &i));
-    CHECK_EQUAL(int_class, mono_object_get_class(int_obj));
-    CHECK_EQUAL(i, *(int*)mono_object_unbox(ExtractManagedFromHandle(int_obj)));
-}
-
 TEST(mono_custom_attrs_has_attr_can_check_class_attribute)
 {
     MonoClass *klassClassWithAttribute = GetClassHelper(kTestDLLNameSpace, "ClassWithAttribute");
@@ -1589,46 +1058,6 @@ TEST(mono_custom_attrs_get_attr_can_get_attribute_instance_for_inherited_attribu
     CHECK_EQUAL(klassInheritedTestAttribute, mono_object_get_class(attributeInstance));
 }
 
-TEST(mono_custom_attrs_get_attr_attribute_instance_has_correct_parameters)
-{
-    MonoClass *klassClassWithAttribute = GetClassHelper(kTestDLLNameSpace, "ClassWithAttribute");
-    MonoClass *klassTestWithParamsAttribute = GetClassHelper(kTestDLLNameSpace, "TestWithParamsAttribute");
-
-    GET_AND_CHECK(attributeInstance, mono_unity_class_get_attribute(klassClassWithAttribute, klassTestWithParamsAttribute));
-
-
-    GET_AND_CHECK(method, mono_class_get_method_from_name(klassTestWithParamsAttribute, "GetI", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(attributeInstance), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(42, int_result);
-
-    GET_AND_CHECK(methodS, mono_class_get_method_from_name(klassTestWithParamsAttribute, "GetS", 0));
-    returnValue = mono_runtime_invoke(methodS, ExtractManagedFromHandle(attributeInstance), nullptr, nullptr);
-    char *utf8 = mono_string_to_utf8((MonoString*)returnValue);
-    CHECK_EQUAL_STR("foo", utf8);
-    mono_unity_g_free(utf8);
-
-    GET_AND_CHECK(methodB, mono_class_get_method_from_name(klassTestWithParamsAttribute, "GetB", 0));
-    returnValue = mono_runtime_invoke(methodB, ExtractManagedFromHandle(attributeInstance), nullptr, nullptr);
-    bool bool_result = *(bool*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(true, bool_result);
-
-    GET_AND_CHECK(methodF, mono_class_get_method_from_name(klassTestWithParamsAttribute, "GetF", 0));
-    returnValue = mono_runtime_invoke(methodF, ExtractManagedFromHandle(attributeInstance), nullptr, nullptr);
-    float float_result = *(float*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(1.0f, float_result);
-}
-
-TEST(mono_custom_attrs_has_attr_can_check_method_attribute)
-{
-    MonoMethod *methodWithAttribute = GetMethodHelper(kTestDLLNameSpace, "ClassWithAttribute", "MethodWithAttribute", 0);
-    MonoClass *klassTestAttribute = GetClassHelper(kTestDLLNameSpace, "TestAttribute");
-    MonoClass *klassAnotherTestAttribute = GetClassHelper(kTestDLLNameSpace, "AnotherTestAttribute");
-
-    CHECK(mono_unity_method_get_attribute(methodWithAttribute, klassTestAttribute) != NULL);
-    CHECK(mono_unity_method_get_attribute(methodWithAttribute, klassAnotherTestAttribute) == NULL);
-}
-
 TEST(mono_custom_attrs_has_attr_can_check_field_attribute)
 {
     // TODO
@@ -1653,36 +1082,7 @@ TEST(mono_custom_attrs_has_attr_can_check_assembly_attribute)
 #define kHelloWorldStringWithEmbeddedNull "Hello\0World"
 #define kHelloWorldStringWithUnicode "Hello, 団結!"
 
-void CheckString(MonoString* str, const char* expected, size_t len)
-{
-    GET_AND_CHECK(stringclass, mono_object_get_class((MonoObject*)str));
-    CHECK_EQUAL(mono_get_string_class(), stringclass);
-    char *utf8 = mono_string_to_utf8(ExtractManagedFromHandle(str));
-    CHECK_EQUAL(0, strcmp(expected, utf8));
 
-    // mono_string_to_utf8 returns a C string, so it cannot contain \0 characters.
-    // Also check if the length of the string matches, to see if we got the characters
-    // after the \0 in the kHelloWorldStringWithEmbeddedNull test.
-    GET_AND_CHECK(property, mono_class_get_property_from_name (mono_get_string_class(), "Length"));
-    GET_AND_CHECK(method, mono_property_get_get_method(property));
-    MonoObject* returnValue = mono_runtime_invoke(method, ExtractManagedFromHandle(str), nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-    CHECK_EQUAL(len, int_result);
-
-    mono_unity_g_free(utf8);
-}
-
-TEST(mono_string_new_wrapper_creates_string)
-{
-    CheckString(mono_string_new_wrapper(kHelloWorldString), kHelloWorldString, 13);
-}
-
-TEST(mono_string_new_len_creates_string)
-{
-    CheckString(mono_string_new_len(mono_domain_get(), kHelloWorldString, 13), kHelloWorldString, 13);
-    CheckString(mono_string_new_len(mono_domain_get(), kHelloWorldString, 5), kHelloString, 5);
-    CheckString(mono_string_new_len(mono_domain_get(), kHelloWorldStringWithEmbeddedNull, 11), kHelloWorldStringWithEmbeddedNull, 11);
-}
 
 TEST(mono_string_new_len_with_unicode_ascii_creates_string)
 {
@@ -1721,82 +1121,10 @@ TEST(can_use_mono_domain_get_to_check_if_thread_is_attached)
 }
 #endif
 
-TEST(can_access_array_elements)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodReturningArray", 0);
-    MonoArray* returnValue = (MonoArray*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    GET_AND_CHECK(arrayInt32Class, mono_object_get_class((MonoObject*)returnValue));
-    CHECK_EQUAL(sizeof(int), mono_array_element_size(arrayInt32Class));
-    for (int i=0; i<6; i++)
-        CHECK_EQUAL(i + 1, *(int*)scripting_array_element_ptr(returnValue, i, sizeof(int)));
-}
-
-TEST(can_access_array_elements_2d)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "StaticMethodReturning2DArray", 0);
-    MonoArray* returnValue = (MonoArray*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    GET_AND_CHECK(arrayInt32Class, mono_object_get_class((MonoObject*)returnValue));
-    CHECK_EQUAL(sizeof(int), mono_array_element_size(arrayInt32Class));
-    for (int i=0; i<6; i++)
-        CHECK_EQUAL(i + 1, *(int*)scripting_array_element_ptr(returnValue, i, sizeof(int)));
-}
-
 int InternalMethod()
 {
    return 42;
 }
-
-int InternalMethodInNestedClass()
-{
-   return 23;
-}
-
-TEST(can_call_internal_method)
-{
-    mono_add_internal_call("TestDll.ICallTest::InternalMethod", reinterpret_cast<gconstpointer>(InternalMethod));
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallInternalMethod", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(42, int_result);
-}
-
-TEST(can_call_internal_method_in_nested_class)
-{
-    mono_add_internal_call("TestDll.ICallTest/NestedClass::InternalMethodInNestedClass", reinterpret_cast<gconstpointer>(InternalMethodInNestedClass));
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallInternalMethodInNestedClass", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(23, int_result);
-}
-
-MonoString* InternalMethodReturnsStackTrace()
-{
-    MonoInternalCallFrameOpaque frame;
-    // In mono, we don't have (or need) this function, so check for it's existance.
-    if (mono_enter_internal_call)
-        mono_enter_internal_call(&frame);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "ReturnStackTrace", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    if (mono_exit_internal_call)
-        mono_exit_internal_call(&frame);
-    return (MonoString*)returnValue;
-}
-
-#if ENABLE_FAILING_TESTS
-TEST(can_get_full_stack_trace_in_internal_method)
-{
-    mono_add_internal_call("TestDll.ICallTest::InternalMethodReturnsStackTrace", reinterpret_cast<gconstpointer>(InternalMethodReturnsStackTrace));
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallInternalMethodReturnsStackTrace", 0);
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    char* str = mono_string_to_utf8((MonoString*)returnValue);
-    CHECK(strstr(str, "ReturnStackTrace"));
-    CHECK(strstr(str, "InternalMethodReturnsStackTrace"));
-    CHECK(strstr(str, "CallInternalMethodReturnsStackTrace"));
-    mono_unity_g_free(str);
-}
-#endif
 
 static const char* find_plugin_callback(const char* name)
 {
@@ -1807,31 +1135,6 @@ static const char* find_plugin_callback(const char* name)
 
     return NULL;
 }
-
-#if ENABLE_FAILING_TESTS
-TEST(can_call_dllimport_method_with_custom_dlopen_callback)
-{
-    mono_set_find_plugin_callback((gconstpointer)find_plugin_callback);
-
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallDllImportFunction", 2);
-    int param1 = 10;
-    int param2 = 15;
-    void* params[2] = { &param1, &param2 };
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(25, int_result);
-}
-
-TEST(mono_runtime_unhandled_exception_policy_set_exception_on_thread_will_not_kill_app)
-{
-    mono_runtime_unhandled_exception_policy_set(MONO_UNHANDLED_POLICY_LEGACY);
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ThreadTest", "RunThreadWhichThrows", 0);
-    MonoObject* returnValue = (MonoObject*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    bool bool_result = *(bool*)mono_object_unbox(returnValue);
-    CHECK(bool_result);
-}
-#endif
 
 #if WIN32
 #define sleep Sleep;
@@ -1851,28 +1154,6 @@ void InternalMethodWhichBlocks()
 
     if (mono_exit_internal_call)
         mono_exit_internal_call(&frame);
-}
-#if ENABLE_FAILING_TESTS
-// This test simulates a scenario where an icall on a thread needs to be interrupted by the GC or we get a deadlock.
-// We have situations like this in Unity. For this reason, our icalls need to be in preemtive mode in CoreCLR.
-TEST(internal_method_can_be_interrupted_by_gc)
-{
-    mono_add_internal_call("TestDll.ICallTest::InternalMethodWhichBlocks", reinterpret_cast<gconstpointer>(InternalMethodWhichBlocks));
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "ThreadTest", "RunThreadWhichBlocksInInternalMethod", 0);
-    mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    while (!g_WaitForGC)
-        sleep(1);
-    mono_gc_collect(mono_gc_max_generation());
-    g_WaitForGC = false;
-}
-#endif
-
-TEST(can_parse_xml_with_win1252_encoding)
-{
-    MonoMethod* method = GetMethodHelper(kTestDLLNameSpace, "XmlTest", "TestParseXmlWithWin1252Encoding", 0);
-    MonoObject* returnValue = (MonoObject*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    bool bool_result = *(bool*)mono_object_unbox(returnValue);
-    CHECK(bool_result);
 }
 
 #if DOMAIN_UNLOAD_TESTS
@@ -1912,64 +1193,6 @@ MonoDomain* LoadTestDllIntoDomain(MonoImage **image)
     mono_domain_set(g_domain, true);
 
     return domain;
-}
-
-TEST(can_load_assembly_into_domain_and_call_into_it)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "MethodReturningInt", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    int int_result = *(int*)mono_object_unbox(returnValue);
-
-    CHECK_EQUAL(42, int_result);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-
-// Since we are loading the unloadable test dll from memory using mono_image_open_from_data_with_name,
-// we need to make sure that we correctly associate the path we pass to mono_image_open_from_data_with_name
-// as the assembly Location.
-TEST(can_load_assembly_into_domain_and_get_assembly_location)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "GetAssemblyLocation", 0));
-    MonoString* returnValue = (MonoString*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    char *utf8 = mono_string_to_utf8(returnValue);
-    CHECK(strstr(utf8, "unloadable-test-dll.dll"));
-    mono_unity_g_free(utf8);
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-
-// Unmodified CoreCLR would assert when a new MethodDesc points to the same internal call
-// implementation as an existing entry in the table. But when we reload the ALC containing the
-// internal call definition, we get a new MethodDesc, so we need to modify CoreCLR to allow this.
-// This test verifies that.
-TEST(can_call_internal_method_after_reloading_domain)
-{
-    mono_add_internal_call("UnloadableTestDll.ICallTest::InternalMethod", reinterpret_cast<gconstpointer>(InternalMethod));
-
-    for (int i=0; i<2; i++)
-    {
-        MonoImage* image;
-        MonoDomain* domain = LoadTestDllIntoDomain(&image);
-        GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "ICallTest"));
-        GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "CallInternalMethod", 0));
-        MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-        int int_result = *(int*)mono_object_unbox(returnValue);
-        CHECK_EQUAL(42, int_result);
-
-        g_UnloadException = nullptr;
-        mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-        CHECK(g_UnloadException == nullptr);
-    }
 }
 
 // This needs to be a separate function, so the object itself is not alive on the stack
@@ -2052,36 +1275,6 @@ TEST(unloading_domain_unloads_its_objects_even_if_protected_by_pinned_gchandle)
     CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
 }
 
-TEST(unloading_domain_unloads_its_objects_even_if_in_static_reference)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "SetupStaticRef", 0));
-    mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, false);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_its_objects_even_if_protected_by_gchandle_indirectly)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "SetupGCHandleIndirect", 0));
-    mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, false);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
 TEST(unloading_domain_unloads_its_objects_even_if_protected_by_stack_slot)
 {
     MonoImage* image;
@@ -2103,95 +1296,7 @@ void UnloadNotification()
 {
     gUnloadNotificationWasCalled = true;
 }
-
-TEST(unloading_domain_calls_unload_event)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    mono_domain_set(domain, true);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "SetupUnloadCallback", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    mono_add_internal_call("UnloadableTestDll.TestClass::UnloadNotification", reinterpret_cast<gconstpointer>(UnloadNotification));
-
-    mono_domain_set(g_domain, true);
-    gUnloadNotificationWasCalled = false;
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(gUnloadNotificationWasCalled);
-}
-
-TEST(unloading_domain_works_even_if_it_sets_up_an_exception_handler)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "SetupUnhandledExceptionHandler", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-
-#if DOMAIN_UNLOAD_THREAD_TESTS
-TEST(unloading_domain_works_even_if_a_thread_is_running)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "CreateThread", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-
-TEST(unloading_domain_works_even_if_a_thread_is_running_an_infinite_loop)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "CreateThreadInfiniteLoop", 0));
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-
-TEST(unloading_domain_works_even_if_it_sets_up_a_filesystem_watcher)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(method, mono_class_get_method_from_name (klass, "SetupFileSystemWatcher", 1));
-    void* params[1] = { ExtractManagedFromHandle(mono_string_new_wrapper(abs_path_from_file("../").c_str()))};
-    MonoObject* returnValue = mono_runtime_invoke(method, nullptr, params, nullptr);
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-}
-#endif // DOMAIN_UNLOAD_THREAD_TESTS
 #endif // DOMAIN_UNLOAD_TESTS
-
-#if ENABLE_FAILING_TESTS
-TEST(can_create_exception_from_name)
-{
-    GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
-    GET_AND_CHECK(ex, mono_exception_from_name_msg(image, kTestDLLNameSpace, "TestException", "Hello"));
-    CHECK(mono_class_is_subclass_of(mono_object_get_class((MonoObject*)ex), mono_get_exception_class(), false));
-}
-#endif
-
-TEST(can_create_argument_null_exception)
-{
-    GET_AND_CHECK(ex, mono_get_exception_argument_null("MyArg"));
-    CHECK(mono_class_is_subclass_of(mono_object_get_class((MonoObject*)ex), mono_get_exception_class(), false));
-}
 
 void InternalMethodWhichThrows()
 {
@@ -2206,27 +1311,6 @@ void InternalMethodWhichReturnsExceptionInRefParam(MonoException **e)
     GET_AND_CHECK(ex, mono_exception_from_name_msg(image, kTestDLLNameSpace, "TestException", "Hello"));
     *e = ex;
 }
-
-#if ENABLE_FAILING_TESTS
-TEST(can_throw_exception_from_internal_method)
-{
-    MonoMethod* method;
-    if (g_Mode == Mono)
-    {
-        mono_add_internal_call("TestDll.ICallTest::InternalMethodWhichThrows", reinterpret_cast<gconstpointer>(InternalMethodWhichThrows));
-        method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallInternalMethodWhichThrowsAndCatchExceptionMono", 0);
-    }
-    else
-    {
-        mono_add_internal_call("TestDll.ICallTest::InternalMethodWhichReturnsExceptionInRefParam", reinterpret_cast<gconstpointer>(InternalMethodWhichReturnsExceptionInRefParam));
-        method = GetMethodHelper(kTestDLLNameSpace, "ICallTest", "CallInternalMethodWhichThrowsAndCatchExceptionCoreCLR", 0);
-    }
-    MonoString* returnValue = (MonoString*)mono_runtime_invoke(method, nullptr, nullptr, nullptr);
-    char *utf8 = mono_string_to_utf8(returnValue);
-    CHECK_EQUAL("Hello", utf8);
-    mono_unity_g_free(utf8);
-}
-#endif // ENABLE_FAILING_TESTS
 
 #if ENABLE_FAILING_TESTS
 #define REMAP_TEST_SRC_PATH_NAME "Foo.txt"
@@ -2256,27 +1340,6 @@ size_t RemapMonoPath(const char* path, char* buffer, size_t bufferLen)
     if (bufferLen >= lenNeeded)
         strcpy(buffer, remapped);
     return lenNeeded;
-}
-
-TEST(mono_unity_register_path_remapper_can_remap_file_read)
-{
-    mono_unity_register_path_remapper (RemapMonoPath);
-
-    MonoMethod* readAllTextMethod = GetMethodHelper(kTestDLLNameSpace, kTestClassName, "ReadAllTextSafe", 1);
-
-    void* params[1] = { ExtractManagedFromHandle(mono_string_new_wrapper(REMAP_TEST_SRC_PATH_NAME))};
-    MonoString* returnValue = (MonoString*)mono_runtime_invoke(readAllTextMethod, nullptr, params, nullptr);
-    CHECK(returnValue != NULL);
-    char* utf8 = mono_string_to_utf8(returnValue);
-
-    CHECK_EQUAL("Hello" + kNewLine, utf8);
-    mono_unity_g_free(utf8);
-
-
-    mono_unity_register_path_remapper (NULL);
-
-    returnValue = (MonoString*)mono_runtime_invoke(readAllTextMethod, nullptr, params, nullptr);
-    CHECK(returnValue == NULL);
 }
 
 TEST(mono_unity_register_path_remapper_can_remap_assembly_load)
