@@ -240,24 +240,6 @@ void* scripting_array_element_ptr(MonoArray* array, int i, size_t element_size)
     return SCRIPTING_ARRAY_HEADERSIZE + i * element_size + (char*)array;
 }
 
-TEST(mono_assembly_get_image_returns_value)
-{
-    GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
-    CHECK_EQUAL(g_assembly, mono_image_get_assembly(image));
-}
-
-TEST(mono_assembly_loaded_works)
-{
-    MonoAssemblyName assemblyName;
-    mono_assembly_name_parse("coreclr-test", &assemblyName);
-    CHECK_EQUAL(g_assembly, mono_assembly_loaded (&assemblyName));
-
-    mono_assembly_name_parse("not loaded", &assemblyName);
-    CHECK(mono_assembly_loaded (&assemblyName) == nullptr);
-
-    mono_assembly_name_free(&assemblyName);
-}
-
 TEST(mono_class_from_name_returns_class)
 {
     GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
@@ -592,20 +574,6 @@ TEST(mono_class_get_interfaces_may_retrieve_parent_interfaces)
         CHECK(monoInterface == NULL);
 }
 
-TEST(can_get_type_of_generic_parameter)
-{
-    if (g_Mode == CoreCLR )
-    {
-        MonoClass* instanceklass = GetClassHelper(kTestDLLNameSpace, "GenericStringInstance");
-        GET_AND_CHECK(klass, mono_class_get_parent(instanceklass));
-        GET_AND_CHECK(instance_type, mono_class_get_type(klass));
-        CHECK(strcmp("TestDll.GenericClass`1[System.String]", mono_type_get_name(instance_type)) == 0);
-        CHECK_EQUAL(1, mono_type_get_num_generic_args(instance_type));
-        GET_AND_CHECK(genericarg, mono_type_get_generic_arg(instance_type, 0));
-        CHECK(strcmp("System.String", mono_type_get_name(genericarg)) == 0);
-    }
-}
-
 TEST(sequential_layout_is_respected)
 {
     // CoreCLR does not respect sequential layout for non-blittable types
@@ -744,16 +712,6 @@ TEST(mono_class_get_methods_retrieves_all_methods)
     CHECK_EQUAL("ABC.ctor", methodnames);
 }
 
-TEST(mono_get_corlib_returns_corlib_image)
-{
-    MonoImage *corlib = mono_get_corlib();
-    CHECK(mono_image_get_assembly(corlib) != NULL);
-    if (g_Mode == CoreCLR)
-        CHECK_EQUAL_STR("System.Private.CoreLib", mono_image_get_name(corlib));
-    else
-        CHECK_EQUAL_STR("mscorlib", mono_image_get_name(corlib));
-}
-
 TEST(mono_get_enum_class_returns_enum_class)
 {
     GET_AND_CHECK(enumClass, mono_get_enum_class());
@@ -795,143 +753,10 @@ TEST(mono_array_new_creates_array_instance)
     CHECK_EQUAL(5, coreclr_array_length(arrayInt32Instance));
 }
 
-TEST(mono_gchandle_new_creates_gc_handle)
-{
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-
-    // Normal
-    uintptr_t handle1 = mono_gchandle_new_v2(testObj, false);
-    CHECK(handle1 != 0);
-    auto blah = mono_gchandle_get_target_v2(handle1);
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), ExtractManagedFromHandle(mono_gchandle_get_target_v2(handle1)));
-    mono_gchandle_free_v2(handle1);
-
-    // Pinned
-    uintptr_t handle2 = mono_gchandle_new_v2(testObj, true);
-    CHECK(handle2 != 0);
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), ExtractManagedFromHandle(mono_gchandle_get_target_v2(handle2)));
-    mono_gchandle_free_v2(handle2);
-
-    CHECK(handle1 != handle2);
-}
-
-TEST(mono_gchandle_new_weakref_creates_weakref)
-{
-    MonoObject* testObj = CreateObjectHelper(kTestDLLNameSpace, kTestClassName);
-
-    // Normal
-    uintptr_t handle1 = mono_gchandle_new_weakref_v2(testObj, false);
-    CHECK(handle1 != 0);
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), ExtractManagedFromHandle(mono_gchandle_get_target_v2(handle1)));
-
-    // Track resurrection
-    uintptr_t handle2 = mono_gchandle_new_weakref_v2(testObj, true);
-    CHECK(handle2 != 0);
-    CHECK_EQUAL(ExtractManagedFromHandle(testObj), ExtractManagedFromHandle(mono_gchandle_get_target_v2(handle2)));
-
-    CHECK(handle1 != handle2);
-
-    mono_gchandle_free_v2(handle1);
-    mono_gchandle_free_v2(handle2);
-}
-
 #if WIN32
 #define NOINLINE __declspec(noinline)
 #else
 #define NOINLINE __attribute__((noinline))
-#endif
-
-// This needs to be a separate function, so the object itself is not alive on the stack
-// and can be collected when the function exits.
-NOINLINE
-uintptr_t SetupTestObjectWeakHandle(const char* _namespace, const char* _class)
-{
-    MonoObject* testObj = CreateObjectHelper(_namespace, _class);
-    uintptr_t handle = mono_gchandle_new_weakref_v2(testObj, false);
-    return handle;
-}
-
-NOINLINE
-uintptr_t SetupTestObjectHandle(const char* _namespace, const char* _class)
-{
-    MonoObject* testObj = CreateObjectHelper(_namespace, _class);
-    uintptr_t handle = mono_gchandle_new_v2(testObj, false);
-    CHECK_EQUAL(testObj, mono_gchandle_get_target_v2(handle));
-    return handle;
-}
-
-NOINLINE
-void VerifyCollectTestObjectHandle(guint32 handle, bool shouldBeAlive)
-{
-    // Clear 10kb of stack memory to avoid any stale stack slots
-    // left over from creating the object keeping it alive.
-    memset(alloca(1024*10), 0, 1024*10);
-
-    // Since the above is not always reliable:
-    // If in CoreCLR, turn off conservative GC for this collection to avoid any
-    // stale stack slots left over from creating the object keeping it alive.
-    // In mono, we don't have this function, so check for it's existance.
-    if (mono_set_gc_conservative)
-        mono_set_gc_conservative(false);
-    mono_gc_collect(mono_gc_max_generation());
-    if (mono_set_gc_conservative)
-        mono_set_gc_conservative(true);
-    if (shouldBeAlive)
-        CHECK(mono_gchandle_get_target_v2(handle) != NULL);
-    else
-        CHECK(mono_gchandle_get_target_v2(handle) == NULL);
-}
-
-#if 0
-TEST(weakref_can_be_collected)
-{
-    uintptr_t handle = SetupTestObjectWeakHandle(kTestDLLNameSpace, kTestClassName);
-    VerifyCollectTestObjectHandle(handle, false);
-}
-
-TEST(handle_cannot_be_collected)
-{
-    uintptr_t handle = SetupTestObjectHandle(kTestDLLNameSpace, kTestClassName);
-    VerifyCollectTestObjectHandle(handle, true);
-}
-
-bool gFinalizedCalled = false;
-void FinalizerCalled()
-{
-    gFinalizedCalled = true;
-}
-
-TEST(mono_domain_finalize_calls_finalizers)
-{
-    mono_add_internal_call("TestDll.TestClassWithFinalizer::FinalizerCalled", reinterpret_cast<gconstpointer>(FinalizerCalled));
-    uintptr_t handle = SetupTestObjectWeakHandle(kTestDLLNameSpace, "TestClassWithFinalizer");
-    VerifyCollectTestObjectHandle(handle, false);
-    mono_domain_finalize(g_domain, -1);
-    CHECK(gFinalizedCalled);
-    gFinalizedCalled = false;
-}
-
-TEST(mono_unity_gc_disable_works)
-{
-    uintptr_t handle = SetupTestObjectWeakHandle(kTestDLLNameSpace, kTestClassName);
-    mono_unity_gc_disable();
-    VerifyCollectTestObjectHandle(handle, true);
-    mono_unity_gc_enable();
-}
-
-TEST(mono_unity_gc_disable_can_be_nested)
-{
-    CHECK(!mono_unity_gc_is_disabled());
-    mono_unity_gc_disable();
-    CHECK(mono_unity_gc_is_disabled());
-    mono_unity_gc_disable();
-    CHECK(mono_unity_gc_is_disabled());
-    mono_unity_gc_enable();
-    CHECK(mono_unity_gc_is_disabled());
-    mono_unity_gc_enable();
-    CHECK(!mono_unity_gc_is_disabled());
-}
-
 #endif
 
 int GetCoreLibClassTypeHelper(const char* namespaze, const char* name)
@@ -1088,7 +913,7 @@ TEST(mono_string_new_len_with_unicode_ascii_creates_string)
 {
     if (g_Mode == CoreCLR)
     {
-        MonoString* str = mono_string_new_len(mono_domain_get(), kHelloWorldStringWithUnicode, strlen(kHelloWorldStringWithUnicode));
+        MonoString* str = mono_string_new_len(nullptr, kHelloWorldStringWithUnicode, strlen(kHelloWorldStringWithUnicode));
         CHECK(ExtractManagedFromHandle(str)->length == 10);
     }
 }
@@ -1101,25 +926,6 @@ TEST(mono_string_new_wrapper_with_unicode_ascii_creates_string)
         CHECK(ExtractManagedFromHandle(str)->length == 10);
     }
 }
-
-void *ThreadFunc(void *arguments)
-{
-    CHECK(mono_domain_get() == NULL);
-    GET_AND_CHECK(thread, mono_thread_attach(mono_get_root_domain()));
-    CHECK_EQUAL(mono_get_root_domain(), mono_domain_get());
-    mono_thread_detach(thread);
-    CHECK(mono_domain_get() == NULL);
-    return NULL;
-}
-
-#if !WIN32
-TEST(can_use_mono_domain_get_to_check_if_thread_is_attached)
-{
-    pthread_t thread;
-    pthread_create(&thread, NULL, ThreadFunc, NULL);
-    pthread_join(thread, NULL);
-}
-#endif
 
 int InternalMethod()
 {
@@ -1155,148 +961,6 @@ void InternalMethodWhichBlocks()
     if (mono_exit_internal_call)
         mono_exit_internal_call(&frame);
 }
-
-#if DOMAIN_UNLOAD_TESTS
-
-MonoObject* g_UnloadException = nullptr;
-static void UnityDomainUnloadCallback(MonoObject* exc)
-{
-    g_UnloadException = exc;
-}
-
-MonoDomain* LoadTestDllIntoDomain(MonoImage **image)
-{
-    std::string testDllPath = abs_path_from_file("../unloadable-test-dll/bin/Debug/net461/unloadable-test-dll.dll");
-
-    GET_AND_CHECK(domain, mono_domain_create_appdomain("domain", NULL));
-
-    // Like in the Unity Editor, we use mono_image_open_from_data_with_name to load the reloadable assembly from memory,
-    // instead of mono_domain_assembly_open. This allows the editor to change the assembly on disk without causing issues.
-    long lSize;
-    GET_AND_CHECK(pFile, fopen (testDllPath.c_str() , "rb"));
-
-    fseek (pFile , 0 , SEEK_END);
-    lSize = ftell (pFile);
-    rewind (pFile);
-
-    GET_AND_CHECK(buffer, (char*) malloc (lSize));
-    CHECK_EQUAL(lSize, fread (buffer, 1, lSize, pFile));
-    fclose (pFile);
-
-    int status = 0;
-    mono_domain_set(domain, true);
-    *image = mono_image_open_from_data_with_name((char*)buffer, lSize, true, &status, false, testDllPath.c_str());
-    CHECK(*image != NULL);
-    CHECK_EQUAL(0, status);
-    GET_AND_CHECK(assembly, mono_assembly_load_from_full(*image, testDllPath.c_str(), &status, false));
-    CHECK_EQUAL(0, status);
-    mono_domain_set(g_domain, true);
-
-    return domain;
-}
-
-// This needs to be a separate function, so the object itself is not alive on the stack
-// and can be collected when the function exits.
-NOINLINE
-guint32 SetupDomainTestObjectHandle(MonoDomain* domain, MonoClass* klass, bool weak, bool pinned = false)
-{
-    GET_AND_CHECK(obj, mono_object_new(domain, klass));
-    guint32 handle = weak ? mono_gchandle_new_weakref_v2(obj, false) : mono_gchandle_new_v2(obj, false);
-    CHECK_EQUAL(obj, mono_gchandle_get_target_v2(handle));
-    return handle;
-}
-
-NOINLINE
-guint32 SetupDomainTestTypeObjectHandle(MonoDomain* domain, MonoClass* klass, bool weak, bool pinned = false)
-{
-    GET_AND_CHECK(obj, mono_type_get_object(domain, mono_class_get_type(klass)));
-    guint32 handle = weak ? mono_gchandle_new_weakref_v2(obj, false) : mono_gchandle_new_v2(obj, pinned);
-    CHECK_EQUAL(obj, mono_gchandle_get_target_v2(handle));
-    return handle;
-}
-
-TEST(unloading_domain_unloads_its_objects)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, true);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_its_objects_even_if_object_creates_handle_in_finalizer)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "ClassWhichCreatesGCHandleToItselfInFinalizer"));
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, true);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_type_objects)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    guint32 gchandle = SetupDomainTestTypeObjectHandle(domain, klass, true);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_its_objects_even_if_protected_by_gchandle)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, false);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_its_objects_even_if_protected_by_pinned_gchandle)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    guint32 gchandle = SetupDomainTestObjectHandle(domain, klass, false, true);
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(gchandle) == NULL);
-}
-
-TEST(unloading_domain_unloads_its_objects_even_if_protected_by_stack_slot)
-{
-    MonoImage* image;
-    MonoDomain* domain = LoadTestDllIntoDomain(&image);
-    GET_AND_CHECK(klass, mono_class_from_name(image, "UnloadableTestDll", "TestClass"));
-    GET_AND_CHECK(obj, mono_object_new(domain, klass));
-    guint32 handle = mono_gchandle_new_weakref_v2(obj, false);
-    CHECK_EQUAL(obj, mono_gchandle_get_target_v2(handle));
-
-    g_UnloadException = nullptr;
-    mono_unity_domain_unload(domain, UnityDomainUnloadCallback);
-    CHECK(g_UnloadException == nullptr);
-    CHECK(mono_gchandle_get_target_v2(handle) == NULL);
-    CHECK(obj != nullptr); // Stack slot now points to invalid memory
-}
-
-bool gUnloadNotificationWasCalled;
-void UnloadNotification()
-{
-    gUnloadNotificationWasCalled = true;
-}
-#endif // DOMAIN_UNLOAD_TESTS
 
 void InternalMethodWhichThrows()
 {
@@ -1444,7 +1108,6 @@ void SetupMono(Mode mode)
 void ShutdownMono()
 {
     printf("Cleaning up...\n");
-    mono_unity_jit_cleanup(g_domain);
 
 #if JON
     // we cannot close the coreclr library

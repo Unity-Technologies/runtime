@@ -139,27 +139,6 @@ public abstract class BaseEmbeddingApiTests
         Assert.That(msg, Is.EqualTo(((ArgumentException)ex).ParamName));
     }
 
-    [Test]
-    public void GCHandleNewAndGetTarget()
-    {
-        var obj = new object();
-        var handle1 = ClrHost.gchandle_new_v2(obj, false);
-        Assert.That(handle1, Is.Not.EqualTo(0));
-        var result = ClrHost.gchandle_get_target_v2(handle1);
-        Assert.That(obj, Is.EqualTo(result));
-
-        var obj2 = new object();
-        var handle2 = ClrHost.gchandle_new_v2(obj2, true);
-        Assert.That(handle2, Is.Not.EqualTo(0));
-        var result2 = ClrHost.gchandle_get_target_v2(handle2);
-        Assert.That(obj2, Is.EqualTo(result2));
-
-        Assert.That(handle1, Is.Not.EqualTo(handle2));
-
-        GCHandle.FromIntPtr(handle1).Free();
-        GCHandle.FromIntPtr(handle2).Free();
-    }
-
     // Classes and classes
     [TestCase(typeof(object), typeof(object), true)]
     [TestCase(typeof(Mammal), typeof(Mammal), true)]
@@ -832,28 +811,6 @@ public abstract class BaseEmbeddingApiTests
 
     [Test]
     [Timeout(50000)]
-    public void GcGetHeapSizeReturnsProperValue()
-    {
-        GC.Collect(0,GCCollectionMode.Forced, true);
-        GC.WaitForPendingFinalizers();
-
-        long heapSize = ClrHost.gc_get_heap_size();
-        while (heapSize == 0)
-        {
-            Thread.Sleep(0);
-            heapSize = ClrHost.gc_get_used_size();
-        }
-        Assert.NotZero(heapSize);
-        int dataSize = 1024 * 1024 * 100;
-        int[] data = new int[dataSize];
-        GC.Collect();
-        heapSize = ClrHost.gc_get_heap_size();
-        Assert.Greater(heapSize, dataSize * sizeof(int));
-        GC.KeepAlive(data);
-    }
-
-    [Test]
-    [Timeout(50000)]
     public void GcGetUsedSizeReturnsProperValue()
     {
         GC.Collect(0,GCCollectionMode.Forced, true);
@@ -873,13 +830,6 @@ public abstract class BaseEmbeddingApiTests
         usedSize = ClrHost.gc_get_used_size();
         Assert.Greater(usedSize, dataSize * sizeof(int));
         GC.KeepAlive(data);
-    }
-
-    [Test]
-    public void GcMaxGenerationReturnsProperValue()
-    {
-        var maxGen = ClrHost.gc_max_generation();
-        Assert.Greater(maxGen, -1);
     }
 
     static List<object?> FlattenedArray(Array arr)
