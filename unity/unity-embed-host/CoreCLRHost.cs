@@ -214,24 +214,6 @@ static unsafe partial class CoreCLRHost
         return StringToPtr(s);
     }
 
-    [return: NativeCallbackType("uintptr_t")]
-    public static IntPtr gchandle_new_v2([NativeCallbackType("MonoObject*")] IntPtr obj, bool pinned)
-    {
-        GCHandle handle = GCHandle.Alloc(obj.ToManagedRepresentation(), pinned ? GCHandleType.Pinned : GCHandleType.Normal);
-        return GCHandle.ToIntPtr(handle);
-    }
-
-    [return: NativeCallbackType("uintptr_t")]
-    public static IntPtr gchandle_new_weakref_v2([NativeCallbackType("MonoObject*")] IntPtr obj, bool track_resurrection)
-    {
-        GCHandle handle = GCHandle.Alloc(obj.ToManagedRepresentation(), track_resurrection ? GCHandleType.WeakTrackResurrection : GCHandleType.Weak);
-        return GCHandle.ToIntPtr(handle);
-    }
-
-    [return: NativeWrapperType("MonoObject*")]
-    public static IntPtr gchandle_get_target_v2([NativeWrapperType("uintptr_t")] IntPtr handleIn)
-        => handleIn.ToGCHandle().Target.ToNativeRepresentation();
-
     [return: NativeCallbackType("MonoObject*")]
     public static IntPtr object_isinst([NativeCallbackType("MonoObject*")] IntPtr obj, [NativeCallbackType("MonoClass*")] IntPtr klass)
         => obj.ToManagedRepresentation().GetType().IsAssignableTo(klass.TypeFromHandleIntPtr()) ? obj : nint.Zero;
@@ -708,26 +690,12 @@ static unsafe partial class CoreCLRHost
         return tClass.MakeArrayType((int)rank).TypeHandleIntPtr();
     }
 
-
-    [return: NativeCallbackType("gint64")]
-    public static long gc_get_heap_size()
-    {
-        var info = GC.GetGCMemoryInfo();
-        return info.HeapSizeBytes;
-    }
-
     [return: NativeCallbackType("gint64")]
     public static long gc_get_used_size()
     {
         var info = GC.GetGCMemoryInfo();
         var heapSz =  info.HeapSizeBytes;
         return heapSz - info.FragmentedBytes;
-    }
-
-    [return: NativeCallbackType("int")]
-    public static int gc_max_generation()
-    {
-        return GC.MaxGeneration;
     }
 
     static void Log(string message)
