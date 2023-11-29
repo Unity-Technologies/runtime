@@ -103,8 +103,6 @@ struct HostStruct
     const char* (*image_get_filename)(MonoImage* image);
     const char* (*image_get_name)(MonoImage* image);
     MonoImage* (*image_loaded)(const char* name);
-    intptr_t (*load_assembly_from_data)(const char* data, int64_t size);
-    intptr_t (*load_assembly_from_path)(const char* path, int32_t length);
     MonoReflectionMethod* (*method_get_object)(MonoDomain* domain, MonoMethod* method, MonoClass* refclass);
     MonoClass* (*object_get_class)(MonoObject* obj);
     MonoMethod* (*object_get_virtual_method)(MonoObject* obj, MonoMethod* method);
@@ -137,18 +135,6 @@ struct HostStructNative
     gboolean (*return_handles_from_api)();
 };
 HostStructNative* g_HostStructNative;
-
-//MonoImage *gCoreCLRHelperAssembly;
-//MonoClass* gALCWrapperClass;
-//MonoObject* gALCWrapperObject;
-//MonoMethod* gALCWrapperLoadFromAssemblyPathMethod;
-//MonoMethod* gALCWrapperLoadFromAssemblyDataMethod;
-//MonoMethod* gALCWrapperDomainUnloadNotificationMethod;
-//MonoMethod* gALCWrapperInitUnloadMethod;
-//MonoMethod* gALCWrapperFinishUnloadMethod;
-//MonoMethod* gALCWrapperCheckRootForUnloadingMethod;
-//MonoMethod* gALCWrapperCheckAssemblyForUnloadingMethod;
-//MonoMethod* gALCWrapperAddPathMethod;
 
 thread_local MonoDomain *gCurrentDomain = NULL;
 MonoDomain *gRootDomain = NULL;
@@ -1384,10 +1370,7 @@ extern "C" EXPORT_API MonoDomain* EXPORT_CC mono_jit_init_version(const char *fi
 
     //coreClrHelperAssembly->EnsureActive();
     //gCoreCLRHelperAssembly = (MonoImage*)coreClrHelperAssembly;
-    //gALCWrapperClass = mono_class_from_name(gCoreCLRHelperAssembly, "Unity.CoreCLRHelpers", "ALCWrapper");
-    //gALCWrapperObject = mono_object_new(NULL, gALCWrapperClass);
 
-    //SetupDomainPaths(gALCWrapperObject);
     //gRootDomain = gCurrentDomain;
 
 /*

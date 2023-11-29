@@ -17,7 +17,6 @@ namespace Unity.CoreCLRHelpers;
 using StringPtr = IntPtr;
 static unsafe partial class CoreCLRHost
 {
-    static ALCWrapper alcWrapper;
     static FieldInfo assemblyHandleField;
     private static HostStructNative* _hostStructNative;
 
@@ -74,7 +73,6 @@ static unsafe partial class CoreCLRHost
 
     internal static void InitState(bool returnHandlesFromAPI)
     {
-        alcWrapper = new ALCWrapper();
         assemblyHandleField = typeof(Assembly).Assembly.GetType("System.Reflection.RuntimeAssembly").GetField("m_assembly", BindingFlags.Instance | BindingFlags.NonPublic);
         if (assemblyHandleField == null)
             throw new Exception("Failed to find RuntimeAssembly.m_assembly field.");
@@ -83,20 +81,6 @@ static unsafe partial class CoreCLRHost
     }
 
     static partial void InitHostStruct(HostStruct* functionStruct);
-
-    [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
-    public static IntPtr /*Assembly*/ load_assembly_from_data(byte* data, long size)
-    {
-        var assembly = alcWrapper.CallLoadFromAssemblyData(data, size);
-        return GetInfoForAssembly(assembly).handle;
-    }
-
-    [NativeFunction(NativeFunctionOptions.DoNotGenerate)]
-    public static IntPtr /*Assembly*/ load_assembly_from_path(byte* path, int length)
-    {
-        var assembly = alcWrapper.CallLoadFromAssemblyPath(Encoding.UTF8.GetString(path, length));
-        return GetInfoForAssembly(assembly).handle;
-    }
 
     static AssemblyCachedInfo GetInfoForAssembly(Assembly assembly)
     {
