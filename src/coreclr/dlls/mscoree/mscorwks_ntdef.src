@@ -126,11 +126,6 @@ EXPORTS
         mono_object_get_virtual_method
         mono_object_isinst
         mono_object_new
-        mono_profiler_create
-        mono_profiler_install
-        mono_profiler_install_thread
-        mono_profiler_load
-        mono_profiler_set_events
         mono_property_get_get_method
         mono_raise_exception
         mono_runtime_invoke

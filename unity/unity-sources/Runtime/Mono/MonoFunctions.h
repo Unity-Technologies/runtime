@@ -213,66 +213,6 @@ DO_API(void, mono_unity_liveness_free_struct, (void* state))
 DO_API(void, mono_unity_liveness_calculation_from_root, (MonoObject * root, void* state))
 DO_API(void, mono_unity_liveness_calculation_from_statics, (void* state))
 
-// Profiler
-#if ENABLE_MONO
-typedef UNUSED_SYMBOL void(*MonoProfileFunc) (void *prof);
-typedef UNUSED_SYMBOL gboolean(*MonoProfilerCoverageFilterCallback) (void *prof, MonoMethod *method);
-typedef UNUSED_SYMBOL void(*MonoProfilerCoverageCallback) (void *prof, const MonoProfilerCoverageData *data);
-DO_API(void, mono_profiler_install, (void *prof, MonoProfileFunc shutdown_callback))
-DO_API(void, mono_profiler_set_events, (int events))
-
-DO_API_OPTIONAL(gboolean, mono_profiler_enable_coverage, ())
-DO_API_OPTIONAL(void, mono_profiler_set_coverage_filter_callback, (void* handle, MonoProfilerCoverageFilterCallback cb))
-DO_API_OPTIONAL(gboolean, mono_profiler_get_coverage_data, (void* handle, MonoMethod * method, MonoProfilerCoverageCallback cb))
-DO_API_OPTIONAL(void, mono_profiler_reset_coverage, (MonoMethod * method))
-DO_API_OPTIONAL(gboolean, mono_profiler_get_all_coverage_data, (void* handle, MonoProfilerCoverageCallback cb))
-DO_API_OPTIONAL(void, mono_profiler_reset_all_coverage, ())
-
-#if LOAD_MONO_DYNAMICALLY
-DO_API_OPTIONAL(void*, mono_profiler_create, (MonoProfiler * prof))
-DO_API_OPTIONAL(void, mono_profiler_load, (const char *desc))
-#endif
-#endif
-
-#if ENABLE_MONO_MEMORY_PROFILER
-typedef UNUSED_SYMBOL void(*MonoProfileMethodFunc)   (void *prof, MonoMethod *method);
-typedef UNUSED_SYMBOL void(*MonoProfileObjectFunc) (void *prof, MonoObject *object);
-typedef UNUSED_SYMBOL void(*MonoProfileExceptionClauseFunc) (void *prof, MonoMethod *method, int clause_type, int clause_num);
-typedef UNUSED_SYMBOL void(*MonoProfileStatCallChainFunc) (void *prof, int call_chain_depth, guchar **ip, void *context);
-typedef UNUSED_SYMBOL void(*MonoProfileStatFunc)       (void *prof, guchar *ip, void *context);
-typedef UNUSED_SYMBOL void(*MonoProfileThreadFunc)     (void *prof, unsigned long tid);
-typedef UNUSED_SYMBOL void(*MonoProfileThreadNameFunc) (void *prof, uintptr_t tid, const char *name);
-typedef UNUSED_SYMBOL void(*MonoProfileJitDoneFunc)    (void *prof, MonoMethod *method, MonoJitInfo *jinfo);
-typedef UNUSED_SYMBOL void(*MonoProfileJitCodeBufferFunc) (void *prof, void *buffer, uint64_t size, MonoProfilerCodeBufferType type, const void *data);
-typedef UNUSED_SYMBOL void(*MonoProfileMethodEnterLeaveFunc)   (void *prof, MonoMethod *method, void *context);
-typedef UNUSED_SYMBOL void(*MonoProfileMethodTailCall)   (void *prof, MonoMethod *method, MonoMethod *target);
-typedef UNUSED_SYMBOL void(*MonoProfileMethodExceptionLeave)   (void *prof, MonoMethod *method, MonoObject *exception);
-typedef UNUSED_SYMBOL int(*MonoProfilerCallInstrumentationFilterCallback) (void *prof, MonoMethod *method);
-typedef UNUSED_SYMBOL void(*MonoProfileDomainFunc)   (void *prof, MonoDomain *domain);
-
-DO_API(void, mono_profiler_install_thread, (MonoProfileThreadFunc start, MonoProfileThreadFunc end))
-
-#if LOAD_MONO_DYNAMICALLY
-DO_API_OPTIONAL(void, mono_profiler_set_thread_name_callback, (void *handle, MonoProfileThreadNameFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_gc_allocation_callback, (void *handle, MonoProfileObjectFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_gc_finalizing_callback, (void *handle, MonoProfileFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_gc_finalized_callback, (void *handle, MonoProfileFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_gc_finalizing_object_callback, (void *handle, MonoProfileObjectFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_gc_finalized_object_callback, (void *handle, MonoProfileObjectFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_jit_begin_callback, (void *handle, MonoProfileMethodFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_jit_failed_callback, (void *handle, MonoProfileMethodFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_jit_done_callback, (void *handle, MonoProfileJitDoneFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_jit_code_buffer_callback, (void *handle, MonoProfileJitCodeBufferFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_method_enter_callback, (void *handle, MonoProfileMethodEnterLeaveFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_method_leave_callback, (void *handle, MonoProfileMethodEnterLeaveFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_method_tail_call_callback, (void *handle, MonoProfileMethodTailCall callback))
-DO_API_OPTIONAL(void, mono_profiler_set_method_exception_leave_callback, (void *handle, MonoProfileMethodExceptionLeave callback))
-DO_API_OPTIONAL(void, mono_profiler_set_call_instrumentation_filter_callback, (void *handle, MonoProfilerCallInstrumentationFilterCallback callback))
-DO_API_OPTIONAL(void, mono_profiler_set_domain_unloading_callback, (void *handle, MonoProfileDomainFunc callback))
-DO_API_OPTIONAL(void, mono_profiler_set_domain_unloaded_callback, (void *handle, MonoProfileDomainFunc callback))
-#endif
-#endif
-
 typedef void(*MonoDataFunc) (void *data, void *userData);
 typedef void(*MonoClassFunc) (MonoClass *klass, void *userData);
 
