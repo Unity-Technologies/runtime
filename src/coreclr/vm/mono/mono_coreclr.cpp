@@ -1540,33 +1540,6 @@ extern "C" EXPORT_API MonoObject* EXPORT_CC mono_object_new(MonoDomain* domain, 
     return g_HostStruct->object_new(domain, klass);
 }
 
-extern "C" EXPORT_API void* EXPORT_CC mono_profiler_create (MonoProfiler* prof)
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return NULL;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_profiler_install(void *prof, MonoProfileFunc shutdown_callback)
-{
-    // NOP
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_profiler_install_thread(MonoProfileThreadFunc start, MonoProfileThreadFunc end)
-{
-    // NOP
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_profiler_load (const char *desc)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_profiler_set_events(int events)
-{
-    // NOP
-}
-
-
 extern "C" EXPORT_API MonoMethod* EXPORT_CC mono_property_get_get_method(MonoProperty *prop)
 {
     return (MonoMethod*)prop;
