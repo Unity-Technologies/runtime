@@ -9,10 +9,6 @@ static class Artifacts
 {
     public static NPath ConsolidateArtifacts(GlobalConfig gConfig)
     {
-        CopyUnityGCTo(gConfig,
-            Utils.RuntimeArtifactDirectory(gConfig).Combine("native"),
-            Utils.UnityTestHostDotNetAppDirectory(gConfig));
-
         CopyUnityEmbedHostToArtifacts(gConfig);
 
         Paths.RepoRoot.Combine("LICENSE.TXT").Copy(Utils.RuntimeArtifactDirectory(gConfig).Combine("LICENSE.md"));
@@ -25,12 +21,6 @@ static class Artifacts
         CopyUnityEmbedHostTo(gConfig,
             Utils.RuntimeArtifactDirectory(gConfig).Combine("lib", Utils.UnityEmbedHostTfmDirectoryName(gConfig)),
             Utils.UnityTestHostDotNetAppDirectory(gConfig));
-    }
-
-    static void CopyUnityGCTo(GlobalConfig gConfig, params NPath[] destinations)
-    {
-        foreach (var dest in destinations)
-            Paths.UnityGC.Combine(gConfig.Configuration, Paths.UnityGCFileName).Copy(dest);
     }
 
     static void CopyUnityEmbedHostTo(GlobalConfig gConfig, params NPath[] destinations)
