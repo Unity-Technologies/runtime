@@ -156,14 +156,6 @@ public class Program
                 VerbosityLevel = context.ParseResult.GetValue(verbosityOption)
             };
 
-            // We always need to build the embedding host because on CI we have the build and tests split into separate jobs.  And the way we have artifacts setup,
-            // we don't retain anything built under `unity`.  And therefore we need to rebuild it so that tests that depend on something in managed.sln can find what they need
-            //
-            // Also when trying to run just the embedding managed tests, dotnet test will not always rebuild dependencies.  Having this build here is handy to ensure that
-            // when the tests run that the embed host is up-to-date
-            if (bTargets != BuildTargets.None || tTargets != TestTargets.None)
-                EmbeddingHost.Build(gConfig);
-
             if (bTargets != BuildTargets.None)
             {
                 if (bTargets.HasFlag(BuildTargets.NullGC))
@@ -190,12 +182,6 @@ public class Program
 
             if (tTargets != TestTargets.None)
             {
-                if (tTargets.HasFlag(TestTargets.EmbeddingManaged))
-                    EmbeddingHost.TestManaged(gConfig);
-
-                if (tTargets.HasFlag(TestTargets.EmbeddingNative))
-                    EmbeddingHost.TestNative(gConfig);
-
                 if (tTargets.HasFlag(TestTargets.Classlibs))
                     CoreCLR.TestClassLibraries(gConfig);
 

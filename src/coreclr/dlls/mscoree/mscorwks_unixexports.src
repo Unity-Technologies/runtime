@@ -16,7 +16,6 @@ g_dacTable
 MetaDataGetDispenser
 
 ; mono
-mono_unity_initialize_host_apis
 coreclr_array_length
 coreclr_class_from_systemtypeinstance
 coreclr_image_get_custom_attribute_data

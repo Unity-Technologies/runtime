@@ -1241,29 +1241,6 @@ void list_tpa(const SString& searchPath, SString& tpa)
     }
 }
 
-extern "C" EXPORT_API void EXPORT_CC mono_unity_initialize_host_apis(initialize_func init_func)
-{
-    HRESULT hr;
-    g_HostStruct = (HostStruct*)malloc(sizeof(HostStruct));
-    memset(g_HostStruct, 0, sizeof(HostStruct));
-
-    g_HostStructNative = (HostStructNative*)malloc(sizeof(HostStructNative));
-    memset(g_HostStructNative, 0, sizeof(HostStructNative));
-
-    g_HostStructNative->unity_log = (unity_log_func)&unity_log;
-    g_HostStructNative->return_handles_from_api = &return_handles_from_api;
-
-    hr = init_func(g_HostStruct, (int32_t)sizeof(HostStruct), g_HostStructNative, (int32_t)sizeof(HostStructNative));
-
-    AppDomain *pCurDomain = SystemDomain::GetCurrentDomain();
-
-    // Disable Windows message processing during waits
-    // On Windows by default waits will processing some messages (COM, WM_PAINT, ...) leading to reentrancy issues
-    pCurDomain->SetForceTrivialWaitOperations();
-
-    gRootDomain = gCurrentDomain = (MonoDomain*)pCurDomain;
-}
-
 extern "C" EXPORT_API MonoDomain* EXPORT_CC mono_jit_init_version(const char *file, const char* runtime_version)
 {
     gboolean useRealGC = false;
@@ -1364,15 +1341,6 @@ extern "C" EXPORT_API MonoDomain* EXPORT_CC mono_jit_init_version(const char *fi
             return nullptr;
         }
     }
-
-    initialize_func init_func;
-    hr = coreclr_create_delegate(g_CLRRuntimeHost, g_RootDomainId, "unity-embed-host", "Unity.CoreCLRHelpers.CoreCLRHost", "InitMethod", (void**)&init_func);
-    if(FAILED(hr))
-    {
-        return nullptr;
-    }
-
-    mono_unity_initialize_host_apis(init_func);
 
     // Note : This logic can be removed once the switch over to using unity_coreclr_create_delegate is complete
     initialize_scripting_runtime_func init_runtime_func;
