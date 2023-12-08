@@ -75,8 +75,6 @@ EXPORTS
         mono_debug_free_source_location
         mono_debug_lookup_source_location
         mono_debug_open_image_from_memory  
-        mono_debugger_install_attach_detach_callback
-        mono_debugger_set_generate_debug_info
         mono_domain_assembly_open
         mono_enter_internal_call
         mono_exception_from_name_msg

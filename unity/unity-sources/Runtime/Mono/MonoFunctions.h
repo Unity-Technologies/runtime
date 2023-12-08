@@ -268,11 +268,6 @@ DO_API_OPTIONAL(const char*, mono_error_get_message, (MonoError * error))
 #endif
 
 #if UNITY_EDITOR
-DO_API_OPTIONAL(void, mono_debugger_set_generate_debug_info, (gboolean enable))
-DO_API_OPTIONAL(gboolean, mono_debugger_get_generate_debug_info, ())
-DO_API_OPTIONAL(void, mono_debugger_disconnect, ())
-typedef void (*MonoDebuggerAttachFunc)(gboolean attached);
-DO_API_OPTIONAL(void, mono_debugger_install_attach_detach_callback, (MonoDebuggerAttachFunc func))
 typedef UNUSED_SYMBOL void (*UnityLogErrorCallback) (const char* message);
 DO_API(void, mono_unity_set_editor_logging_callback, (UnityLogErrorCallback callback))
 #endif

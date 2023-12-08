@@ -796,15 +796,6 @@ extern "C" EXPORT_API void EXPORT_CC mono_debug_open_image_from_memory(MonoImage
     // NOP
 }
 
-typedef void (*MonoDebuggerAttachFunc)(gboolean attached);
-extern "C" EXPORT_API void EXPORT_CC mono_debugger_install_attach_detach_callback (MonoDebuggerAttachFunc func)
-{
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_debugger_set_generate_debug_info(gboolean enable)
-{
-}
-
 extern "C" EXPORT_API MonoAssembly* EXPORT_CC mono_domain_assembly_open(MonoDomain *domain, const char *name)
 {
     GCX_PREEMP(); // temporary until we sort out our GC thread model
