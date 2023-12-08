@@ -165,7 +165,6 @@ extern "C" HRESULT  GetCLRRuntimeHost(REFIID riid, IUnknown **ppUnk);
 
 #define ASSERT_NOT_IMPLEMENTED printf("Function not implemented: %s\n", __func__);
 
-#define kCoreCLRHelpersDll "unity-embed-host.dll"
 #define FIELD_ATTRIBUTE_PRIVATE               0x0001
 #define FIELD_ATTRIBUTE_FAMILY                0x0004
 #define FIELD_ATTRIBUTE_PUBLIC                0x0006
