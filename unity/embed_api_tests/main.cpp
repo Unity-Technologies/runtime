@@ -822,13 +822,6 @@ void InternalMethodWhichBlocks()
         mono_exit_internal_call(&frame);
 }
 
-void InternalMethodWhichThrows()
-{
-    GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
-    GET_AND_CHECK(ex, mono_exception_from_name_msg(image, kTestDLLNameSpace, "TestException", "Hello"));
-    mono_raise_exception(ex);
-}
-
 void InternalMethodWhichReturnsExceptionInRefParam(MonoException **e)
 {
     GET_AND_CHECK(image, mono_assembly_get_image(g_assembly));
