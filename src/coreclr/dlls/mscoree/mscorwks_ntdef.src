@@ -49,7 +49,6 @@ EXPORTS
         mono_class_from_name
         mono_class_from_name_case
         mono_class_get_element_class
-        mono_class_get_field_from_name
         mono_class_get_fields
         mono_class_get_flags
         mono_class_get_image
@@ -59,7 +58,6 @@ EXPORTS
         mono_class_get_namespace
         mono_class_get_nested_types
         mono_class_get_nesting_type
-        mono_class_get_parent
         mono_class_get_property_from_name
         mono_class_get_rank
         mono_class_get_type

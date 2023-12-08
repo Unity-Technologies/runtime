@@ -416,27 +416,6 @@ extern "C" EXPORT_API MonoClass* EXPORT_CC mono_class_get_element_class(MonoClas
     return (MonoClass*)reinterpret_cast<MonoClass_clr*>(klass)->GetArrayElementTypeHandle().GetMethodTable();
 }
 
-extern "C" EXPORT_API MonoClassField* EXPORT_CC mono_class_get_field_from_name(MonoClass *klass, const char *name)
-{
-    CONTRACTL
-    {
-    GC_TRIGGERS;
-    PRECONDITION(klass != NULL);
-    }
-    CONTRACTL_END;
-
-    MonoClass_clr* mt = reinterpret_cast<MonoClass_clr*>(klass);
-    FieldDesc* retVal = NULL;
-    // FindField only checks the fields of the current class and not inherited ones.
-    while (retVal == NULL && mt != NULL)
-    {
-        retVal = MemberLoader::FindField(mt, name, NULL, NULL, NULL);
-        mt = mt->GetParentMethodTable();
-    }
-
-    return (MonoClassField*)retVal;
-}
-
 thread_local ThreadLocalPoolAllocator<ApproxFieldDescIterator,5> g_ApproxFieldDescIteratorAlloc;
 
 extern "C" EXPORT_API MonoClassField* EXPORT_CC mono_class_get_fields(MonoClass* klass, gpointer *iter)
@@ -690,12 +669,6 @@ extern "C" EXPORT_API MonoClass* EXPORT_CC mono_class_get_nesting_type(MonoClass
     }
     MonoClass_clr* ret = ClassLoader::LoadTypeDefOrRefOrSpecThrowing(klass_clr->GetModule(), klass_clr->GetEnclosingCl(), NULL, ClassLoader::ThrowIfNotFound, ClassLoader::PermitUninstDefOrRef).AsMethodTable();
     return (MonoClass*)ret;
-}
-
-extern "C" EXPORT_API MonoClass* EXPORT_CC mono_class_get_parent(MonoClass *klass)
-{
-    MonoClass_clr* parent = reinterpret_cast<MonoClass_clr*>(klass)->GetParentMethodTable();
-    return (MonoClass*)parent;
 }
 
 extern "C" EXPORT_API MonoProperty* EXPORT_CC mono_class_get_property_from_name(MonoClass *klass, const char *name)

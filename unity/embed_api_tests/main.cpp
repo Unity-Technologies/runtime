@@ -327,17 +327,6 @@ TEST(mono_object_isinst_works_with_same_class)
     CHECK(mono_object_isinst(testobj, unrelatedclass) == NULL);
 }
 
-TEST(mono_class_get_parent_returns_base_class)
-{
-    GET_AND_CHECK(objectClass, mono_class_from_name(mono_get_corlib(), "System", "Object"));
-    MonoClass *base = GetClassHelper(kTestDLLNameSpace, "BaseClass");
-    MonoClass *inherited = GetClassHelper(kTestDLLNameSpace, "InheritedClass");
-
-    CHECK_EQUAL(base, mono_class_get_parent(inherited));
-    CHECK_EQUAL(objectClass, mono_class_get_parent(base));
-    CHECK(mono_class_get_parent(objectClass) == nullptr);
-}
-
 TEST(mono_unity_class_is_abstract_works)
 {
     MonoClass *base = GetClassHelper(kTestDLLNameSpace, "BaseClass");
@@ -427,46 +416,6 @@ TEST(mono_class_is_subclass_of_works_with_interfaces)
     CHECK(!mono_class_is_subclass_of(base, inherited, true));
 }
 
-TEST(mono_class_is_inflated_works)
-{
-    MonoClass *noninflated = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    MonoClass *genericinstance = GetClassHelper(kTestDLLNameSpace, "GenericStringInstance");
-    GET_AND_CHECK(genericinstanceparent, mono_class_get_parent(genericinstance));
-    CHECK(mono_class_is_inflated(genericinstanceparent));
-    CHECK(!mono_class_is_inflated(genericinstance));
-    CHECK(!mono_class_is_inflated(noninflated));
-}
-
-TEST(mono_unity_class_get_generic_type_definition_works)
-{
-    MonoClass *noninflated = GetClassHelper(kTestDLLNameSpace, kTestClassName);
-    MonoClass *genericinstance = GetClassHelper(kTestDLLNameSpace, "GenericStringInstance");
-    GET_AND_CHECK(genericinstanceparent, mono_class_get_parent(genericinstance));
-    GET_AND_CHECK(generic_type, mono_unity_class_get_generic_type_definition(genericinstanceparent));
-    CHECK(strcmp("GenericClass`1", mono_class_get_name(genericinstanceparent)) == 0);
-
-    GET_AND_CHECK(genericinstanceparent_type, mono_class_get_type(genericinstanceparent));
-    CHECK(
-        strcmp(
-            g_Mode == CoreCLR ? "TestDll.GenericClass`1[System.String]" : "TestDll.GenericClass<System.String>"
-            , mono_type_get_name(genericinstanceparent_type)
-        ) == 0);
-
-    CHECK(strcmp("GenericClass`1", mono_class_get_name(generic_type)) == 0);
-
-    GET_AND_CHECK(generic_type_type, mono_class_get_type(generic_type));
-    CHECK(
-        strcmp(
-            g_Mode == CoreCLR ? "TestDll.GenericClass`1[T]" : "TestDll.GenericClass<T>"
-            , mono_type_get_name(generic_type_type)
-        ) == 0);
-
-    CHECK(mono_class_is_inflated(genericinstanceparent));
-    CHECK(!mono_class_is_inflated(generic_type));
-    CHECK(!mono_class_is_generic(genericinstanceparent));
-    CHECK(mono_class_is_generic(generic_type));
-}
-
 TEST(mono_class_get_flags_works)
 {
     CHECK_EQUAL(TYPE_ATTRIBUTE_PUBLIC | TYPE_ATTRIBUTE_BEFORE_FIELD_INIT,
@@ -509,39 +458,6 @@ TEST(can_get_type_of_generic_field)
     CHECK(field != NULL);
     CHECK(strcmp("genericArrayField", mono_field_get_name(field)) == 0);
     CHECK(strcmp("T[]", mono_type_get_name(mono_field_get_type(field))) == 0);
-    field = mono_class_get_fields(klass, &ptr);
-    CHECK(field == NULL);
-}
-
-TEST(can_get_type_of_generic_instance_field)
-{
-    MonoClass* instanceklass = GetClassHelper(kTestDLLNameSpace, "GenericStringInstance");
-    GET_AND_CHECK(klass, mono_class_get_parent(instanceklass));
-
-    GET_AND_CHECK(klass_type, mono_class_get_type(klass));
-    CHECK(MONO_TYPE_GENERICINST == mono_type_get_type(klass_type));
-
-    gpointer ptr = nullptr;
-    GET_AND_CHECK(field, mono_class_get_fields(klass, &ptr));
-    CHECK(field != NULL);
-    CHECK(strcmp("genericField", mono_field_get_name(field)) == 0);
-    if (g_Mode == CoreCLR )
-    {
-        CHECK(strcmp("System.String", mono_type_get_name(mono_field_get_type_specific(field, klass))) == 0);
-        CHECK(strcmp("System.__Canon", mono_type_get_name(mono_field_get_type(field))) == 0);
-    }
-    else
-        CHECK(strcmp("System.String", mono_type_get_name(mono_field_get_type(field))) == 0);
-    field = mono_class_get_fields(klass, &ptr);
-    CHECK(field != NULL);
-    CHECK(strcmp("genericArrayField", mono_field_get_name(field)) == 0);
-    if (g_Mode == CoreCLR )
-    {
-        CHECK(strcmp("System.String[]", mono_type_get_name(mono_field_get_type_specific(field, klass))) == 0);
-        CHECK(strcmp("System.__Canon[]", mono_type_get_name(mono_field_get_type(field))) == 0);
-    }
-    else
-        CHECK(strcmp("System.String[]", mono_type_get_name(mono_field_get_type(field))) == 0);
     field = mono_class_get_fields(klass, &ptr);
     CHECK(field == NULL);
 }
@@ -667,32 +583,6 @@ TEST(explicit_layout_is_correctly_calculated_for_derived_class)
     CHECK(field == NULL);
 }
 
-TEST(mono_field_get_flags_works)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithFields");
-    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "x"));
-    CHECK_EQUAL(FIELD_ATTRIBUTE_PUBLIC, mono_field_get_flags(field0));
-    GET_AND_CHECK(field1, mono_class_get_field_from_name(klass, "y"));
-    CHECK_EQUAL(FIELD_ATTRIBUTE_PRIVATE, mono_field_get_flags(field1));
-    GET_AND_CHECK(field2, mono_class_get_field_from_name(klass, "z"));
-    CHECK_EQUAL(FIELD_ATTRIBUTE_PRIVATE | FIELD_ATTRIBUTE_STATIC, mono_field_get_flags(field2));
-    GET_AND_CHECK(field3, mono_class_get_field_from_name(klass, "w"));
-    CHECK_EQUAL(FIELD_ATTRIBUTE_FAMILY | FIELD_ATTRIBUTE_NOT_SERIALIZED, mono_field_get_flags(field3));
-}
-
-TEST(mono_class_get_field_from_name_base_class_works)
-{
-    MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "DerivedClassWithFields");
-    // Derived class checks
-    GET_AND_CHECK(field3, mono_class_get_field_from_name(klass, "a"));
-    GET_AND_CHECK(field4, mono_class_get_field_from_name(klass, "b"));
-    GET_AND_CHECK(field5, mono_class_get_field_from_name(klass, "c"));
-    // Base class checks
-    GET_AND_CHECK(field0, mono_class_get_field_from_name(klass, "x"));
-    GET_AND_CHECK(field1, mono_class_get_field_from_name(klass, "y"));
-    GET_AND_CHECK(field2, mono_class_get_field_from_name(klass, "z"));
-}
-
 TEST(mono_class_get_methods_retrieves_all_methods)
 {
     MonoClass* klass = GetClassHelper(kTestDLLNameSpace, "TestClassWithMethods");
@@ -771,36 +661,6 @@ TEST(mono_type_get_type_returns_expected_values)
     CHECK_EQUAL(MONO_TYPE_OBJECT, GetCoreLibClassTypeHelper ("System", "Object"));
     CHECK_EQUAL(MONO_TYPE_STRING, GetCoreLibClassTypeHelper ("System", "String"));
     CHECK_EQUAL(MONO_TYPE_I4, GetCoreLibClassTypeHelper ("System", "Int32"));
-}
-
-static int get_field_type(MonoClass* klass,const char* fieldName)
-{
-    return mono_type_get_type(mono_field_get_type( mono_class_get_field_from_name (klass, fieldName)));
-}
-
-TEST(mono_type_get_type_returns_expected_values2)
-{
-    MonoClass* classWithFields = GetClassHelper(kTestDLLNameSpace, "ClassWithFields");
-    CHECK_EQUAL(MONO_TYPE_I1, get_field_type (classWithFields, "_sbyte"));
-    CHECK_EQUAL(MONO_TYPE_U1, get_field_type (classWithFields, "_byte"));
-    CHECK_EQUAL(MONO_TYPE_I2, get_field_type (classWithFields, "_short"));
-    CHECK_EQUAL(MONO_TYPE_U2, get_field_type (classWithFields, "_ushort"));
-    CHECK_EQUAL(MONO_TYPE_I4, get_field_type (classWithFields, "_int"));
-    CHECK_EQUAL(MONO_TYPE_U4, get_field_type (classWithFields, "_uint"));
-    CHECK_EQUAL(MONO_TYPE_I8, get_field_type (classWithFields, "_long"));
-    CHECK_EQUAL(MONO_TYPE_U8, get_field_type (classWithFields, "_ulong"));
-
-
-    CHECK_EQUAL(MONO_TYPE_R4, get_field_type (classWithFields, "_float"));
-    CHECK_EQUAL(MONO_TYPE_R8, get_field_type (classWithFields, "_double"));
-
-    CHECK_EQUAL(MONO_TYPE_BOOLEAN, get_field_type (classWithFields, "_bool"));
-    CHECK_EQUAL(MONO_TYPE_CHAR, get_field_type (classWithFields, "_char"));
-
-    CHECK_EQUAL(MONO_TYPE_STRING, get_field_type (classWithFields, "_string"));
-    CHECK_EQUAL(MONO_TYPE_OBJECT, get_field_type (classWithFields, "_object"));
-    CHECK_EQUAL(MONO_TYPE_CLASS, get_field_type (classWithFields, "_class"));
-
 }
 
 TEST(mono_class_from_mono_type_returns_class)
