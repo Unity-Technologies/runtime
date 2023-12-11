@@ -9,7 +9,6 @@ public enum BuildTargets
     None = 0,
     Runtime = 1 << 0,
     ClassLibs = 1 << 1,
-    NullGC = 1 << 2,
     CoreCLR = Runtime | ClassLibs,
-    All = CoreCLR | NullGC
+    All = CoreCLR
 }

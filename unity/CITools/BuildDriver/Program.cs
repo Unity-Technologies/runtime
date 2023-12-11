@@ -158,9 +158,6 @@ public class Program
 
             if (bTargets != BuildTargets.None)
             {
-                if (bTargets.HasFlag(BuildTargets.NullGC))
-                    NullGC.Build(gConfig);
-
                 if (bTargets.HasFlag(BuildTargets.Runtime) || bTargets.HasFlag(BuildTargets.ClassLibs))
                     CoreCLR.Build(gConfig, bTargets);
 
