@@ -250,11 +250,6 @@ extern "C" EXPORT_API int EXPORT_CC mono_array_element_size(MonoClass* classOfAr
     return reinterpret_cast<MonoClass_clr*>(classOfArray)->GetArrayElementTypeHandle().GetSize();
 }
 
-extern "C" EXPORT_API void EXPORT_CC mono_assembly_foreach (GFunc func, gpointer user_data)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
 extern "C" EXPORT_API MonoImage* EXPORT_CC mono_assembly_get_image(MonoAssembly *assembly)
 {
     TRACE_API("%p", assembly);
@@ -828,26 +823,6 @@ extern "C" EXPORT_API gint64 EXPORT_CC mono_gc_get_max_time_slice_ns ()
     return 0;
 }
 
-extern "C" EXPORT_API gboolean EXPORT_CC mono_gc_is_incremental ()
-{
-    return false;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_gc_set_incremental (gboolean value)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_gc_set_max_time_slice_ns (gint64 maxTimeSlice)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_gc_wbarrier_set_field (MonoObject * obj, gpointer field_ptr, MonoObject * value)
-{
-    GCX_COOP();
-
-    SetObjectReference((OBJECTREF*)field_ptr, ObjectToOBJECTREF((MonoObject_clr*)value));
 }
 
 static inline OBJECTHANDLE handle_from_uintptr(uintptr_t p)
@@ -1721,48 +1696,12 @@ extern "C" EXPORT_API gboolean EXPORT_CC mono_unity_class_has_failure (MonoClass
 #endif
 }
 
-extern "C" EXPORT_API void EXPORT_CC mono_unity_domain_mempool_chunk_foreach (MonoDomain * domain, MonoDataFunc callback, void* userData)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
 extern "C" EXPORT_API void EXPORT_CC mono_unity_g_free(void* p)
 {
     free(p);
 }
 
 extern "C" EXPORT_API void EXPORT_CC mono_unity_gc_handles_foreach_get_target (MonoDataFunc callback, void* userData)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_image_set_mempool_chunk_foreach (MonoDataFunc callback, void* userdata)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void* EXPORT_CC mono_unity_liveness_allocate_struct(MonoClass* filter, int max_object_count, mono_register_object_callback callback, void* userdata, mono_liveness_reallocate_callback reallocate)
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return NULL;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_liveness_calculation_from_root(MonoObject* root, void* state)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_liveness_calculation_from_statics(void* state)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_liveness_finalize(void* state)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_liveness_free_struct(void* state)
 {
     ASSERT_NOT_IMPLEMENTED;
 }
@@ -1779,22 +1718,6 @@ extern "C" EXPORT_API int EXPORT_CC mono_unity_managed_callstack(unsigned char* 
     return 0;
 }
 
-extern "C" EXPORT_API uint32_t EXPORT_CC mono_unity_object_header_size()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
-}
-
-extern "C" EXPORT_API uint32_t EXPORT_CC mono_unity_offset_of_array_bounds_in_array_object_header()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
-}
-
-extern "C" EXPORT_API uint32_t EXPORT_CC mono_unity_offset_of_array_length_in_array_object_header()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
 }
 
 extern "C" EXPORT_API void EXPORT_CC mono_unity_set_vprintf_func(vprintf_func func)

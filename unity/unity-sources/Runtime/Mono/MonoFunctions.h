@@ -29,8 +29,6 @@ DO_API(MonoClass*, mono_get_object_class, ())
 DO_API(void*, mono_aot_get_method, (MonoDomain * domain, MonoMethod * method))
 #endif
 
-DO_API(void, mono_gc_wbarrier_set_field, (MonoObject * obj, gpointer field_ptr, MonoObject * value))
-
 #if UNITY_EDITOR
 DO_API(MonoMethodDesc*, mono_method_desc_new, (const char *name, gboolean include_namespace))
 DO_API(MonoMethod*, mono_method_desc_search_in_class, (MonoMethodDesc * desc, MonoClass * klass))
@@ -88,11 +86,6 @@ DO_API(MonoMethod*, mono_method_get_last_managed, ())
 
 DO_API(void, mono_set_assemblies_path_null_separated, (const char* name))
 
-DO_API_OPTIONAL(gint64, mono_gc_get_max_time_slice_ns, ());
-DO_API_OPTIONAL(void, mono_gc_set_max_time_slice_ns, (gint64 maxTimeSlice));
-DO_API_OPTIONAL(gboolean, mono_gc_is_incremental, ());
-DO_API_OPTIONAL(void, mono_gc_set_incremental, (gboolean value));
-
 DO_API(void, mono_gchandle_free_v2, (uintptr_t gchandle))
 
 DO_API(MonoJitInfo*, mono_jit_info_table_find, (MonoDomain * domain, void* ip))
@@ -104,17 +97,6 @@ DO_API(MonoDebugSourceLocation*, mono_debug_lookup_source_location, (MonoMethod 
 DO_API(void, mono_debug_free_source_location, (MonoDebugSourceLocation * location))
 DO_API_OPTIONAL(MonoDebugMethodJitInfo*, mono_debug_find_method, (MonoMethod * method, MonoDomain * domain))
 DO_API_OPTIONAL(void, mono_debug_free_method_jit_info, (MonoDebugMethodJitInfo * jit))
-
-// We need to hook into the Boehm GC internals to perform validation of write barriers
-#if ENABLE_SCRIPTING_GC_WBARRIERS && UNITY_DEVELOPER_BUILD
-DO_API_OPTIONAL(void, GC_dirty_inner, (void **ptr))
-DO_API_OPTIONAL(void*, GC_malloc, (size_t size))
-DO_API_OPTIONAL(void*, GC_malloc_uncollectable, (size_t size))
-DO_API_OPTIONAL(void*, GC_malloc_kind, (size_t size, int k))
-DO_API_OPTIONAL(void*, GC_malloc_atomic, (size_t size))
-DO_API_OPTIONAL(void*, GC_gcj_malloc, (size_t size, void *))
-DO_API_OPTIONAL(void*, GC_free, (void*))
-#endif
 
 DO_API(MonoMethod*, mono_property_get_get_method, (MonoProperty * prop))
 //DO_API(MonoDomain*, mono_object_get_domain, (MonoObject *obj))

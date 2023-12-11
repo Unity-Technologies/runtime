@@ -272,6 +272,9 @@ test_method_thunk (int test_id, gpointer test_method_handle, gpointer create_obj
 	gpointer (*mono_string_new_wrapper)(const char *)
 		= (gpointer (*)(const char *))sym_mono_string_new_wrapper;
 
+	char *(*mono_string_to_utf8)(gpointer)
+		= (char *(*)(gpointer))sym_mono_string_to_utf8;
+
 	// FIXME use runtime headers
 	gpointer (*mono_object_unbox)(gpointer)
 		= (gpointer (*)(gpointer))sym_mono_object_unbox;
@@ -449,6 +452,17 @@ test_method_thunk (int test_id, gpointer test_method_handle, gpointer create_obj
 			ret = 4;
 			goto done;
 		}
+
+		if (!(a1 == 254 &&
+		      a2 == 32700 &&
+		      a3 == -245378 &&
+		      a4 == 6789600 &&
+		      (fabs (a5 - 3.1415) < 0.001) &&
+		      (fabs (a6 - 3.1415) < 0.001) &&
+		      strcmp (mono_string_to_utf8 (a7), "Test8") == 0)){
+				ret = 5;
+				goto done;
+			}
 
 		break;
 	}
@@ -809,6 +823,7 @@ mono_test_init_symbols (void)
 
 	SYM_LOOKUP (mono_method_get_unmanaged_thunk);
 	SYM_LOOKUP (mono_string_new_wrapper);
+	SYM_LOOKUP (mono_string_to_utf8);
 	SYM_LOOKUP (mono_object_unbox);
 
 	SYM_LOOKUP (mono_threads_enter_gc_unsafe_region);
