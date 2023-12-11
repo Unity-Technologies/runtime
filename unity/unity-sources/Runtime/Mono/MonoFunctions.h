@@ -22,7 +22,6 @@ DO_API(MonoMethod*, mono_class_get_methods, (MonoClass * klass, gpointer * iter)
 DO_API(int, mono_class_get_userdata_offset, ())
 DO_API(void*, mono_class_get_userdata, (MonoClass * klass))
 DO_API(void, mono_class_set_userdata, (MonoClass * klass, void* userdata))
-DO_API(void, mono_assembly_foreach, (GFunc func, gpointer user_data))
 DO_API(MonoClass*, mono_get_object_class, ())
 
 #if USE_MONO_AOT
@@ -75,7 +74,6 @@ DO_API(MonoType*, mono_class_get_type, (MonoClass * klass))
 
 DO_API(gboolean, mono_is_debugger_attached, (void))
 
-DO_API(void, mono_debug_open_image_from_memory, (MonoImage * image, const char *raw_contents, int size))
 DO_API(guint32, mono_field_get_flags, (MonoClassField * field))
 DO_API(int, mono_assembly_name_parse, (const char* name, MonoAssemblyName * assembly))
 DO_API(int, mono_image_get_table_rows, (MonoImage * image, int table_id))
@@ -102,8 +100,6 @@ DO_API(MonoMethod*, mono_property_get_get_method, (MonoProperty * prop))
 //DO_API(MonoDomain*, mono_object_get_domain, (MonoObject *obj))
 
 DO_API(void, mono_gc_collect, (int generation))
-DO_API_OPTIONAL(int, mono_gc_collect_a_little, ())
-DO_API_OPTIONAL(void, mono_gc_start_incremental_collection, ())
 
 DO_API(gint32, mono_class_instance_size, (MonoClass * klass))
 DO_API(guint32, mono_class_get_type_token, (MonoClass * klass))
@@ -130,23 +126,9 @@ typedef int (*vprintf_func)(const char* msg, va_list args);
 #endif
 DO_API(void, mono_unity_set_vprintf_func, (vprintf_func func))
 
-DO_API(void*, mono_unity_liveness_allocate_struct, (MonoClass * filter, int max_object_count, mono_register_object_callback callback, void* userdata, mono_liveness_reallocate_callback reallocate))
-DO_API(void, mono_unity_liveness_finalize, (void* state))
-DO_API(void, mono_unity_liveness_free_struct, (void* state))
-DO_API(void, mono_unity_liveness_calculation_from_root, (MonoObject * root, void* state))
-DO_API(void, mono_unity_liveness_calculation_from_statics, (void* state))
-
 typedef void(*MonoDataFunc) (void *data, void *userData);
-typedef void(*MonoClassFunc) (MonoClass *klass, void *userData);
 
-DO_API(void, mono_unity_image_set_mempool_chunk_foreach, (MonoDataFunc callback, void* userdata))
-DO_API(void, mono_unity_domain_mempool_chunk_foreach, (MonoDomain * domain, MonoDataFunc callback, void* userData))
-DO_API(void, mono_unity_assembly_mempool_chunk_foreach, (MonoAssembly * assembly, MonoDataFunc callback, void* userData))
 DO_API(void, mono_unity_gc_handles_foreach_get_target, (MonoDataFunc callback, void* userData))
-DO_API(uint32_t, mono_unity_object_header_size, ())
-DO_API(uint32_t, mono_unity_array_object_header_size, ())
-DO_API(uint32_t, mono_unity_offset_of_array_length_in_array_object_header, ())
-DO_API(uint32_t, mono_unity_offset_of_array_bounds_in_array_object_header, ())
 DO_API(uint32_t, mono_unity_allocation_granularity, ())
 DO_API(void, mono_unity_type_get_name_full_chunked, (MonoType * type, MonoDataFunc appendCallback, void* userData))
 DO_API(gboolean, mono_unity_type_is_pointer_type, (MonoType * type))

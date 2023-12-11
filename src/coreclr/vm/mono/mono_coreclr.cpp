@@ -811,20 +811,6 @@ extern "C" EXPORT_API void EXPORT_CC mono_gc_collect(int generation)
     GCHeapUtilities::GetGCHeap()->GarbageCollect(generation, false, collection_blocking);
 }
 
-extern "C" EXPORT_API int EXPORT_CC mono_gc_collect_a_little ()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
-}
-
-extern "C" EXPORT_API gint64 EXPORT_CC mono_gc_get_max_time_slice_ns ()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
-}
-
-}
-
 static inline OBJECTHANDLE handle_from_uintptr(uintptr_t p)
 {
     // mask off bit that is set for pinned in managed
@@ -1648,17 +1634,6 @@ extern "C" EXPORT_API uint32_t EXPORT_CC mono_unity_allocation_granularity ()
     return 0;
 }
 
-extern "C" EXPORT_API uint32_t EXPORT_CC mono_unity_array_object_header_size ()
-{
-    ASSERT_NOT_IMPLEMENTED;
-    return 0;
-}
-
-extern "C" EXPORT_API void EXPORT_CC mono_unity_assembly_mempool_chunk_foreach (MonoAssembly * assembly, MonoDataFunc callback, void* userData)
-{
-    ASSERT_NOT_IMPLEMENTED;
-}
-
 #if defined(HOST_OSX) || defined(HOST_UNIX)
 extern "C" EXPORT_API int EXPORT_CC mono_unity_backtrace_from_context(void* context, void* array[], int count)
 {
@@ -1716,8 +1691,6 @@ extern "C" EXPORT_API int EXPORT_CC mono_unity_managed_callstack(unsigned char* 
 {
     ASSERT_NOT_IMPLEMENTED;
     return 0;
-}
-
 }
 
 extern "C" EXPORT_API void EXPORT_CC mono_unity_set_vprintf_func(vprintf_func func)
