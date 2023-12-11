@@ -9,7 +9,6 @@ public enum BuildTargets
     None = 0,
     Runtime = 1 << 0,
     ClassLibs = 1 << 1,
-    EmbeddingHost = 1 << 3,
     CoreCLR = Runtime | ClassLibs,
-    All = CoreCLR | EmbeddingHost
+    All = CoreCLR
 }

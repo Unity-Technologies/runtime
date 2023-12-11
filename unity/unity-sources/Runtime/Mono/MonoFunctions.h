@@ -11,16 +11,10 @@ typedef UNUSED_SYMBOL void(*MonoUnityExceptionFunc) (MonoObject* exc);
 // If you add functions to this file you also need to expose them in MonoBundle.exp
 // Otherwise they wont be exported in the web plugin!
 DO_API(gboolean, mono_unity_class_has_failure, (MonoClass * klass))
-DO_API(MonoMethod*, mono_object_get_virtual_method, (MonoObject * obj, MonoMethod * method))
 
 DO_API(void, mono_add_internal_call, (const char *name, gconstpointer method))
 DO_API(MonoDomain*, mono_jit_init_version, (const char *file, const char* runtime_version))
-DO_API(MonoClass *, mono_class_from_name, (MonoImage * image, const char* name_space, const char *name))
-DO_API(MonoClass *, mono_class_from_name_case, (MonoImage * image, const char* name_space, const char *name))
-DO_API(MonoAssembly *, mono_domain_assembly_open, (MonoDomain * domain, const char *name))
 
-DO_API(MonoObject*, mono_object_new, (MonoDomain * domain, MonoClass * klass))
-DO_API(MonoObject*, mono_runtime_invoke, (MonoMethod * method, void *obj, void **params, MonoException **exc))
 DO_API(int, mono_field_get_offset, (MonoClassField * field))
 DO_API(MonoClassField*, mono_class_get_fields, (MonoClass * klass, gpointer * iter))
 DO_API(MonoClass*, mono_class_get_nested_types, (MonoClass * klass, gpointer * iter))
@@ -28,15 +22,11 @@ DO_API(MonoMethod*, mono_class_get_methods, (MonoClass * klass, gpointer * iter)
 DO_API(int, mono_class_get_userdata_offset, ())
 DO_API(void*, mono_class_get_userdata, (MonoClass * klass))
 DO_API(void, mono_class_set_userdata, (MonoClass * klass, void* userdata))
-DO_API(void, mono_assembly_foreach, (GFunc func, gpointer user_data))
-DO_API(const char*, mono_image_get_name, (MonoImage * image))
 DO_API(MonoClass*, mono_get_object_class, ())
 
 #if USE_MONO_AOT
 DO_API(void*, mono_aot_get_method, (MonoDomain * domain, MonoMethod * method))
 #endif
-
-DO_API(void, mono_gc_wbarrier_set_field, (MonoObject * obj, gpointer field_ptr, MonoObject * value))
 
 #if UNITY_EDITOR
 DO_API(MonoMethodDesc*, mono_method_desc_new, (const char *name, gboolean include_namespace))
@@ -55,43 +45,18 @@ DO_API(const char*, mono_method_get_name, (MonoMethod * method))
 DO_API(char*, mono_method_full_name, (MonoMethod * method, gboolean signature))
 DO_API(MonoImage*, mono_assembly_get_image, (MonoAssembly * assembly))
 DO_API(MonoClass*, mono_method_get_class, (MonoMethod * method))
-DO_API(MonoClass*, mono_object_get_class, (MonoObject * obj))
-DO_API(MonoObject*, mono_object_isinst, (MonoObject * obj, MonoClass * klass))
-DO_API(gboolean, mono_class_is_valuetype, (MonoClass * klass))
-DO_API(gboolean, mono_class_is_blittable, (MonoClass * klass))
 DO_API(guint32, mono_signature_get_param_count, (MonoMethodSignature * sig))
-DO_API(MonoString*, mono_unity_string_empty_wrapper, ())
-DO_API(MonoString*, mono_string_new_wrapper, (const char* text))
-DO_API(MonoString*, mono_string_new_len, (MonoDomain * domain, const char *text, guint32 length))
-DO_API(MonoString*, mono_string_new_utf16, (MonoDomain * domain, const guint16 * text, gint32 length))
-DO_API(MonoString*, mono_string_from_utf16, (const gunichar2 * text))
 DO_API(MonoClass*, mono_class_get_parent, (MonoClass * klass))
 DO_API(const char*, mono_class_get_namespace, (MonoClass * klass))
-DO_API(gboolean, mono_class_is_subclass_of, (MonoClass * klass, MonoClass * klassc, gboolean check_interfaces))
 DO_API(const char*, mono_class_get_name, (MonoClass * klass))
 DO_API(char*, mono_type_get_name, (MonoType * type))
 DO_API(MonoClass*, mono_type_get_class, (MonoType * type))
 DO_API(gboolean, mono_metadata_type_equal, (MonoType * t1, MonoType * t2))
-DO_API(MonoException *, mono_exception_from_name_msg, (MonoImage * image, const char *name_space, const char *name, const char *msg))
-DO_API(MonoException *, mono_get_exception_argument_null, (const char *arg))
 DO_API_NO_RETURN(void, mono_raise_exception, (MonoException * ex))
-DO_API(MonoArray*, mono_array_new, (MonoDomain * domain, MonoClass * eclass, guint32 n))
-DO_API(MonoArray*, mono_unity_array_new_2d, (MonoDomain * domain, MonoClass * eclass, size_t size0, size_t size1))
-DO_API(MonoArray*, mono_unity_array_new_3d, (MonoDomain * domain, MonoClass * eclass, size_t size0, size_t size1, size_t size2))
-DO_API(int, coreclr_array_length, (MonoArray* array))
-DO_API(void*, mono_unity_method_get_function_pointer, (MonoMethod* method))
 
 DO_API(void*, unity_coreclr_create_delegate, (const char* assemblyName, const char* typeName, const char* methodName))
 
-DO_API(MonoClass *, mono_array_class_get, (MonoClass * eclass, guint32 rank))
-
 DO_API(gint32, mono_class_array_element_size, (MonoClass * ac))
-DO_API(MonoObject*, mono_type_get_object, (MonoDomain * domain, MonoType * type))
-DO_API(gboolean, mono_class_is_generic, (MonoClass * klass))
-DO_API(gboolean, mono_class_is_inflated, (MonoClass * klass))
-
-DO_API(gboolean, unity_mono_method_is_generic_specific, (MonoMethod * method, MonoClass * klass))
-DO_API(gboolean, unity_mono_method_is_inflated_specific, (MonoMethod * method, MonoClass * klass))
 
 DO_API(MonoThread *, mono_thread_attach, (MonoDomain * domain))
 
@@ -101,9 +66,6 @@ DO_API(gboolean, mono_thread_has_sufficient_execution_stack, (void))
 DO_API(MonoThread *, mono_thread_current, (void))
 
 DO_API(MonoClass*, mono_class_get_nesting_type, (MonoClass * klass))
-DO_API(MonoReflectionMethod*, mono_method_get_object, (MonoDomain * domain, MonoMethod * method, MonoClass * refclass))
-DO_API(MonoReflectionField*, mono_field_get_object, (MonoDomain * domain, MonoClass * klass, MonoClassField * field))
-DO_API(MonoClassField* , mono_field_from_token, (MonoImage * image, uint32_t token, MonoClass** retklass, MonoGenericContext * context))
 
 DO_API(MonoMethodSignature*, mono_method_signature, (MonoMethod * method))
 DO_API(MonoType*, mono_signature_get_params, (MonoMethodSignature * sig, gpointer * iter))
@@ -112,31 +74,17 @@ DO_API(MonoType*, mono_class_get_type, (MonoClass * klass))
 
 DO_API(gboolean, mono_is_debugger_attached, (void))
 
-DO_API(void, mono_debug_open_image_from_memory, (MonoImage * image, const char *raw_contents, int size))
 DO_API(guint32, mono_field_get_flags, (MonoClassField * field))
-DO_API(MonoImage*, mono_image_open_from_data_with_name, (char *data, guint32 data_len, gboolean need_copy, int *status, gboolean refonly, const char *name))
 DO_API(int, mono_assembly_name_parse, (const char* name, MonoAssemblyName * assembly))
-DO_API(MonoAssembly*, mono_assembly_loaded, (MonoAssemblyName * aname))
 DO_API(int, mono_image_get_table_rows, (MonoImage * image, int table_id))
-DO_API(MonoClass*, mono_unity_class_get, (MonoImage * image, guint32 type_token))
 DO_API(gboolean, mono_metadata_signature_equal, (MonoMethodSignature * sig1, MonoMethodSignature * sig2))
 
-DO_API(MonoObject *, mono_value_box, (MonoDomain * domain, MonoClass * klass, gpointer val))
-DO_API(MonoImage*, mono_class_get_image, (MonoClass * klass))
 DO_API(char, mono_signature_is_instance, (MonoMethodSignature * signature))
 DO_API(MonoMethod*, mono_method_get_last_managed, ())
-DO_API(MonoClass*, mono_get_enum_class, ())
 
 DO_API(void, mono_set_assemblies_path_null_separated, (const char* name))
 
-DO_API_OPTIONAL(gint64, mono_gc_get_max_time_slice_ns, ());
-DO_API_OPTIONAL(void, mono_gc_set_max_time_slice_ns, (gint64 maxTimeSlice));
-DO_API_OPTIONAL(gboolean, mono_gc_is_incremental, ());
-DO_API_OPTIONAL(void, mono_gc_set_incremental, (gboolean value));
-
 DO_API(void, mono_gchandle_free_v2, (uintptr_t gchandle))
-
-DO_API(MonoObject*, mono_assembly_get_object, (MonoDomain * domain, MonoAssembly * assembly))
 
 DO_API(MonoJitInfo*, mono_jit_info_table_find, (MonoDomain * domain, void* ip))
 
@@ -148,55 +96,26 @@ DO_API(void, mono_debug_free_source_location, (MonoDebugSourceLocation * locatio
 DO_API_OPTIONAL(MonoDebugMethodJitInfo*, mono_debug_find_method, (MonoMethod * method, MonoDomain * domain))
 DO_API_OPTIONAL(void, mono_debug_free_method_jit_info, (MonoDebugMethodJitInfo * jit))
 
-// We need to hook into the Boehm GC internals to perform validation of write barriers
-#if ENABLE_SCRIPTING_GC_WBARRIERS && UNITY_DEVELOPER_BUILD
-DO_API_OPTIONAL(void, GC_dirty_inner, (void **ptr))
-DO_API_OPTIONAL(void*, GC_malloc, (size_t size))
-DO_API_OPTIONAL(void*, GC_malloc_uncollectable, (size_t size))
-DO_API_OPTIONAL(void*, GC_malloc_kind, (size_t size, int k))
-DO_API_OPTIONAL(void*, GC_malloc_atomic, (size_t size))
-DO_API_OPTIONAL(void*, GC_gcj_malloc, (size_t size, void *))
-DO_API_OPTIONAL(void*, GC_free, (void*))
-#endif
-
 DO_API(MonoMethod*, mono_property_get_get_method, (MonoProperty * prop))
 //DO_API(MonoDomain*, mono_object_get_domain, (MonoObject *obj))
 
 DO_API(void, mono_gc_collect, (int generation))
-DO_API_OPTIONAL(int, mono_gc_collect_a_little, ())
-DO_API_OPTIONAL(void, mono_gc_start_incremental_collection, ())
 
-DO_API(gint64, mono_gc_get_used_size, ())
-
-DO_API(gboolean, mono_class_is_enum, (MonoClass * klass))
 DO_API(gint32, mono_class_instance_size, (MonoClass * klass))
 DO_API(guint32, mono_class_get_type_token, (MonoClass * klass))
-DO_API(const char*, mono_image_get_filename, (MonoImage * image))
 DO_API(MonoClass*, mono_class_get_interfaces, (MonoClass * klass, gpointer * iter))
 DO_API(MonoProperty*, mono_class_get_property_from_name, (MonoClass * klass, const char *name))
 DO_API(MonoClass*, mono_class_from_mono_type, (MonoType * image))
-DO_API(int, mono_class_get_rank, (MonoClass * klass));
 DO_API(MonoClass*, mono_class_get_element_class, (MonoClass * klass));
-DO_API(gboolean, mono_unity_class_is_interface, (MonoClass * klass))
-DO_API(gboolean, mono_unity_class_is_abstract, (MonoClass * klass))
-DO_API(MonoClass*, mono_unity_class_get_generic_type_definition, (MonoClass * klass))
-DO_API(MonoMethod*, mono_get_method, (MonoImage * image, guint32 token, MonoClass * klass))
 
 DO_API(int, mono_array_element_size, (MonoClass * classOfArray))
 
-DO_API(MonoImage*, mono_get_corlib, ())
-DO_API(MonoImage*, mono_image_loaded, (const char *name))
 DO_API(MonoClassField*, mono_class_get_field_from_name, (MonoClass * klass, const char *name))
 DO_API(guint32, mono_class_get_flags, (MonoClass * klass))
 
 DO_API(void, mono_set_dirs, (const char *assembly_dir, const char *config_dir))
 
 DO_API(void, mono_jit_parse_options, (int argc, char * argv[]))
-
-DO_API(MonoObject*, mono_unity_class_get_attribute, (MonoClass* klass, MonoClass* attr_klass))
-DO_API(MonoObject*, mono_unity_assembly_get_attribute, (MonoAssembly* assembly, MonoClass* attr_klass))
-DO_API(MonoObject*, mono_unity_method_get_attribute, (MonoMethod* method, MonoClass* attr_klass))
-DO_API(MonoObject*, mono_unity_field_get_attribute, (MonoClass* klass, MonoClassField* field, MonoClass* attr_klass))
 
 DO_API(MonoException*, mono_unity_loader_get_last_error_and_error_prepare_exception, (void))
 
@@ -207,25 +126,10 @@ typedef int (*vprintf_func)(const char* msg, va_list args);
 #endif
 DO_API(void, mono_unity_set_vprintf_func, (vprintf_func func))
 
-DO_API(void*, mono_unity_liveness_allocate_struct, (MonoClass * filter, int max_object_count, mono_register_object_callback callback, void* userdata, mono_liveness_reallocate_callback reallocate))
-DO_API(void, mono_unity_liveness_finalize, (void* state))
-DO_API(void, mono_unity_liveness_free_struct, (void* state))
-DO_API(void, mono_unity_liveness_calculation_from_root, (MonoObject * root, void* state))
-DO_API(void, mono_unity_liveness_calculation_from_statics, (void* state))
-
 typedef void(*MonoDataFunc) (void *data, void *userData);
-typedef void(*MonoClassFunc) (MonoClass *klass, void *userData);
 
-DO_API(void, mono_unity_image_set_mempool_chunk_foreach, (MonoDataFunc callback, void* userdata))
-DO_API(void, mono_unity_domain_mempool_chunk_foreach, (MonoDomain * domain, MonoDataFunc callback, void* userData))
-DO_API(void, mono_unity_assembly_mempool_chunk_foreach, (MonoAssembly * assembly, MonoDataFunc callback, void* userData))
 DO_API(void, mono_unity_gc_handles_foreach_get_target, (MonoDataFunc callback, void* userData))
-DO_API(uint32_t, mono_unity_object_header_size, ())
-DO_API(uint32_t, mono_unity_array_object_header_size, ())
-DO_API(uint32_t, mono_unity_offset_of_array_length_in_array_object_header, ())
-DO_API(uint32_t, mono_unity_offset_of_array_bounds_in_array_object_header, ())
 DO_API(uint32_t, mono_unity_allocation_granularity, ())
-DO_API(uint32_t, mono_unity_class_get_data_size, (MonoClass * klass))
 DO_API(void, mono_unity_type_get_name_full_chunked, (MonoType * type, MonoDataFunc appendCallback, void* userData))
 DO_API(gboolean, mono_unity_type_is_pointer_type, (MonoType * type))
 DO_API(gboolean, mono_unity_type_is_static, (MonoType * type))
