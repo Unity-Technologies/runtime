@@ -30,28 +30,18 @@ EXPORTS
         MetaDataGetDispenser
 
         ; mono
-        mono_unity_initialize_host_apis
-        coreclr_array_length
-        coreclr_class_from_systemtypeinstance
         coreclr_image_get_custom_attribute_data
         coreclr_unity_profiler_register
         mono_add_internal_call
-        mono_array_class_get
         mono_array_element_size
-        mono_array_new
         mono_assembly_get_assemblyref
         mono_assembly_get_image
-        mono_assembly_get_object
-        mono_assembly_loaded
         mono_class_array_element_size
         mono_class_from_mono_type
-        mono_class_from_name
-        mono_class_from_name_case
         mono_class_get_element_class
         mono_class_get_field_from_name
         mono_class_get_fields
         mono_class_get_flags
-        mono_class_get_image
         mono_class_get_interfaces
         mono_class_get_methods
         mono_class_get_name
@@ -60,49 +50,28 @@ EXPORTS
         mono_class_get_nesting_type
         mono_class_get_parent
         mono_class_get_property_from_name
-        mono_class_get_rank
         mono_class_get_type
         mono_class_get_type_token
         mono_class_get_userdata
         mono_class_get_userdata_offset
         mono_class_instance_size
-        mono_class_is_blittable
-        mono_class_is_enum
-        mono_class_is_generic
-        mono_class_is_inflated
-        mono_class_is_subclass_of
-        mono_class_is_valuetype
         mono_class_set_userdata
         mono_debug_free_source_location
         mono_debug_lookup_source_location
-        mono_debug_open_image_from_memory  
         mono_debugger_install_attach_detach_callback
         mono_debugger_set_generate_debug_info
-        mono_domain_assembly_open
         mono_enter_internal_call
-        mono_exception_from_name_msg
         mono_exit_internal_call
-        mono_field_from_token
         mono_field_get_flags
         mono_field_get_name
-        mono_field_get_object
         mono_field_get_offset
         mono_field_get_parent
         mono_field_get_type
         mono_field_get_type_specific
         mono_gc_collect
-        mono_gc_get_used_size
         mono_gchandle_free_v2
-        mono_get_corlib
-        mono_get_enum_class
-        mono_get_exception_argument_null
-        mono_get_method
         mono_get_object_class
-        mono_image_get_filename
-        mono_image_get_name
         mono_image_get_table_rows
-        mono_image_loaded
-        mono_image_open_from_data_with_name
         mono_is_debugger_attached
         mono_jit_info_table_find
         mono_jit_init
@@ -113,15 +82,9 @@ EXPORTS
         mono_method_get_class
         mono_method_get_last_managed
         mono_method_get_name
-        mono_method_get_object
         mono_method_signature
-        mono_object_get_class
-        mono_object_get_virtual_method
-        mono_object_isinst
-        mono_object_new
         mono_property_get_get_method
         mono_raise_exception
-        mono_runtime_invoke
         mono_runtime_invoke_with_nested_object
         mono_set_assemblies_path
         mono_set_assemblies_path_null_separated
@@ -130,10 +93,6 @@ EXPORTS
         mono_signature_get_params
         mono_signature_get_return_type
         mono_signature_is_instance
-        mono_string_from_utf16
-        mono_string_new_len
-        mono_string_new_utf16
-        mono_string_new_wrapper
         mono_thread_attach
         mono_thread_current
         mono_thread_detach
@@ -141,34 +100,17 @@ EXPORTS
         mono_type_get_class
         mono_type_get_name
         mono_type_get_name_full
-        mono_type_get_object
         mono_type_get_type
         mono_type_is_byref
         mono_unity_allocation_granularity
-        mono_unity_array_new_2d
-        mono_unity_array_new_3d
-        mono_unity_assembly_get_attribute
         mono_unity_class_field_is_literal
-        mono_unity_class_get
-        mono_unity_class_get_data_size
-        mono_unity_class_get_generic_type_definition
-        mono_unity_class_get_attribute
         mono_unity_class_has_failure
-        mono_unity_class_is_abstract
-        mono_unity_class_is_interface
-        mono_unity_field_get_attribute
         mono_unity_g_free
         mono_unity_gc_handles_foreach_get_target
         mono_unity_loader_get_last_error_and_error_prepare_exception
         mono_unity_managed_callstack
-        mono_unity_method_get_function_pointer
-        mono_unity_method_get_attribute
         mono_unity_set_vprintf_func
-        mono_unity_string_empty_wrapper
         mono_unity_type_get_name_full_chunked
         mono_unity_type_is_pointer_type
         mono_unity_type_is_static
-        mono_value_box
-        unity_mono_method_is_generic_specific
-        unity_mono_method_is_inflated_specific
         unity_coreclr_create_delegate
