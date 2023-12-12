@@ -94,7 +94,6 @@ DO_API(gboolean, unity_mono_method_is_inflated_specific, (MonoMethod * method, M
 DO_API(MonoThread *, mono_thread_attach, (MonoDomain * domain))
 
 DO_API(void, mono_thread_detach, (MonoThread * thread))
-DO_API(gboolean, mono_thread_has_sufficient_execution_stack, (void))
 
 DO_API(MonoThread *, mono_thread_current, (void))
 
@@ -253,13 +252,6 @@ DO_API(void, mono_unity_install_memory_callbacks, (MonoMemoryCallbacks * callbac
 typedef UNUSED_SYMBOL size_t(*RemapPathFunction)(const char* path, char* buffer, size_t buffer_len);
 DO_API(void, mono_unity_register_path_remapper, (RemapPathFunction func))
 DO_API_OPTIONAL(void, mono_unity_set_enable_handler_block_guards, (gboolean allow))
-#endif
-
-DO_API_OPTIONAL(void, mono_unity_install_unitytls_interface, (void* callbacks))
-
-#if ENABLE_OUT_OF_PROCESS_CRASH_HANDLER && UNITY_64 && PLATFORM_WIN && ENABLE_MONO && !PLATFORM_XBOXONE
-DO_API_OPTIONAL(void*, mono_unity_lock_dynamic_function_access_tables64, (unsigned int))
-DO_API_OPTIONAL(void, mono_unity_unlock_dynamic_function_access_tables64, (void))
 #endif
 
 #if LOAD_MONO_DYNAMICALLY
