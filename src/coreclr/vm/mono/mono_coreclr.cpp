@@ -1191,6 +1191,20 @@ extern "C" EXPORT_API void EXPORT_CC mono_raise_exception(MonoException *ex)
     ASSERT_NOT_IMPLEMENTED;
 }
 
+extern "C" EXPORT_API MonoObject* EXPORT_CC mono_runtime_invoke(MonoMethod *method, void *obj, void **params, MonoException **exc)
+{
+    TRACE_API("%p, %p, %p, %p", method, obj, params, exc);
+
+    if (obj == nullptr)
+        return mono_runtime_invoke_with_nested_object(method, nullptr, nullptr, params, exc);
+    MonoClass_clr * klass = (MonoClass_clr*)reinterpret_cast<MonoObject_clr*>(obj)->GetMethodTable();
+    auto method_clr = (MonoMethod_clr*)method;
+    if (klass->IsValueType())// && !method_clr->IsVtableMethod())
+        return mono_runtime_invoke_with_nested_object(method, (char*)obj + sizeof(Object), obj, params, exc);
+    else
+        return mono_runtime_invoke_with_nested_object(method, obj, obj, params, exc);
+}
+
 extern "C" EXPORT_API MonoObject* EXPORT_CC mono_runtime_invoke_with_nested_object(MonoMethod *method, void *obj, void *parentobj, void **params, MonoException **exc)
 {
     TRACE_API("%p, %p, %p, %p, %p", method, obj, parentobj, params, exc);
