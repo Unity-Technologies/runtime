@@ -58,6 +58,7 @@ EXPORTS
         mono_class_set_userdata
         mono_debug_free_source_location
         mono_debug_lookup_source_location
+        mono_debug_open_image_from_memory
         mono_debugger_install_attach_detach_callback
         mono_debugger_set_generate_debug_info
         mono_enter_internal_call
@@ -105,6 +106,7 @@ EXPORTS
         mono_type_is_byref
         mono_unity_allocation_granularity
         mono_unity_class_field_is_literal
+        mono_unity_class_get_data_size
         mono_unity_class_has_failure
         mono_unity_g_free
         mono_unity_gc_handles_foreach_get_target

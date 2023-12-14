@@ -75,6 +75,7 @@ DO_API(MonoType*, mono_class_get_type, (MonoClass * klass))
 
 DO_API(gboolean, mono_is_debugger_attached, (void))
 
+DO_API(void, mono_debug_open_image_from_memory, (MonoImage * image, const char *raw_contents, int size))
 DO_API(guint32, mono_field_get_flags, (MonoClassField * field))
 DO_API(int, mono_assembly_name_parse, (const char* name, MonoAssemblyName * assembly))
 DO_API(int, mono_image_get_table_rows, (MonoImage * image, int table_id))
@@ -131,6 +132,7 @@ typedef void(*MonoDataFunc) (void *data, void *userData);
 
 DO_API(void, mono_unity_gc_handles_foreach_get_target, (MonoDataFunc callback, void* userData))
 DO_API(uint32_t, mono_unity_allocation_granularity, ())
+DO_API(uint32_t, mono_unity_class_get_data_size, (MonoClass * klass))
 DO_API(void, mono_unity_type_get_name_full_chunked, (MonoType * type, MonoDataFunc appendCallback, void* userData))
 DO_API(gboolean, mono_unity_type_is_pointer_type, (MonoType * type))
 DO_API(gboolean, mono_unity_type_is_static, (MonoType * type))
