@@ -1046,6 +1046,14 @@ extern "C" EXPORT_API MonoDomain* EXPORT_CC mono_jit_init_version(const char *fi
         }
     }
 
+    AppDomain *pCurDomain = SystemDomain::GetCurrentDomain();
+
+    // Disable Windows message processing during waits
+    // On Windows by default waits will processing some messages (COM, WM_PAINT, ...) leading to reentrancy issues
+    pCurDomain->SetForceTrivialWaitOperations();
+
+    gRootDomain = gCurrentDomain = (MonoDomain*)pCurDomain;
+
     // Note : This logic can be removed once the switch over to using unity_coreclr_create_delegate is complete
     initialize_scripting_runtime_func init_runtime_func;
     hr = coreclr_create_delegate(g_CLRRuntimeHost, g_RootDomainId, "UnityEngine.Scripting", "UnityEngine.Scripting.Initialization", "NativeCallbackToPerformInitialization", (void**)&init_runtime_func);
