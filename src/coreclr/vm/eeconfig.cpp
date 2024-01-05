@@ -121,9 +121,10 @@ HRESULT EEConfig::Init()
 
     INDEBUG(fStressLog = true;)
 
+    fDebuggable = false;
+
 #ifdef _DEBUG
     fExpandAllOnLoad = false;
-    fDebuggable = false;
     pPrestubHalt = 0;
     pPrestubGC = 0;
     pszBreakOnClassLoad = 0;
@@ -553,9 +554,9 @@ HRESULT EEConfig::sync()
 #endif
 
 
-#ifdef _DEBUG
-    fDebuggable         = (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_JitDebuggable) != 0);
+    fDebuggable         = (CLRConfig::GetConfigValue(CLRConfig::EXTERNAL_JitDebuggable) != 0);
 
+#ifdef _DEBUG
     LPWSTR wszPreStubStuff = NULL;
 
     IfFailRet(CLRConfig::GetConfigValue(CLRConfig::INTERNAL_PrestubHalt, &wszPreStubStuff));

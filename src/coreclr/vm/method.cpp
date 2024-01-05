@@ -3071,9 +3071,7 @@ bool MethodDesc::IsJitOptimizationDisabledForAllMethodsInChunk()
 
     return
         g_pConfig->JitMinOpts() ||
-#ifdef _DEBUG
         g_pConfig->GenDebuggableCode() ||
-#endif
         CORDisableJITOptimizations(GetModule()->GetDebuggerInfoBits());
 }
 
