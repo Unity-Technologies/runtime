@@ -10504,6 +10504,7 @@ BOOL IsProcessCorruptedStateException(DWORD dwExceptionCode, OBJECTREF throwable
     case EXCEPTION_NONCONTINUABLE_EXCEPTION:
     case EXCEPTION_PRIV_INSTRUCTION:
     case STATUS_UNWIND_CONSOLIDATE:
+    case STATUS_FATAL_APP_EXIT:
         break;
     default:
         return FALSE;
