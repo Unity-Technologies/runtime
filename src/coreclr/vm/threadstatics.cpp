@@ -58,7 +58,7 @@ void ThreadLocalBlock::FreeTLM(SIZE_T i, BOOL isThreadShuttingdown)
                         GCX_COOP();
 
                         LOADERALLOCATORREF loaderAllocator = pLoaderAllocator->GetExposedObject();
-                        if (loaderAllocator != NULL)
+                        if (loaderAllocator != NULL && !pLoaderAllocator->IsUnloaded())
                         {
                             if (entry->m_hGCStatics != NULL)
                             {
