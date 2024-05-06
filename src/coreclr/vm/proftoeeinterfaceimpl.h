@@ -739,7 +739,7 @@ public:
     // end ICorProfilerInfo14
 
 protected:
-
+#ifdef FEATURE_PERFTRACING
     // Internal Helper Functions
     static void EventPipeCallbackHelper(EventPipeProvider *provider,
                                         DWORD eventId,
@@ -754,6 +754,7 @@ protected:
                                         ULONG numStackFrames,
                                         UINT_PTR stackFrames[],
                                         void *additionalData);
+#endif
 
     HRESULT GetCodeInfoHelper(FunctionID functionId,
                                ReJITID  reJitId,

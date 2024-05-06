@@ -315,6 +315,7 @@ void ProfilingAPIUtility::LogProfEventVA(
 
     AppendSupplementaryInformation(iStringResourceID, &messageToLog);
 
+#if defined(FEATURE_PERFTRACING)
     if (EventEnabledProfilerMessage())
     {
         StackSString messageToLogUtf16;
@@ -323,6 +324,7 @@ void ProfilingAPIUtility::LogProfEventVA(
         // Write to ETW and EventPipe with the message
         FireEtwProfilerMessage(GetClrInstanceId(), messageToLogUtf16.GetUnicode());
     }
+#endif
 
     // Output debug strings for diagnostic messages.
     OutputDebugStringUtf8(messageToLog.GetUTF8());

@@ -12257,7 +12257,7 @@ void CEEJitInfo::getEHinfo(
 
 
 
-#ifdef FEATURE_INTERPRETER
+#if defined(FEATURE_INTERPRETER) && defined(FEATURE_PERFTRACING)
 static CorJitResult CompileMethodWithEtwWrapper(EEJitManager *jitMgr,
                                                       CEEInfo *comp,
                                                       struct CORINFO_METHOD_INFO *info,

@@ -22178,11 +22178,13 @@ void gc_heap::update_end_gc_time_per_heap()
 
         last_suspended_end_time = end_gc_time;
 
+#if FEATURE_EVENT_TRACE
         GCEventFireHeapCountSample_V1 (
             (uint64_t)VolatileLoadWithoutBarrier (&settings.gc_index),
             sample.elapsed_between_gcs,
             sample.gc_pause_time,
             sample.msl_wait_time);
+#endif
 
         dynamic_heap_count_data.sample_index = (dynamic_heap_count_data.sample_index + 1) % dynamic_heap_count_data_t::sample_size;
 
@@ -25480,6 +25482,7 @@ int gc_heap::calculate_new_heap_count ()
     dynamic_heap_count_data.scp_increase_per_step_up = scp_increase_per_step_up;
     dynamic_heap_count_data.scp_decrease_per_step_down = scp_decrease_per_step_down;
 
+#if FEATURE_EVENT_TRACE
     GCEventFireHeapCountTuning_V1 (
         (uint16_t)dynamic_heap_count_data.new_n_heaps,
         (uint64_t)VolatileLoadWithoutBarrier (&settings.gc_index),
@@ -25490,6 +25493,7 @@ int gc_heap::calculate_new_heap_count ()
         dynamic_heap_count_data.scp_increase_per_step_up,
         dynamic_heap_count_data.scp_decrease_per_step_down
     );
+#endif
 
     dynamic_heap_count_data.prev_num_completed_gcs = num_completed_gcs;
 

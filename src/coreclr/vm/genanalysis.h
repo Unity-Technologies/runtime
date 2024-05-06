@@ -24,7 +24,9 @@ enum GcGenAnalysisState
 
 extern bool s_forcedGCInProgress;
 extern GcGenAnalysisState gcGenAnalysisState;
+#ifdef FEATURE_PERFTRACING
 extern EventPipeSession* gcGenAnalysisEventPipeSession;
+#endif
 extern uint64_t gcGenAnalysisEventPipeSessionId;
 extern GcGenAnalysisState gcGenAnalysisConfigured;
 extern int64_t gcGenAnalysisGen;

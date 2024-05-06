@@ -454,7 +454,7 @@ public:
     BOOL HasTimedOutWaitingForConcurrentGC();
 
     HRESULT GetAssemblyReferences(LPCWSTR wszAssemblyPath, IAssemblyBindingClosure * pClosure, AssemblyReferenceClosureWalkContextForProfAPI * pContext);
-
+#if defined(FEATURE_PERFTRACING)
     //
     // Event Pipe
     //
@@ -473,6 +473,7 @@ public:
         UINT_PTR stackFrames[]);
 
     HRESULT EventPipeProviderCreated(EventPipeProvider *provider);
+#endif
 
     HRESULT LoadAsNotificationOnly(BOOL *pbNotificationOnly);
 

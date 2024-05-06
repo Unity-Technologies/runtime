@@ -6,7 +6,9 @@
 #include "eventpipeadapter.h"
 
 GcGenAnalysisState gcGenAnalysisState = GcGenAnalysisState::Uninitialized;
+#if defined(FEATURE_PERFTRACING)
 EventPipeSession* gcGenAnalysisEventPipeSession = nullptr;
+#endif
 uint64_t gcGenAnalysisEventPipeSessionId = (uint64_t)-1;
 GcGenAnalysisState gcGenAnalysisConfigured = GcGenAnalysisState::Uninitialized;
 int64_t gcGenAnalysisGen = -1;
@@ -76,6 +78,7 @@ bool gcGenAnalysisDump = false;
 
 /* static */ void GenAnalysis::EnableGenerationalAwareSession()
 {
+#if defined(FEATURE_PERFTRACING)
     WCHAR outputPath[MAX_PATH];
     ReplacePid(GENAWARE_TRACE_FILE_NAME, outputPath, MAX_PATH);
 
@@ -115,4 +118,7 @@ bool gcGenAnalysisDump = false;
     {
         gcGenAnalysisTrace = false;
     }
+#else
+    gcGenAnalysisTrace = false;
+#endif
 }

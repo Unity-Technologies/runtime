@@ -5,4 +5,6 @@
 
 #include <fxver.h>
 #include <fxver.rc>
+#if FEATURE_EVENT_TRACE
 #include "ClrEtwAll.rc"
+#endif

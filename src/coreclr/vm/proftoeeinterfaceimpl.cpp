@@ -7447,6 +7447,7 @@ HRESULT ProfToEEInterfaceImpl::EventPipeWriteEvent(
 #endif // FEATURE_PERFTRACING
 }
 
+#ifdef FEATURE_PERFTRACING
 void ProfToEEInterfaceImpl::EventPipeCallbackHelper(EventPipeProvider *provider,
                                                     DWORD eventId,
                                                     DWORD eventVersion,
@@ -7486,6 +7487,8 @@ void ProfToEEInterfaceImpl::EventPipeCallbackHelper(EventPipeProvider *provider,
         }
     }
 };
+
+#endif
 
 HRESULT ProfToEEInterfaceImpl::CreateHandle(
     ObjectID object,

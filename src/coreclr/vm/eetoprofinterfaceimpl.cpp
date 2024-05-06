@@ -5972,6 +5972,7 @@ HRESULT EEToProfInterfaceImpl::GetAssemblyReferences(LPCWSTR wszAssemblyPath, IA
 
     return hr;
 }
+#if defined(FEATURE_PERFTRACING)
 
 HRESULT EEToProfInterfaceImpl::EventPipeEventDelivered(
     EventPipeProvider *provider,
@@ -6054,6 +6055,8 @@ HRESULT EEToProfInterfaceImpl::EventPipeProviderCreated(EventPipeProvider *provi
     return E_NOTIMPL;
 #endif // FEATURE_PERFTRACING
 }
+
+#endif
 
 HRESULT EEToProfInterfaceImpl::LoadAsNotificationOnly(BOOL *pbNotificationOnly)
 {

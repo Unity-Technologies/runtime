@@ -1687,6 +1687,7 @@ inline BOOL IsProfilerMonitoringEventPipe(ProfilerInfo *pProfilerInfo)
     return pProfilerInfo->eventMask.IsEventMaskHighSet(COR_PRF_HIGH_MONITOR_EVENT_PIPE);
 }
 
+#if defined(FEATURE_PERFTRACING)
 inline HRESULT EventPipeEventDeliveredHelper(EEToProfInterfaceImpl *profInterface,
                                              EventPipeProvider *provider,
                                              DWORD eventId,
@@ -1761,6 +1762,8 @@ inline void ProfControlBlock::EventPipeProviderCreated(EventPipeProvider *provid
                        &EventPipeProviderCreatedHelper,
                        provider);
 }
+
+#endif
 
 //---------------------------------------------------------------------------------------
 // Inlined helpers used throughout the runtime to check for the profiler's load status

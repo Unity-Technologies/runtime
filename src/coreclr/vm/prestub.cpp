@@ -830,7 +830,7 @@ PCODE MethodDesc::JitCompileCodeLockedEventWrapper(PrepareCodeConfig* pConfig, J
         // to fix the issues that cause us to avoid generating jit notifications
         // for interpreted methods in the first place. The interpreter does generate
         // a small stub of native code but no native-IL mapping.
-#ifndef FEATURE_INTERPRETER
+#if !defined(FEATURE_INTERPRETER) && defined(FEATURE_PERFTRACING)
         ETW::MethodLog::MethodJitting(this,
             pilHeader,
             &namespaceOrClassName,
@@ -845,6 +845,7 @@ PCODE MethodDesc::JitCompileCodeLockedEventWrapper(PrepareCodeConfig* pConfig, J
         if (Interpreter::InterpretationStubToMethodInfo(pCode) == NULL)
 #endif
         {
+#if defined(FEATURE_PERFTRACING)
             // Fire an ETW event to mark the end of JIT'ing
             ETW::MethodLog::MethodJitted(this,
                 &namespaceOrClassName,
@@ -852,6 +853,7 @@ PCODE MethodDesc::JitCompileCodeLockedEventWrapper(PrepareCodeConfig* pConfig, J
                 &methodSignature,
                 pCode,
                 pConfig);
+#endif
         }
 
     }

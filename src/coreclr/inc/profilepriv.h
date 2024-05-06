@@ -385,9 +385,11 @@ public:
     void GarbageCollectionStarted(int cGenerations, BOOL generationCollected[], COR_PRF_GC_REASON reason);
     void GarbageCollectionFinished();
     void GetAssemblyReferences(LPCWSTR wszAssemblyPath, IAssemblyBindingClosure *pClosure, AssemblyReferenceClosureWalkContextForProfAPI *pContext);
+#if defined(FEATURE_PERFTRACING)
     void EventPipeEventDelivered(EventPipeProvider *provider, DWORD eventId, DWORD eventVersion, ULONG cbMetadataBlob, LPCBYTE metadataBlob, ULONG cbEventData,
                                  LPCBYTE eventData, LPCGUID pActivityId, LPCGUID pRelatedActivityId, Thread *pEventThread, ULONG numStackFrames, UINT_PTR stackFrames[]);
     void EventPipeProviderCreated(EventPipeProvider *provider);
+#endif
 };
 
 

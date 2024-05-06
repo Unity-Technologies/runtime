@@ -285,7 +285,9 @@ VOID FinalizerThread::FinalizerThreadWorker(void *args)
             gcGenAnalysisState = GcGenAnalysisState::Disabled;
             if (gcGenAnalysisTrace)
             {
+#if defined(FEATURE_PERFTRACING)
                 EventPipeAdapter::Disable(gcGenAnalysisEventPipeSessionId);
+#endif
 #ifdef GEN_ANALYSIS_STRESS
                 GenAnalysis::EnableGenerationalAwareSession();
 #endif
