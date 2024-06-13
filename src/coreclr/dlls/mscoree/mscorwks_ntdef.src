@@ -28,7 +28,7 @@ EXPORTS
 
         ; Used by profilers
         MetaDataGetDispenser
-        
+
         ; mono
         coreclr_image_get_custom_attribute_data
         coreclr_unity_array_element_size
@@ -37,6 +37,8 @@ EXPORTS
         coreclr_unity_profiler_get_managed_assembly_load_context
         coreclr_unity_gc_concurrent_mode
         mono_assembly_get_assemblyref
+        mono_class_from_mono_type
+        mono_class_get_methods
         mono_class_get_name
         mono_class_get_namespace
         mono_class_get_type

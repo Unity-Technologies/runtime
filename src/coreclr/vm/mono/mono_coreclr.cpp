@@ -837,4 +837,4 @@ extern "C" EXPORT_API bool EXPORT_CC coreclr_unity_get_stackframe_info_from_ip(v
     }
 
     return false;
-} 
+}
