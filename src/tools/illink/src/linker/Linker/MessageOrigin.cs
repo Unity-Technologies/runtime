@@ -14,6 +14,7 @@ namespace Mono.Linker
 	{
 		public string? FileName { get; }
 		public ICustomAttributeProvider? Provider { get; }
+		public MethodDefinition? OwningMethodForCompilerGeneratedMember { get; }
 
 		public int SourceLine { get; }
 		public int SourceColumn { get; }
@@ -36,6 +37,12 @@ namespace Mono.Linker
 		public MessageOrigin (string fileName, int sourceLine = 0, int sourceColumn = 0)
 			: this (fileName, sourceLine, sourceColumn, null)
 		{
+		}
+
+		public MessageOrigin (ICustomAttributeProvider? provider, MethodDefinition? owningMethodForCompilerGeneratedMember)
+			: this (provider, UnsetILOffset)
+		{
+			OwningMethodForCompilerGeneratedMember = owningMethodForCompilerGeneratedMember;
 		}
 
 		// The assembly attribute should be specified if available as it allows assigning the diagnostic

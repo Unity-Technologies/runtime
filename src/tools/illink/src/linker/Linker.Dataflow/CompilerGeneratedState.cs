@@ -108,7 +108,7 @@ namespace Mono.Linker.Dataflow
 		/// up and find the nearest containing user type. Returns the nearest user type,
 		/// or null if none was found.
 		/// </summary>
-		TypeDefinition? GetCompilerGeneratedStateForType (TypeDefinition type)
+		TypeDefinition? GetCompilerGeneratedStateForType (TypeDefinition type, MethodDefinition? owningMethod = null)
 		{
 			// Look in the declaring type if this is a compiler-generated type (state machine or display class).
 			// State machines can be emitted into display classes, so we may also need to go one more level up.
@@ -213,7 +213,7 @@ namespace Mono.Linker.Dataflow
 
 					if (!_compilerGeneratedTypeToUserCodeMethod.TryAdd (stateMachineType, method)) {
 						var alreadyAssociatedMethod = _compilerGeneratedTypeToUserCodeMethod[stateMachineType];
-						_context.LogWarning (new MessageOrigin (method), DiagnosticId.MethodsAreAssociatedWithStateMachine, method.GetDisplayName (), alreadyAssociatedMethod.GetDisplayName (), stateMachineType.GetDisplayName ());
+						_context.LogWarning (new MessageOrigin (method, owningMethod), DiagnosticId.MethodsAreAssociatedWithStateMachine, method.GetDisplayName (), alreadyAssociatedMethod.GetDisplayName (), stateMachineType.GetDisplayName ());
 					}
 					// Already warned above if multiple methods map to the same type
 					// Fill in null for argument providers now, the real providers will be filled in later
@@ -432,7 +432,14 @@ namespace Mono.Linker.Dataflow
 			if (IsNestedFunctionOrStateMachineMember (method))
 				return false;
 
-			var typeToCache = GetCompilerGeneratedStateForType (method.DeclaringType);
+			var typeToCache = GetCompilerGeneratedStateForType (method.DeclaringType,
+				// We need to pass along the owning method which we know at this point so that we can avoid a stack overflow if
+				// one of the LogWarning calls that GetCompilerGeneratedStateForType makes is called.  Depending on the code being processed, the LogWarning call can lead to
+				// to a sequence of calls that ends up back in GetCompilerGeneratedStateForType.  The scenario is
+				// LogWarning calls in GetCompilerGeneratedStateForType -> MessageContainer.CreateWarningMessage -> context.IsWarningSuppressed -> Suppressions.IsSuppressed -> TryGetOwningMethodForCompilerGeneratedMember -> GetCompilerGeneratedStateForType.
+				// By tagging the MessageOrigin with the owning method we can avoid the call to TryGetOwningMethodForCompilerGeneratedMember inside Suppressions.IsSuppressed
+				// which lets us break the cycle that leads to the stack overflow.
+				owningMethod: method);
 			if (typeToCache is null)
 				return false;
 

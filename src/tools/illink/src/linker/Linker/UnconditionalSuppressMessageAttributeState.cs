@@ -76,6 +76,15 @@ namespace Mono.Linker
 			if (provider is not IMemberDefinition member)
 				return false;
 
+			// When a warning is tagged with the owning member, don't proceed to call TryGetOwningMethodForCompilerGeneratedMember.
+			// Doing so can lead to a stack overflow in some situations because.  See TryGetCompilerGeneratedCalleesForUserMethod for more details.
+			if (warningOrigin.OwningMethodForCompilerGeneratedMember != null) {
+				if (IsSuppressed (id, warningOrigin.OwningMethodForCompilerGeneratedMember, out info))
+					return true;
+
+				return false;
+			}
+
 			MethodDefinition? owningMethod;
 			while (_context.CompilerGeneratedState.TryGetOwningMethodForCompilerGeneratedMember (member, out owningMethod)) {
 				Debug.Assert (owningMethod != member);
