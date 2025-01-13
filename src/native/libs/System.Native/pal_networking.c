@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #if HAVE_EPOLL
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #elif HAVE_KQUEUE
 #include <sys/types.h>
 #include <sys/event.h>
@@ -2698,6 +2699,24 @@ static int32_t TryChangeSocketEventRegistrationInner(
     return err == 0 ? Error_SUCCESS : SystemNative_ConvertErrorPlatformToPal(errno);
 }
 
+static int32_t WakeUpSocketEventThreadInner(int32_t port, intptr_t* handle)
+{
+    struct epoll_event evt;
+    memset(&evt, 0, sizeof(struct epoll_event));
+
+    int fd = eventfd(0, EFD_SEMAPHORE);
+    evt.events = EPOLLIN;
+    evt.data.ptr = (void*)fd;
+    int err = epoll_ctl(port, EPOLL_CTL_ADD, fd, &evt);
+    if (err != 0)
+        return SystemNative_ConvertErrorPlatformToPal(errno);
+
+    *handle = (intptr_t)fd;
+
+    err = eventfd_write(fd, 1);
+    return err == 0 ? Error_SUCCESS : SystemNative_ConvertErrorPlatformToPal(errno);
+}
+
 static void ConvertEventEPollToSocketAsync(SocketEvent* sae, struct epoll_event* epoll)
 {
     assert(sae != NULL);
@@ -2891,6 +2910,24 @@ static int32_t TryChangeSocketEventRegistrationInner(
     return err == 0 ? Error_SUCCESS : SystemNative_ConvertErrorPlatformToPal(errno);
 }
 
+static int32_t WakeUpSocketEventThreadInner(int32_t port, intptr_t* handle)
+{
+    int pipeFds[2];
+    int err = pipe(pipeFds);
+    if (err != 0) return SystemNative_ConvertErrorPlatformToPal(errno);
+
+    struct kevent event;
+    EV_SET(&event, (uint64_t)pipeFds[0], EVFILT_READ, EV_ADD, 0, 0, GetKeventUdata(pipeFds[0]));
+    while ((err = kevent(port, &event, GetKeventNchanges(1), NULL, 0, NULL)) < 0 && errno == EINTR);
+    if (err != 0) return SystemNative_ConvertErrorPlatformToPal(errno);
+
+    *handle = (intptr_t)pipeFds[0];
+
+    err = write(pipeFds[1], &err, sizeof(err));
+    close(pipeFds[1]);
+    return err > 0 ? Error_SUCCESS : SystemNative_ConvertErrorPlatformToPal(errno);
+}
+
 static int32_t WaitForSocketEventsInner(int32_t port, SocketEvent* buffer, int32_t* count)
 {
     assert(buffer != NULL);
@@ -3015,6 +3052,14 @@ SystemNative_TryChangeSocketEventRegistration(intptr_t port, intptr_t socket, in
 
     return TryChangeSocketEventRegistrationInner(
         portFd, socketFd, (SocketEvents)currentEvents, (SocketEvents)newEvents, data);
+}
+
+int32_t SystemNative_WakeUpSocketEventThread(intptr_t port, intptr_t* handle)
+{
+    int portFd = ToFileDescriptor(port);
+
+    *handle = 0;
+    return WakeUpSocketEventThreadInner(portFd, handle);
 }
 
 int32_t SystemNative_WaitForSocketEvents(intptr_t port, SocketEvent* buffer, int32_t* count)

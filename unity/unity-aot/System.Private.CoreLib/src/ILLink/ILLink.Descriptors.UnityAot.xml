@@ -1,0 +1,5 @@
+<linker>
+    <type fullname="System.Threading.Thread">
+        <method name="RegisterShutdownHandler" action="preserve" />
+    </type>
+</linker>

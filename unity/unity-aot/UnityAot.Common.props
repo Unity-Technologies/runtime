@@ -1,0 +1,5 @@
+<Project>
+    <PropertyGroup>
+        <DefineConstants>$(DefineConstants);UNITY_AOT;FEATURE_RUNTIME_SHUTDOWN</DefineConstants>
+    </PropertyGroup>
+</Project>

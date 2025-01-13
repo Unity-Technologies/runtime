@@ -47,5 +47,8 @@ internal static partial class Interop
 
         [LibraryImport(Libraries.SystemNative, EntryPoint = "SystemNative_WaitForSocketEvents")]
         internal static unsafe partial Error WaitForSocketEvents(IntPtr port, SocketEvent* buffer, int* count);
+
+        [LibraryImport(Libraries.SystemNative, EntryPoint = "SystemNative_WakeUpSocketEventThread")]
+        internal static unsafe partial Error WakeupSocketEventThread(IntPtr port, IntPtr* handle);
     }
 }

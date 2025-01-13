@@ -183,6 +183,7 @@ static const Entry s_sysNative[] =
     DllImportEntry(SystemNative_FreeSocketEventBuffer)
     DllImportEntry(SystemNative_TryChangeSocketEventRegistration)
     DllImportEntry(SystemNative_WaitForSocketEvents)
+    DllImportEntry(SystemNative_WakeUpSocketEventThread)
     DllImportEntry(SystemNative_PlatformSupportsDualModeIPv4PacketInfo)
     DllImportEntry(SystemNative_GetDomainSocketSizes)
     DllImportEntry(SystemNative_GetMaximumAddressSize)

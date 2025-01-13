@@ -1,0 +1,3 @@
+<Project>
+    <Import Project="../UnityAot.Common.props" />
+</Project>

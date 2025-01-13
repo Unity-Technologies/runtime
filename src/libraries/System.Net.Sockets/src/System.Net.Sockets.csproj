@@ -298,4 +298,7 @@
   <ItemGroup Condition="'$(TargetPlatformIdentifier)' == 'unix'">
     <Reference Include="System.Threading.Thread" />
   </ItemGroup>
+
+  <Import Project="$([MSBuild]::NormalizeDirectory('$(RepoRoot)'))\unity\unity-aot\System.Net.Sockets\System.Net.Sockets.props"  Condition="'$(UnityAot)' == 'true'" />
+  
 </Project>

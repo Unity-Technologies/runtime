@@ -67,6 +67,30 @@ namespace System.Threading
             return true;
         }
 
+#if FEATURE_RUNTIME_SHUTDOWN
+        private static CancellationTokenSource? s_cts;
+
+        private static bool ContinueLoop() => !s_cts!.IsCancellationRequested;
+
+        private static void RegisterShutdownHandler()
+        {
+            s_cts = new CancellationTokenSource();
+            var thread = Thread.CurrentThread;
+            Thread.RegisterShutdownHandler(
+                () =>
+                {
+                    s_cts.Cancel();
+                    s_timerEvent.Set();
+                    thread.Join();
+                });
+        }
+#else
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ContinueLoop() => true;
+
+        private static void RegisterShutdownHandler() {};
+#endif
+
         /// <summary>
         /// This method is executed on a dedicated timer thread. Its purpose is
         /// to handle timer requests and notify the TimerQueue when a timer expires.
@@ -81,8 +105,10 @@ namespace System.Threading
                 timers = s_scheduledTimers!;
             }
 
+            RegisterShutdownHandler();
+
             int shortestWaitDurationMs = Timeout.Infinite;
-            while (true)
+            while (ContinueLoop())
             {
                 timerEvent.WaitOne(shortestWaitDurationMs);
 

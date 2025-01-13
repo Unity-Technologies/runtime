@@ -1,8 +1,10 @@
 <Project>
+    <Import Project="../UnityAot.Common.props" />
+
     <PropertyGroup>
-        <DefineConstants>$(DefineConstants);UNITY_AOT</DefineConstants>
         <NativeAotSourcesRoot>$(CoreClrProjectRoot)\nativeaot</NativeAotSourcesRoot>
         <NativeAotBclSourcesRoot>$(NativeAotSourcesRoot)\System.Private.CoreLib\src</NativeAotBclSourcesRoot>
+        <UnityAotSourcesRoot>$(MSBuildThisFileDirectory)\src</UnityAotSourcesRoot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,9 +16,14 @@
 
         <Compile Remove="$(CoreLibSharedDir)\System\Runtime\CompilerServices\RuntimeFeature.NonNativeAot.cs" />
         <Compile Include="$(NativeAotBclSourcesRoot)\System\Runtime\CompilerServices\RuntimeFeature.NativeAot.cs" />
-
     </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="$(UnityAotSourcesRoot)\System\Threading\Thread.UnityAot.cs" />
+    </ItemGroup>
+
     <ItemGroup>
         <ILLinkSubstitutionsXmls Include="$(MSBuildThisFileDirectory)\src\ILLink\ILLink.Substitutions.UnityAot.xml" />
+    	<ILLinkDescriptorsXmls Include="$(MSBuildThisFileDirectory)\src\ILLink\ILLink.Descriptors.UnityAot.xml" />
     </ItemGroup>
 </Project>

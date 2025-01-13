@@ -20,12 +20,39 @@ namespace System.Threading
             private static readonly AutoResetEvent RunGateThreadEvent = new AutoResetEvent(initialState: true);
             private static readonly AutoResetEvent DelayEvent = new AutoResetEvent(initialState: false);
 
+#if FEATURE_RUNTIME_SHUTDOWN
+            private static CancellationTokenSource? s_cts;
+
+            private static bool ContinueLoop() => !s_cts!.IsCancellationRequested;
+
+            private static void RegisterShutdownHandler()
+            {
+                s_cts = new CancellationTokenSource();
+                var thread = Thread.CurrentThread;
+                Thread.RegisterShutdownHandler(() =>
+                {
+                    ThreadPool.SetMinThreads(0, 0);
+                    ThreadPool.SetMaxThreads(1, 1);
+                    s_cts.Cancel();
+                    RunGateThreadEvent.Set();
+                    DelayEvent.Set();
+                    thread.Join();
+                });
+            }
+#else
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool ContinueLoop() => true;
+            private static void RegisterShutdownCallback() {};
+#endif
+
             private static void GateThreadStart()
             {
                 bool disableStarvationDetection =
                     AppContextConfigHelper.GetBooleanConfig("System.Threading.ThreadPool.DisableStarvationDetection", false);
                 bool debuggerBreakOnWorkStarvation =
                     AppContextConfigHelper.GetBooleanConfig("System.Threading.ThreadPool.DebugBreakOnWorkerStarvation", false);
+
+                RegisterShutdownHandler();
 
                 // The first reading is over a time range other than what we are focusing on, so we do not use the read other
                 // than to send it to any runtime-specific implementation that may also use the CPU utilization.
@@ -43,13 +70,13 @@ namespace System.Threading
                     Gen2GcCallback.Register(threadPoolInstance.OnGen2GCCallback);
                 }
 
-                while (true)
+                while (ContinueLoop())
                 {
                     RunGateThreadEvent.WaitOne();
                     int currentTimeMs = Environment.TickCount;
                     delayHelper.SetGateActivitiesTime(currentTimeMs);
 
-                    while (true)
+                    while (ContinueLoop())
                     {
                         bool wasSignaledToWake = DelayEvent.WaitOne((int)delayHelper.GetNextDelay(currentTimeMs));
                         currentTimeMs = Environment.TickCount;

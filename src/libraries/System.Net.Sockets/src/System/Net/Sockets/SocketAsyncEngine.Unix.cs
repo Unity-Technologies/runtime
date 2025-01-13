@@ -173,12 +173,47 @@ namespace System.Net.Sockets
             }
         }
 
+#if FEATURE_RUNTIME_SHUTDOWN
+        private CancellationTokenSource? _cts;
+        private bool ContinueLoop() => !_cts!.IsCancellationRequested;
+
+        [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "RegisterShutdownHandler")]
+        private static extern void ThreadRegisterShutdownHandler(Thread thread, Action action);
+
+        private void RegisterShutdownHandler()
+        {
+            _cts = new CancellationTokenSource();
+            var eventLoopThread = Thread.CurrentThread;
+            ThreadRegisterShutdownHandler(eventLoopThread, () =>
+            {
+                _cts.Cancel();
+                IntPtr handle;
+                var err = Interop.Sys.WakeupSocketEventThread(_port, &handle);
+                if (err == Interop.Error.SUCCESS)
+                {
+                    eventLoopThread.Join();
+                    _cts.Dispose();
+                }
+
+                if (handle != IntPtr.Zero)
+                    Interop.Sys.Close(handle);
+            });
+        }
+#else
+        [MethodImplAttribute(MethodImplOptions.AggressiveInlining)]
+        private bool ContinueLoop() => true;
+
+        private void RegisterShutdownHandler() {}
+#endif
+
         private void EventLoop()
         {
+            RegisterShutdownHandler();
+
             try
             {
                 SocketEventHandler handler = new SocketEventHandler(this);
-                while (true)
+                while (ContinueLoop())
                 {
                     int numEvents = EventBufferCount;
                     Interop.Error err = Interop.Sys.WaitForSocketEvents(_port, handler.Buffer, &numEvents);
@@ -199,6 +234,10 @@ namespace System.Net.Sockets
             catch (Exception e)
             {
                 Environment.FailFast("Exception thrown from SocketAsyncEngine event loop: " + e.ToString(), e);
+            }
+            finally
+            {
+                FreeNativeResources();
             }
         }
 
