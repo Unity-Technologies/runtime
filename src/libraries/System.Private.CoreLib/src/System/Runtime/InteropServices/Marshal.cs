@@ -353,20 +353,16 @@ namespace System.Runtime.InteropServices
         [Obsolete("ReadIntPtr(Object, Int32) may be unavailable in future releases.")]
         public static IntPtr ReadIntPtr(object ptr, int ofs)
         {
-#if TARGET_64BIT
-            return (nint)ReadInt64(ptr, ofs);
-#else // 32
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (nint)ReadInt64(ptr, ofs);
             return (nint)ReadInt32(ptr, ofs);
-#endif
         }
 
         public static IntPtr ReadIntPtr(IntPtr ptr, int ofs)
         {
-#if TARGET_64BIT
-            return (nint)ReadInt64(ptr, ofs);
-#else // 32
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (nint)ReadInt64(ptr, ofs);
             return (nint)ReadInt32(ptr, ofs);
-#endif
         }
 
         public static IntPtr ReadIntPtr(IntPtr ptr) => ReadIntPtr(ptr, 0);
@@ -470,13 +466,12 @@ namespace System.Runtime.InteropServices
 
         public static void WriteIntPtr(IntPtr ptr, int ofs, IntPtr val)
         {
-#if TARGET_64BIT
-            WriteInt64(ptr, ofs, (long)val);
-#else // 32
+            if (RuntimeHelpers.TargetIs64Bit)
+                WriteInt64(ptr, ofs, (long)val);
+            else
 #pragma warning disable CA2020 // Prevent from behavioral change
-            WriteInt32(ptr, ofs, (int)val);
+                WriteInt32(ptr, ofs, (int)val);
 #pragma warning restore CA2020
-#endif
         }
 
         [RequiresDynamicCode("Marshalling code for the object might not be available")]
@@ -484,13 +479,12 @@ namespace System.Runtime.InteropServices
         [Obsolete("WriteIntPtr(Object, Int32, IntPtr) may be unavailable in future releases.")]
         public static void WriteIntPtr(object ptr, int ofs, IntPtr val)
         {
-#if TARGET_64BIT
-            WriteInt64(ptr, ofs, (long)val);
-#else // 32
+            if (RuntimeHelpers.TargetIs64Bit)
+                WriteInt64(ptr, ofs, (long)val);
+            else
 #pragma warning disable CA2020 // Prevent from behavioral change
-            WriteInt32(ptr, ofs, (int)val);
+                WriteInt32(ptr, ofs, (int)val);
 #pragma warning restore CA2020
-#endif
         }
 
         public static void WriteIntPtr(IntPtr ptr, IntPtr val) => WriteIntPtr(ptr, 0, val);

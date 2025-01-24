@@ -1436,11 +1436,9 @@ namespace System
 
         public static int Sign(nint value)
         {
-#if TARGET_64BIT
-            return unchecked((int)(value >> 63 | (long)((ulong)-value >> 63)));
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return unchecked((int)(value >> 63 | (long)((ulong)-value >> 63)));
             return unchecked((int)(value >> 31) | (int)((uint)-value >> 31));
-#endif
         }
 
         [CLSCompliant(false)]

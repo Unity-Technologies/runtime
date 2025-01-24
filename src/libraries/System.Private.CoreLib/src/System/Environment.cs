@@ -178,7 +178,7 @@ namespace System
             }
         }
 
-        public static bool Is64BitProcess => IntPtr.Size == 8;
+        public static bool Is64BitProcess => RuntimeHelpers.TargetIs64Bit;
 
         public static bool Is64BitOperatingSystem => Is64BitProcess || Is64BitOperatingSystemWhen32BitProcess;
 

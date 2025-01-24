@@ -1065,15 +1065,18 @@ namespace System
             }
             else if (typeof(TOther) == typeof(nint))
             {
-#if TARGET_32BIT
-                nint actualResult = (value >= int.MaxValue) ? int.MaxValue : (nint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#else
-                nint actualResult = (nint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#endif
+                if (RuntimeHelpers.TargetIs32Bit)
+                {
+                    nint actualResult = (value >= int.MaxValue) ? int.MaxValue : (nint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
+                else
+                {
+                    nint actualResult = (nint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
             }
             else if (typeof(TOther) == typeof(sbyte))
             {

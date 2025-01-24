@@ -96,11 +96,9 @@ namespace System.Threading
         public static IntPtr Exchange(ref IntPtr location1, IntPtr value)
         {
 #pragma warning disable CA2020 // Prevent from behavioral change
-#if TARGET_64BIT
-            return (IntPtr)Interlocked.Exchange(ref Unsafe.As<IntPtr, long>(ref location1), (long)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (IntPtr)Interlocked.Exchange(ref Unsafe.As<IntPtr, long>(ref location1), (long)value);
             return (IntPtr)Exchange(ref Unsafe.As<IntPtr, int>(ref location1), (int)value);
-#endif
 #pragma warning restore CA2020
         }
 
@@ -113,11 +111,9 @@ namespace System.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UIntPtr Exchange(ref UIntPtr location1, UIntPtr value)
         {
-#if TARGET_64BIT
-            return (UIntPtr)Interlocked.Exchange(ref Unsafe.As<UIntPtr, long>(ref location1), (long)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (UIntPtr)Interlocked.Exchange(ref Unsafe.As<UIntPtr, long>(ref location1), (long)value);
             return (UIntPtr)Exchange(ref Unsafe.As<UIntPtr, int>(ref location1), (int)value);
-#endif
         }
         #endregion
 
@@ -174,11 +170,9 @@ namespace System.Threading
         public static IntPtr CompareExchange(ref IntPtr location1, IntPtr value, IntPtr comparand)
         {
 #pragma warning disable CA2020 // Prevent from behavioral change
-#if TARGET_64BIT
-            return (IntPtr)Interlocked.CompareExchange(ref Unsafe.As<IntPtr, long>(ref location1), (long)value, (long)comparand);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (IntPtr)Interlocked.CompareExchange(ref Unsafe.As<IntPtr, long>(ref location1), (long)value, (long)comparand);
             return (IntPtr)CompareExchange(ref Unsafe.As<IntPtr, int>(ref location1), (int)value, (int)comparand);
-#endif
 #pragma warning restore CA2020
         }
 
@@ -192,11 +186,9 @@ namespace System.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UIntPtr CompareExchange(ref UIntPtr location1, UIntPtr value, UIntPtr comparand)
         {
-#if TARGET_64BIT
-            return (UIntPtr)Interlocked.CompareExchange(ref Unsafe.As<UIntPtr, long>(ref location1), (long)value, (long)comparand);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (UIntPtr)Interlocked.CompareExchange(ref Unsafe.As<UIntPtr, long>(ref location1), (long)value, (long)comparand);
             return (UIntPtr)CompareExchange(ref Unsafe.As<UIntPtr, int>(ref location1), (int)value, (int)comparand);
-#endif
         }
         #endregion
 

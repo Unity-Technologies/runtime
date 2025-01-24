@@ -2182,34 +2182,35 @@ namespace System
             return true;
         }
 
-#if TARGET_64BIT
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         private static unsafe TChar* Int64ToHexChars<TChar>(TChar* buffer, ulong value, int hexBase, int digits) where TChar : unmanaged, IUtfChar<TChar>
         {
             Debug.Assert(typeof(TChar) == typeof(char) || typeof(TChar) == typeof(byte));
-#if TARGET_32BIT
-            uint lower = (uint)value;
-            uint upper = (uint)(value >> 32);
-
-            if (upper != 0)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                buffer = Int32ToHexChars(buffer, lower, hexBase, 8);
-                return Int32ToHexChars(buffer, upper, hexBase, digits - 8);
+                uint lower = (uint)value;
+                uint upper = (uint)(value >> 32);
+
+                if (upper != 0)
+                {
+                    buffer = Int32ToHexChars(buffer, lower, hexBase, 8);
+                    return Int32ToHexChars(buffer, upper, hexBase, digits - 8);
+                }
+                else
+                {
+                    return Int32ToHexChars(buffer, lower, hexBase, Math.Max(digits, 1));
+                }
             }
             else
             {
-                return Int32ToHexChars(buffer, lower, hexBase, Math.Max(digits, 1));
+                while (--digits >= 0 || value != 0)
+                {
+                    byte digit = (byte)(value & 0xF);
+                    *(--buffer) = TChar.CastFrom(digit + (digit < 10 ? (byte)'0' : hexBase));
+                    value >>= 4;
+                }
+                return buffer;
             }
-#else
-            while (--digits >= 0 || value != 0)
-            {
-                byte digit = (byte)(value & 0xF);
-                *(--buffer) = TChar.CastFrom(digit + (digit < 10 ? (byte)'0' : hexBase));
-                value >>= 4;
-            }
-            return buffer;
-#endif
         }
 
         private static unsafe string UInt64ToBinaryStr(ulong value, int digits)
@@ -2254,33 +2255,35 @@ namespace System
             return true;
         }
 
-#if TARGET_64BIT
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         private static unsafe TChar* UInt64ToBinaryChars<TChar>(TChar* buffer, ulong value, int digits) where TChar : unmanaged, IUtfChar<TChar>
         {
             Debug.Assert(typeof(TChar) == typeof(char) || typeof(TChar) == typeof(byte));
-#if TARGET_32BIT
-            uint lower = (uint)value;
-            uint upper = (uint)(value >> 32);
-
-            if (upper != 0)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                buffer = UInt32ToBinaryChars(buffer, lower, 32);
-                return UInt32ToBinaryChars(buffer, upper, digits - 32);
+
+                uint lower = (uint)value;
+                uint upper = (uint)(value >> 32);
+
+                if (upper != 0)
+                {
+                    buffer = UInt32ToBinaryChars(buffer, lower, 32);
+                    return UInt32ToBinaryChars(buffer, upper, digits - 32);
+                }
+                else
+                {
+                    return UInt32ToBinaryChars(buffer, lower, Math.Max(digits, 1));
+                }
             }
             else
             {
-                return UInt32ToBinaryChars(buffer, lower, Math.Max(digits, 1));
+                while (--digits >= 0 || value != 0)
+                {
+                    *(--buffer) = TChar.CastFrom('0' + (byte)(value & 0x1));
+                    value >>= 1;
+                }
+                return buffer;
             }
-#else
-            while (--digits >= 0 || value != 0)
-            {
-                *(--buffer) = TChar.CastFrom('0' + (byte)(value & 0x1));
-                value >>= 1;
-            }
-            return buffer;
-#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2315,78 +2318,82 @@ namespace System
             return rem;
         }
 
-#if TARGET_64BIT
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         internal static unsafe TChar* UInt64ToDecChars<TChar>(TChar* bufferEnd, ulong value) where TChar : unmanaged, IUtfChar<TChar>
         {
             Debug.Assert(typeof(TChar) == typeof(char) || typeof(TChar) == typeof(byte));
 
-#if TARGET_32BIT
-            while ((uint)(value >> 32) != 0)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                bufferEnd = UInt32ToDecChars(bufferEnd, Int64DivMod1E9(ref value), 9);
-            }
-            return UInt32ToDecChars(bufferEnd, (uint)value);
-#else
-            if (value >= 10)
-            {
-                // Handle all values >= 100 two-digits at a time so as to avoid expensive integer division operations.
-                while (value >= 100)
-                {
-                    bufferEnd -= 2;
-                    (value, ulong remainder) = Math.DivRem(value, 100);
-                    WriteTwoDigits((uint)remainder, bufferEnd);
-                }
 
-                // If there are two digits remaining, store them.
+                while ((uint)(value >> 32) != 0)
+                {
+                    bufferEnd = UInt32ToDecChars(bufferEnd, Int64DivMod1E9(ref value), 9);
+                }
+                return UInt32ToDecChars(bufferEnd, (uint)value);
+            }
+            else
+            {
                 if (value >= 10)
                 {
-                    bufferEnd -= 2;
-                    WriteTwoDigits((uint)value, bufferEnd);
-                    return bufferEnd;
-                }
-            }
+                    // Handle all values >= 100 two-digits at a time so as to avoid expensive integer division operations.
+                    while (value >= 100)
+                    {
+                        bufferEnd -= 2;
+                        (value, ulong remainder) = Math.DivRem(value, 100);
+                        WriteTwoDigits((uint)remainder, bufferEnd);
+                    }
 
-            // Otherwise, store the single digit remaining.
-            *(--bufferEnd) = TChar.CastFrom(value + '0');
-            return bufferEnd;
-#endif
+                    // If there are two digits remaining, store them.
+                    if (value >= 10)
+                    {
+                        bufferEnd -= 2;
+                        WriteTwoDigits((uint)value, bufferEnd);
+                        return bufferEnd;
+                    }
+                }
+
+                // Otherwise, store the single digit remaining.
+                *(--bufferEnd) = TChar.CastFrom(value + '0');
+                return bufferEnd;
+            }
         }
 
-#if TARGET_64BIT
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#endif
         internal static unsafe TChar* UInt64ToDecChars<TChar>(TChar* bufferEnd, ulong value, int digits) where TChar : unmanaged, IUtfChar<TChar>
         {
             Debug.Assert(typeof(TChar) == typeof(char) || typeof(TChar) == typeof(byte));
 
-#if TARGET_32BIT
-            while ((uint)(value >> 32) != 0)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                bufferEnd = UInt32ToDecChars(bufferEnd, Int64DivMod1E9(ref value), 9);
-                digits -= 9;
-            }
-            return UInt32ToDecChars(bufferEnd, (uint)value, digits);
-#else
-            ulong remainder;
-            while (value >= 100)
-            {
-                bufferEnd -= 2;
-                digits -= 2;
-                (value, remainder) = Math.DivRem(value, 100);
-                WriteTwoDigits((uint)remainder, bufferEnd);
-            }
 
-            while (value != 0 || digits > 0)
-            {
-                digits--;
-                (value, remainder) = Math.DivRem(value, 10);
-                *(--bufferEnd) = TChar.CastFrom(remainder + '0');
+                while ((uint)(value >> 32) != 0)
+                {
+                    bufferEnd = UInt32ToDecChars(bufferEnd, Int64DivMod1E9(ref value), 9);
+                    digits -= 9;
+                }
+                return UInt32ToDecChars(bufferEnd, (uint)value, digits);
             }
+            else
+            {
+                ulong remainder;
+                while (value >= 100)
+                {
+                    bufferEnd -= 2;
+                    digits -= 2;
+                    (value, remainder) = Math.DivRem(value, 100);
+                    WriteTwoDigits((uint)remainder, bufferEnd);
+                }
 
-            return bufferEnd;
-#endif
+                while (value != 0 || digits > 0)
+                {
+                    digits--;
+                    (value, remainder) = Math.DivRem(value, 10);
+                    *(--bufferEnd) = TChar.CastFrom(remainder + '0');
+                }
+
+                return bufferEnd;
+            }
         }
 
         internal static unsafe string UInt64ToDecStr(ulong value)

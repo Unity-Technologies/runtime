@@ -503,8 +503,7 @@ namespace System
                 }
             }
 
-#if TARGET_64BIT
-            if (minLength >= (i + sizeof(int) / sizeof(char)))
+            if (RuntimeHelpers.TargetIs64Bit && minLength >= (i + sizeof(int) / sizeof(char)))
             {
                 if (Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref first, (nint)i))) ==
                     Unsafe.ReadUnaligned<int>(ref Unsafe.As<char, byte>(ref Unsafe.Add(ref second, (nint)i))))
@@ -512,7 +511,6 @@ namespace System
                     i += sizeof(int) / sizeof(char);
                 }
             }
-#endif
 
             while (i < minLength)
             {

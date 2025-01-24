@@ -13,13 +13,19 @@ namespace System
     public partial class Array
     {
         [StructLayout(LayoutKind.Sequential)]
-        internal sealed class RawData
+        internal sealed class RawData32
         {
             public IntPtr Bounds;
             public uint Count;
-#if !TARGET_32BIT
+            public byte Data;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal sealed class RawData64
+        {
+            public IntPtr Bounds;
+            public uint Count;
             private uint _Pad;
-#endif
             public byte Data;
         }
 
@@ -32,7 +38,7 @@ namespace System
         // This could return a length greater than int.MaxValue
         internal nuint NativeLength
         {
-            get => (nuint)Unsafe.As<RawData>(this).Count;
+            get => RuntimeHelpers.TargetIs64Bit ? (nuint)Unsafe.As<RawData64>(this).Count : (nuint)Unsafe.As<RawData32>(this).Count;
         }
 
         public long LongLength

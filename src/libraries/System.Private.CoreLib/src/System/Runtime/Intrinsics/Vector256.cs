@@ -32,13 +32,16 @@ namespace System.Runtime.Intrinsics
     {
         internal const int Size = 32;
 
-#if TARGET_ARM
-        internal const int Alignment = 8;
-#elif TARGET_ARM64
-        internal const int Alignment = 16;
-#else
-        internal const int Alignment = 32;
-#endif
+        internal static nuint Alignment
+        {
+            get {
+                if (RuntimeInformation.OSArchitecture == Architecture.Arm)
+                    return 8;
+                if (RuntimeInformation.OSArchitecture == Architecture.Arm64)
+                    return 16;
+                return 32;
+            }
+        }
 
         /// <summary>Gets a value that indicates whether 256-bit vector operations are subject to hardware acceleration through JIT intrinsic support.</summary>
         /// <value><see langword="true" /> if 256-bit vector operations are subject to hardware acceleration; otherwise, <see langword="false" />.</value>

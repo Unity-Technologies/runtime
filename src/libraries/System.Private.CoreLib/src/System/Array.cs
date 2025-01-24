@@ -809,11 +809,11 @@ namespace System
                                 result = GenericBinarySearch<ulong>(array, adjustedIndex, length, value);
                                 break;
                             case CorElementType.ELEMENT_TYPE_I:
-                                if (IntPtr.Size == 4)
+                                if (RuntimeHelpers.TargetIs32Bit)
                                     goto case CorElementType.ELEMENT_TYPE_I4;
                                 goto case CorElementType.ELEMENT_TYPE_I8;
                             case CorElementType.ELEMENT_TYPE_U:
-                                if (IntPtr.Size == 4)
+                                if (RuntimeHelpers.TargetIs32Bit)
                                     goto case CorElementType.ELEMENT_TYPE_U4;
                                 goto case CorElementType.ELEMENT_TYPE_U8;
                             case CorElementType.ELEMENT_TYPE_R4:
@@ -1309,7 +1309,7 @@ namespace System
                             break;
                         case CorElementType.ELEMENT_TYPE_I:
                         case CorElementType.ELEMENT_TYPE_U:
-                            if (IntPtr.Size == 4)
+                            if (RuntimeHelpers.TargetIs32Bit)
                                 goto case CorElementType.ELEMENT_TYPE_I4;
                             goto case CorElementType.ELEMENT_TYPE_I8;
                         case CorElementType.ELEMENT_TYPE_R4:
@@ -1536,7 +1536,7 @@ namespace System
                             break;
                         case CorElementType.ELEMENT_TYPE_I:
                         case CorElementType.ELEMENT_TYPE_U:
-                            if (IntPtr.Size == 4)
+                            if (RuntimeHelpers.TargetIs32Bit)
                                 goto case CorElementType.ELEMENT_TYPE_I4;
                             goto case CorElementType.ELEMENT_TYPE_I8;
                         case CorElementType.ELEMENT_TYPE_R4:
@@ -1744,7 +1744,7 @@ namespace System
                     return;
                 case CorElementType.ELEMENT_TYPE_I:
                 case CorElementType.ELEMENT_TYPE_U:
-                    if (IntPtr.Size == 4)
+                    if (RuntimeHelpers.TargetIs32Bit)
                         goto case CorElementType.ELEMENT_TYPE_I4;
                     goto case CorElementType.ELEMENT_TYPE_I8;
                 case CorElementType.ELEMENT_TYPE_OBJECT:
@@ -1949,11 +1949,11 @@ namespace System
                             GenericSort<ulong>(keys, items, adjustedIndex, length);
                             return;
                         case CorElementType.ELEMENT_TYPE_I:
-                            if (IntPtr.Size == 4)
+                            if (RuntimeHelpers.TargetIs32Bit)
                                 goto case CorElementType.ELEMENT_TYPE_I4;
                             goto case CorElementType.ELEMENT_TYPE_I8;
                         case CorElementType.ELEMENT_TYPE_U:
-                            if (IntPtr.Size == 4)
+                            if (RuntimeHelpers.TargetIs32Bit)
                                 goto case CorElementType.ELEMENT_TYPE_U4;
                             goto case CorElementType.ELEMENT_TYPE_U8;
                         case CorElementType.ELEMENT_TYPE_R4:

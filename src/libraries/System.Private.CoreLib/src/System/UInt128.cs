@@ -1899,15 +1899,18 @@ namespace System
             }
             else if (typeof(TOther) == typeof(nint))
             {
-#if TARGET_32BIT
-                nint actualResult = (value >= new UInt128(0x0000_0000_0000_0000, 0x0000_0000_7FFF_FFFF)) ? nint.MaxValue : (nint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#else
-                nint actualResult = (value >= new UInt128(0x0000_0000_0000_0000, 0x7FFF_FFFF_FFFF_FFFF)) ? nint.MaxValue : (nint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#endif
+                if (RuntimeHelpers.TargetIs32Bit)
+                {
+                    nint actualResult = (value >= new UInt128(0x0000_0000_0000_0000, 0x0000_0000_7FFF_FFFF)) ? nint.MaxValue : (nint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
+                else
+                {
+                    nint actualResult = (value >= new UInt128(0x0000_0000_0000_0000, 0x7FFF_FFFF_FFFF_FFFF)) ? nint.MaxValue : (nint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
             }
             else if (typeof(TOther) == typeof(sbyte))
             {

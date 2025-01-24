@@ -96,14 +96,18 @@ namespace System
             }
             if (!typeof(T).IsValueType && array.GetType() != typeof(T[]))
                 ThrowHelper.ThrowArrayTypeMismatchException();
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)array.Length)
-                ThrowHelper.ThrowArgumentOutOfRangeException();
-#else
-            if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
-                ThrowHelper.ThrowArgumentOutOfRangeException();
-#endif
+
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)array.Length)
+                    ThrowHelper.ThrowArgumentOutOfRangeException();
+            }
+            else
+            {
+                if ((uint)start > (uint)array.Length || (uint)length > (uint)(array.Length - start))
+                    ThrowHelper.ThrowArgumentOutOfRangeException();
+            }
 
             _object = array;
             _index = start;
@@ -247,14 +251,17 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Memory<T> Slice(int start, int length)
         {
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)_length)
-                ThrowHelper.ThrowArgumentOutOfRangeException();
-#else
-            if ((uint)start > (uint)_length || (uint)length > (uint)(_length - start))
-                ThrowHelper.ThrowArgumentOutOfRangeException();
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)_length)
+                    ThrowHelper.ThrowArgumentOutOfRangeException();
+            }
+            else
+            {
+                if ((uint)start > (uint)_length || (uint)length > (uint)(_length - start))
+                    ThrowHelper.ThrowArgumentOutOfRangeException();
+            }
 
             // It is expected for _index + start to be negative if the memory is already pre-pinned.
             return new Memory<T>(_object, _index + start, length);
@@ -330,18 +337,22 @@ namespace System
                     nuint desiredStartIndex = (uint)_index & (uint)ReadOnlyMemory<T>.RemoveFlagsBitMask;
                     int desiredLength = _length;
 
-#if TARGET_64BIT
-                    // See comment in Span<T>.Slice for how this works.
-                    if ((ulong)desiredStartIndex + (ulong)(uint)desiredLength > (ulong)(uint)lengthOfUnderlyingSpan)
+                    if (RuntimeHelpers.TargetIs64Bit)
                     {
-                        ThrowHelper.ThrowArgumentOutOfRangeException();
+
+                        // See comment in Span<T>.Slice for how this works.
+                        if ((ulong)desiredStartIndex + (ulong)(uint)desiredLength > (ulong)(uint)lengthOfUnderlyingSpan)
+                        {
+                            ThrowHelper.ThrowArgumentOutOfRangeException();
+                        }
                     }
-#else
-                    if ((uint)desiredStartIndex > (uint)lengthOfUnderlyingSpan || (uint)desiredLength > (uint)lengthOfUnderlyingSpan - (uint)desiredStartIndex)
+                    else
                     {
-                        ThrowHelper.ThrowArgumentOutOfRangeException();
+                        if ((uint)desiredStartIndex > (uint)lengthOfUnderlyingSpan || (uint)desiredLength > (uint)lengthOfUnderlyingSpan - (uint)desiredStartIndex)
+                        {
+                            ThrowHelper.ThrowArgumentOutOfRangeException();
+                        }
                     }
-#endif
 
                     refToReturn = ref Unsafe.Add(ref refToReturn, (IntPtr)(void*)desiredStartIndex);
                     lengthOfUnderlyingSpan = desiredLength;

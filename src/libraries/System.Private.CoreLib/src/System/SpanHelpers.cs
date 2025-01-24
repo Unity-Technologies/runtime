@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
@@ -17,14 +18,18 @@ namespace System
             if (byteLength == 0)
                 return;
 
-#if TARGET_AMD64 || TARGET_ARM64 || TARGET_LOONGARCH64
-            // The exact matrix on when ZeroMemory is faster than InitBlockUnaligned is very complex. The factors to consider include
-            // type of hardware and memory alignment. This threshold was chosen as a good balance across different configurations.
-            if (byteLength > 768)
-                goto PInvoke;
-            Unsafe.InitBlockUnaligned(ref b, 0, (uint)byteLength);
-            return;
-#else
+            if (RuntimeInformation.OSArchitecture == Architecture.X64 || RuntimeInformation.OSArchitecture == Architecture.Arm64 || RuntimeInformation.OSArchitecture == Architecture.LoongArch64)
+            {
+                // The exact matrix on when ZeroMemory is faster than InitBlockUnaligned is very complex. The factors to consider include
+                // type of hardware and memory alignment. This threshold was chosen as a good balance across different configurations.
+                if (byteLength > 768)
+                    goto PInvoke;
+                Unsafe.InitBlockUnaligned(ref b, 0, (uint)byteLength);
+                return;
+            }
+            else
+            {
+
             // TODO: Optimize other platforms to be on par with AMD64 CoreCLR
             // Note: It's important that this switch handles lengths at least up to 22.
             // See notes below near the main loop for why.
@@ -61,164 +66,209 @@ namespace System
                     Unsafe.Add(ref b, 6) = 0;
                     return;
                 case 8:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     return;
                 case 9:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.Add(ref b, 8) = 0;
                     return;
                 case 10:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 8)) = 0;
                     return;
                 case 11:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 8)) = 0;
                     Unsafe.Add(ref b, 10) = 0;
                     return;
                 case 12:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
                     return;
                 case 13:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
                     Unsafe.Add(ref b, 12) = 0;
                     return;
                 case 14:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 12)) = 0;
                     return;
                 case 15:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 12)) = 0;
                     Unsafe.Add(ref b, 14) = 0;
                     return;
                 case 16:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     return;
                 case 17:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.Add(ref b, 16) = 0;
                     return;
                 case 18:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 16)) = 0;
                     return;
                 case 19:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 16)) = 0;
                     Unsafe.Add(ref b, 18) = 0;
                     return;
                 case 20:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 16)) = 0;
                     return;
                 case 21:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 16)) = 0;
                     Unsafe.Add(ref b, 20) = 0;
                     return;
                 case 22:
-#if TARGET_64BIT
-                    Unsafe.As<byte, long>(ref b) = 0;
-                    Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
-#else
-                    Unsafe.As<byte, int>(ref b) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
-                    Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
-#endif
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        Unsafe.As<byte, long>(ref b) = 0;
+                        Unsafe.As<byte, long>(ref Unsafe.Add<byte>(ref b, 8)) = 0;
+                    }
+                    else
+                    {
+                        Unsafe.As<byte, int>(ref b) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 4)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 8)) = 0;
+                        Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 12)) = 0;
+                    }
                     Unsafe.As<byte, int>(ref Unsafe.Add(ref b, 16)) = 0;
                     Unsafe.As<byte, short>(ref Unsafe.Add(ref b, 20)) = 0;
                     return;
@@ -242,9 +292,9 @@ namespace System
                 i += 2;
             }
 
-            IntAligned:
+        IntAligned:
 
-            // On 64-bit IntPtr.Size == 8, so we want to advance to the next 8-aligned address. If
+            // On 64-bit RuntimeHelpers.TargetIs64Bit, so we want to advance to the next 8-aligned address. If
             // (int)b % 8 is 0, 5, 6, or 7, we will already have advanced by 0, 3, 2, or 1
             // bytes to the next aligned address (respectively), so do nothing. On the other hand,
             // if it is 1, 2, 3, or 4 we will want to copy-and-advance another 4 bytes until
@@ -282,15 +332,18 @@ namespace System
                 // So the only cost is a bit of code size, which is made up for by the fact that
                 // we save on writes to b.
 
-#if TARGET_64BIT
-                Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i)) = 0;
-                Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i + 8)) = 0;
-#else
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i)) = 0;
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 4)) = 0;
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 8)) = 0;
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 12)) = 0;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i)) = 0;
+                    Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i + 8)) = 0;
+                }
+                else
+                {
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i)) = 0;
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 4)) = 0;
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 8)) = 0;
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 12)) = 0;
+                }
 
                 i = counter;
 
@@ -301,12 +354,15 @@ namespace System
 
             if ((byteLength & 8) != 0)
             {
-#if TARGET_64BIT
-                Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i)) = 0;
-#else
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i)) = 0;
-                Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 4)) = 0;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    Unsafe.As<byte, long>(ref Unsafe.AddByteOffset<byte>(ref b, i)) = 0;
+                }
+                else
+                {
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i)) = 0;
+                    Unsafe.As<byte, int>(ref Unsafe.AddByteOffset(ref b, i + 4)) = 0;
+                }
                 i += 8;
             }
             if ((byteLength & 4) != 0)
@@ -327,7 +383,7 @@ namespace System
             }
 
             return;
-#endif
+        }
 
         PInvoke:
             Buffer._ZeroMemory(ref b, byteLength);

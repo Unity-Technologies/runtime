@@ -769,10 +769,8 @@ namespace System
                 goto Longer;
             }
 
-#if TARGET_64BIT
             // On 32-bit, this will always be true since sizeof(nuint) == 4
-            if (length < sizeof(uint))
-#endif
+            if (RuntimeHelpers.TargetIs64Bit && length < sizeof(uint))
             {
                 uint differentBits = 0;
                 nuint offset = (length & 2);
@@ -788,8 +786,7 @@ namespace System
                 result = (differentBits == 0);
                 goto Result;
             }
-#if TARGET_64BIT
-            else
+            else if (RuntimeHelpers.TargetIs64Bit)
             {
                 nuint offset = length - sizeof(uint);
                 uint differentBits = LoadUInt(ref first) - LoadUInt(ref second);
@@ -797,7 +794,6 @@ namespace System
                 result = (differentBits == 0);
                 goto Result;
             }
-#endif
         Longer:
             // Only check that the ref is the same if buffers are large,
             // and hence its worth avoiding doing unnecessary comparisons
@@ -912,8 +908,7 @@ namespace System
                 }
             }
 
-#if TARGET_64BIT
-            if (Vector128.IsHardwareAccelerated)
+            if (RuntimeHelpers.TargetIs64Bit && Vector128.IsHardwareAccelerated)
             {
                 Debug.Assert(length <= (nuint)sizeof(nuint) * 2);
 
@@ -924,7 +919,6 @@ namespace System
                 goto Result;
             }
             else
-#endif
             {
                 Debug.Assert(length >= (nuint)sizeof(nuint));
                 {

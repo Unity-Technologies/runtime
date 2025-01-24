@@ -364,20 +364,23 @@ namespace System
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TryGetSpan(int startIndex, int count, out ReadOnlySpan<char> slice)
         {
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)startIndex + (ulong)(uint)count > (ulong)(uint)Length)
+            if (RuntimeHelpers.TargetIs64Bit)
             {
-                slice = default;
-                return false;
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)startIndex + (ulong)(uint)count > (ulong)(uint)Length)
+                {
+                    slice = default;
+                    return false;
+                }
             }
-#else
-            if ((uint)startIndex > (uint)Length || (uint)count > (uint)(Length - startIndex))
+            else
             {
-                slice = default;
-                return false;
+                if ((uint)startIndex > (uint)Length || (uint)count > (uint)(Length - startIndex))
+                {
+                    slice = default;
+                    return false;
+                }
             }
-#endif
 
             slice = new ReadOnlySpan<char>(ref Unsafe.Add(ref _firstChar, (nint)(uint)startIndex /* force zero-extension */), count);
             return true;

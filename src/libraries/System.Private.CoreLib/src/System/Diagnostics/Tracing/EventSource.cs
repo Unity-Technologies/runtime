@@ -1757,7 +1757,7 @@ namespace System.Diagnostics.Tracing
                             data++;
                             goto BytePtr;
                         }
-                        else if (IntPtr.Size == 4 && dataType == typeof(IntPtr))
+                        else if (RuntimeHelpers.TargetIs32Bit && dataType == typeof(IntPtr))
                         {
                             decoded = *(IntPtr*)dataPointer;
                         }
@@ -1817,7 +1817,7 @@ namespace System.Diagnostics.Tracing
                         {
                             decoded = DateTime.FromFileTimeUtc(*(long*)dataPointer);
                         }
-                        else if (IntPtr.Size == 8 && dataType == typeof(IntPtr))
+                        else if (RuntimeHelpers.TargetIs64Bit && dataType == typeof(IntPtr))
                         {
                             decoded = *(IntPtr*)dataPointer;
                         }

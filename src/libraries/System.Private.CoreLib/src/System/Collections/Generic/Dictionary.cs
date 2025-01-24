@@ -25,9 +25,8 @@ namespace System.Collections.Generic
 
         private int[]? _buckets;
         private Entry[]? _entries;
-#if TARGET_64BIT
+
         private ulong _fastModMultiplier;
-#endif
         private int _count;
         private int _freeList;
         private int _freeCount;
@@ -490,9 +489,8 @@ namespace System.Collections.Generic
 
             // Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
             _freeList = -1;
-#if TARGET_64BIT
-            _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+                _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
             _buckets = buckets;
             _entries = entries;
 
@@ -873,9 +871,10 @@ namespace System.Collections.Generic
 
             // Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
             _buckets = new int[newSize];
-#if TARGET_64BIT
-            _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)newSize);
-#endif
+
+            if (RuntimeHelpers.TargetIs64Bit)
+                _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)newSize);
+
             for (int i = 0; i < count; i++)
             {
                 if (entries[i].next >= -1)
@@ -1342,11 +1341,9 @@ namespace System.Collections.Generic
         private ref int GetBucket(uint hashCode)
         {
             int[] buckets = _buckets!;
-#if TARGET_64BIT
-            return ref buckets[HashHelpers.FastMod(hashCode, (uint)buckets.Length, _fastModMultiplier)];
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return ref buckets[HashHelpers.FastMod(hashCode, (uint)buckets.Length, _fastModMultiplier)];
             return ref buckets[(uint)hashCode % buckets.Length];
-#endif
         }
 
         private struct Entry

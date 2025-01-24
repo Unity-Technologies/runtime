@@ -96,11 +96,9 @@ namespace System.Runtime.CompilerServices
         private static int HashToBucket(Entry[] table, int hash)
         {
             byte hashShift = HashShift(table);
-#if TARGET_64BIT
-            return (int)(((ulong)hash * 11400714819323198485ul) >> hashShift);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (int)(((ulong)hash * 11400714819323198485ul) >> hashShift);
             return (int)(((uint)hash * 2654435769u) >> hashShift);
-#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

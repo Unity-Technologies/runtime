@@ -9,14 +9,6 @@ using System.Runtime.Intrinsics;
 
 #pragma warning disable SA1121 // explicitly using type aliases instead of built-in types
 
-#if TARGET_64BIT
-using nint_t = System.Int64;
-using nuint_t = System.UInt64;
-#else
-using nint_t = System.Int32;
-using nuint_t = System.UInt32;
-#endif
-
 namespace System.Buffers.Binary
 {
     public static partial class BinaryPrimitives
@@ -55,7 +47,7 @@ namespace System.Buffers.Binary
         /// <param name="value">The value to reverse.</param>
         /// <returns>The reversed value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static nint ReverseEndianness(nint value) => (nint)ReverseEndianness((nint_t)value);
+        public static nint ReverseEndianness(nint value) => RuntimeHelpers.TargetIs64Bit ? (nint)ReverseEndianness((Int64)value) : (nint)ReverseEndianness((UInt32)value);
 
         /// <summary>Reverses a primitive value by performing an endianness swap of the specified <see cref="Int128"/> value.</summary>
         /// <param name="value">The value to reverse.</param>
@@ -153,7 +145,7 @@ namespace System.Buffers.Binary
         /// <returns>The reversed value.</returns>
         [CLSCompliant(false)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static nuint ReverseEndianness(nuint value) => (nuint)ReverseEndianness((nuint_t)value);
+        public static nuint ReverseEndianness(nuint value) => RuntimeHelpers.TargetIs64Bit ? (nuint)ReverseEndianness((UInt64)value) : (nuint) ReverseEndianness((UInt32) value);
 
         /// <summary>Reverses a primitive value by performing an endianness swap of the specified <see cref="UInt128"/> value.</summary>
         /// <param name="value">The value to reverse.</param>
@@ -201,20 +193,22 @@ namespace System.Buffers.Binary
 
         /// <inheritdoc cref="ReverseEndianness(ReadOnlySpan{ushort}, Span{ushort})" />
         [CLSCompliant(false)]
-        public static void ReverseEndianness(ReadOnlySpan<nuint> source, Span<nuint> destination) =>
-#if TARGET_64BIT
-            ReverseEndianness<long, Int64EndiannessReverser>(MemoryMarshal.Cast<nuint, long>(source), MemoryMarshal.Cast<nuint, long>(destination));
-#else
-            ReverseEndianness<int, Int32EndiannessReverser>(MemoryMarshal.Cast<nuint, int>(source), MemoryMarshal.Cast<nuint, int>(destination));
-#endif
+        public static void ReverseEndianness(ReadOnlySpan<nuint> source, Span<nuint> destination)
+        {
+            if (RuntimeHelpers.TargetIs64Bit)
+                ReverseEndianness<long, Int64EndiannessReverser>(MemoryMarshal.Cast<nuint, long>(source), MemoryMarshal.Cast<nuint, long>(destination));
+            else
+                ReverseEndianness<int, Int32EndiannessReverser>(MemoryMarshal.Cast<nuint, int>(source), MemoryMarshal.Cast<nuint, int>(destination));
+        }
 
         /// <inheritdoc cref="ReverseEndianness(ReadOnlySpan{ushort}, Span{ushort})" />
-        public static void ReverseEndianness(ReadOnlySpan<nint> source, Span<nint> destination) =>
-#if TARGET_64BIT
-            ReverseEndianness<long, Int64EndiannessReverser>(MemoryMarshal.Cast<nint, long>(source), MemoryMarshal.Cast<nint, long>(destination));
-#else
-            ReverseEndianness<int, Int32EndiannessReverser>(MemoryMarshal.Cast<nint, int>(source), MemoryMarshal.Cast<nint, int>(destination));
-#endif
+        public static void ReverseEndianness(ReadOnlySpan<nint> source, Span<nint> destination)
+        {
+            if (RuntimeHelpers.TargetIs64Bit)
+                ReverseEndianness<long, Int64EndiannessReverser>(MemoryMarshal.Cast<nint, long>(source), MemoryMarshal.Cast<nint, long>(destination));
+            else
+                ReverseEndianness<int, Int32EndiannessReverser>(MemoryMarshal.Cast<nint, int>(source), MemoryMarshal.Cast<nint, int>(destination));
+        }
 
         private readonly struct Int16EndiannessReverser : IEndiannessReverser<short>
         {

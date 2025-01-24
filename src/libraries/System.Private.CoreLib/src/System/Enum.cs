@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using static System.Array;
 
 #pragma warning disable 8500 // Allow taking address of managed types
 
@@ -452,11 +453,10 @@ namespace System
 
                 case CorElementType.ELEMENT_TYPE_I:
                 case CorElementType.ELEMENT_TYPE_U:
-#if TARGET_32BIT
-                    goto case CorElementType.ELEMENT_TYPE_U4;
-#else
-                    goto case CorElementType.ELEMENT_TYPE_U8;
-#endif
+                    if (RuntimeHelpers.TargetIs32Bit)
+                        goto case CorElementType.ELEMENT_TYPE_U4;
+                    else
+                        goto case CorElementType.ELEMENT_TYPE_U8;
 #endif
 
                 default:
@@ -1235,11 +1235,9 @@ namespace System
 
                 case CorElementType.ELEMENT_TYPE_I:
                 case CorElementType.ELEMENT_TYPE_U:
-#if TARGET_32BIT
-                    goto case CorElementType.ELEMENT_TYPE_U4;
-#else
+                    if (RuntimeHelpers.TargetIs32Bit)
+                        goto case CorElementType.ELEMENT_TYPE_U4;
                     goto case CorElementType.ELEMENT_TYPE_U8;
-#endif
 #endif
 
                 default:
@@ -1331,17 +1329,14 @@ namespace System
                 case CorElementType.ELEMENT_TYPE_CHAR:
                     goto case CorElementType.ELEMENT_TYPE_U2;
 
-#if TARGET_32BIT
                 case CorElementType.ELEMENT_TYPE_I:
-                    goto case CorElementType.ELEMENT_TYPE_I4;
-                case CorElementType.ELEMENT_TYPE_U:
-                    goto case CorElementType.ELEMENT_TYPE_U4;
-#else
-                case CorElementType.ELEMENT_TYPE_I:
+                    if (RuntimeHelpers.TargetIs32Bit)
+                        goto case CorElementType.ELEMENT_TYPE_I4;
                     goto case CorElementType.ELEMENT_TYPE_I8;
                 case CorElementType.ELEMENT_TYPE_U:
+                    if (RuntimeHelpers.TargetIs32Bit)
+                        goto case CorElementType.ELEMENT_TYPE_U4;
                     goto case CorElementType.ELEMENT_TYPE_U8;
-#endif
 #endif
 
                 default:
@@ -1569,10 +1564,7 @@ namespace System
                     HexConverter.ToCharsBuffer((byte)value, destination, 2);
                 }
                 else if (typeof(TStorage) == typeof(uint) ||
-#if TARGET_32BIT
-                         typeof(TStorage) == typeof(nuint) ||
-                         typeof(TStorage) == typeof(nint) ||
-#endif
+                         (RuntimeHelpers.TargetIs32Bit && (typeof(TStorage) == typeof(nuint) || typeof(TStorage) == typeof(nint))) ||
                          typeof(TStorage) == typeof(int))
                 {
                     uint value = Unsafe.As<byte, uint>(ref data);
@@ -1582,10 +1574,7 @@ namespace System
                     HexConverter.ToCharsBuffer((byte)value, destination, 6);
                 }
                 else if (typeof(TStorage) == typeof(ulong) ||
-#if TARGET_64BIT
-                         typeof(TStorage) == typeof(nuint) ||
-                         typeof(TStorage) == typeof(nint) ||
-#endif
+                        (RuntimeHelpers.TargetIs64Bit && (typeof(TStorage) == typeof(nuint) || typeof(TStorage) == typeof(nint))) ||
                          typeof(TStorage) == typeof(long))
                 {
                     ulong value = Unsafe.As<byte, ulong>(ref data);

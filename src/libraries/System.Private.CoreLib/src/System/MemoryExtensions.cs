@@ -199,14 +199,17 @@ namespace System
                 return default;
             }
 
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)text.Length)
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-#else
-            if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)text.Length)
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+            }
+            else
+            {
+                if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+            }
 
             return new ReadOnlySpan<char>(ref Unsafe.Add(ref text.GetRawStringData(), (nint)(uint)start /* force zero-extension */), length);
         }
@@ -281,14 +284,17 @@ namespace System
                 return default;
             }
 
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)text.Length)
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-#else
-            if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)start + (ulong)(uint)length > (ulong)(uint)text.Length)
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+            }
+            else
+            {
+                if ((uint)start > (uint)text.Length || (uint)length > (uint)(text.Length - start))
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+            }
 
             return new ReadOnlyMemory<char>(text, start, length);
         }
@@ -1371,7 +1377,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is int or uint || (IntPtr.Size == 4 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is int or uint || (RuntimeHelpers.TargetIs32Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.IndexOfAnyInRangeUnsignedNumber(
                         ref Unsafe.As<T, uint>(ref MemoryMarshal.GetReference(span)),
@@ -1380,7 +1386,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is long or ulong || (IntPtr.Size == 8 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is long or ulong || (RuntimeHelpers.TargetIs64Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.IndexOfAnyInRangeUnsignedNumber(
                         ref Unsafe.As<T, ulong>(ref MemoryMarshal.GetReference(span)),
@@ -1437,7 +1443,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is int or uint || (IntPtr.Size == 4 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is int or uint || (RuntimeHelpers.TargetIs32Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.IndexOfAnyExceptInRangeUnsignedNumber(
                         ref Unsafe.As<T, uint>(ref MemoryMarshal.GetReference(span)),
@@ -1446,7 +1452,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is long or ulong || (IntPtr.Size == 8 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is long or ulong || (RuntimeHelpers.TargetIs64Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.IndexOfAnyExceptInRangeUnsignedNumber(
                         ref Unsafe.As<T, ulong>(ref MemoryMarshal.GetReference(span)),
@@ -1503,7 +1509,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is int or uint || (IntPtr.Size == 4 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is int or uint || (RuntimeHelpers.TargetIs32Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.LastIndexOfAnyInRangeUnsignedNumber(
                         ref Unsafe.As<T, uint>(ref MemoryMarshal.GetReference(span)),
@@ -1512,7 +1518,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is long or ulong || (IntPtr.Size == 8 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is long or ulong || (RuntimeHelpers.TargetIs64Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.LastIndexOfAnyInRangeUnsignedNumber(
                         ref Unsafe.As<T, ulong>(ref MemoryMarshal.GetReference(span)),
@@ -1569,7 +1575,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is int or uint || (IntPtr.Size == 4 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is int or uint || (RuntimeHelpers.TargetIs32Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.LastIndexOfAnyExceptInRangeUnsignedNumber(
                         ref Unsafe.As<T, uint>(ref MemoryMarshal.GetReference(span)),
@@ -1578,7 +1584,7 @@ namespace System
                         span.Length);
                 }
 
-                if (lowInclusive is long or ulong || (IntPtr.Size == 8 && (lowInclusive is nint or nuint)))
+                if (lowInclusive is long or ulong || (RuntimeHelpers.TargetIs64Bit && (lowInclusive is nint or nuint)))
                 {
                     return SpanHelpers.LastIndexOfAnyExceptInRangeUnsignedNumber(
                         ref Unsafe.As<T, ulong>(ref MemoryMarshal.GetReference(span)),

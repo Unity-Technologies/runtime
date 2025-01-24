@@ -1410,17 +1410,21 @@ namespace System
             }
             else if (typeof(TOther) == typeof(nuint))
             {
-#if TARGET_64BIT
-                nuint actualResult = (value >= ulong.MaxValue) ? unchecked((nuint)ulong.MaxValue) :
-                                     (value <= ulong.MinValue) ? unchecked((nuint)ulong.MinValue) : (nuint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#else
-                nuint actualResult = (value >= uint.MaxValue) ? uint.MaxValue :
-                                     (value <= uint.MinValue) ? uint.MinValue : (nuint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+
+                    nuint actualResult = (value >= ulong.MaxValue) ? unchecked((nuint)ulong.MaxValue) :
+                                         (value <= ulong.MinValue) ? unchecked((nuint)ulong.MinValue) : (nuint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
+                else
+                {
+                    nuint actualResult = (value >= uint.MaxValue) ? uint.MaxValue :
+                                         (value <= uint.MinValue) ? uint.MinValue : (nuint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
             }
             else
             {

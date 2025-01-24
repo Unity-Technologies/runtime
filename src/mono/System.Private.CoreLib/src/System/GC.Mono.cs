@@ -59,7 +59,7 @@ namespace System
         public static void AddMemoryPressure(long bytesAllocated)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bytesAllocated);
-            if (IntPtr.Size == 4)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(bytesAllocated, int.MaxValue);
             }
@@ -69,7 +69,7 @@ namespace System
         public static void RemoveMemoryPressure(long bytesAllocated)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bytesAllocated);
-            if (IntPtr.Size == 4)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(bytesAllocated, int.MaxValue);
             }

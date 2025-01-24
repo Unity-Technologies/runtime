@@ -1260,16 +1260,19 @@ namespace System
             }
             else if (typeof(TOther) == typeof(nuint))
             {
-#if TARGET_32BIT
-                nuint actualResult = (value >= uint.MaxValue) ? uint.MaxValue :
-                                     (value <= uint.MinValue) ? uint.MinValue : (nuint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#else
-                nuint actualResult = (value <= 0) ? 0 : (nuint)value;
-                result = (TOther)(object)actualResult;
-                return true;
-#endif
+                if (RuntimeHelpers.TargetIs32Bit)
+                {
+                    nuint actualResult = (value >= uint.MaxValue) ? uint.MaxValue :
+                                         (value <= uint.MinValue) ? uint.MinValue : (nuint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
+                else
+                {
+                    nuint actualResult = (value <= 0) ? 0 : (nuint)value;
+                    result = (TOther)(object)actualResult;
+                    return true;
+                }
             }
             else
             {

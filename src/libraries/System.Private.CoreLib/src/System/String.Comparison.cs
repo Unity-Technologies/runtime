@@ -122,25 +122,28 @@ namespace System
                 length -= 2; a += 2; b += 2;
 
                 // unroll the loop
-#if TARGET_64BIT
-                while (length >= 12)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    if (*(long*)a != *(long*)b) goto DiffOffset0;
-                    if (*(long*)(a + 4) != *(long*)(b + 4)) goto DiffOffset4;
-                    if (*(long*)(a + 8) != *(long*)(b + 8)) goto DiffOffset8;
-                    length -= 12; a += 12; b += 12;
+                    while (length >= 12)
+                    {
+                        if (*(long*)a != *(long*)b) goto DiffOffset0;
+                        if (*(long*)(a + 4) != *(long*)(b + 4)) goto DiffOffset4;
+                        if (*(long*)(a + 8) != *(long*)(b + 8)) goto DiffOffset8;
+                        length -= 12; a += 12; b += 12;
+                    }
                 }
-#else // TARGET_64BIT
-                while (length >= 10)
+                else
                 {
-                    if (*(int*)a != *(int*)b) goto DiffOffset0;
-                    if (*(int*)(a + 2) != *(int*)(b + 2)) goto DiffOffset2;
-                    if (*(int*)(a + 4) != *(int*)(b + 4)) goto DiffOffset4;
-                    if (*(int*)(a + 6) != *(int*)(b + 6)) goto DiffOffset6;
-                    if (*(int*)(a + 8) != *(int*)(b + 8)) goto DiffOffset8;
-                    length -= 10; a += 10; b += 10;
+                    while (length >= 10)
+                    {
+                        if (*(int*)a != *(int*)b) goto DiffOffset0;
+                        if (*(int*)(a + 2) != *(int*)(b + 2)) goto DiffOffset2;
+                        if (*(int*)(a + 4) != *(int*)(b + 4)) goto DiffOffset4;
+                        if (*(int*)(a + 6) != *(int*)(b + 6)) goto DiffOffset6;
+                        if (*(int*)(a + 8) != *(int*)(b + 8)) goto DiffOffset8;
+                        length -= 10; a += 10; b += 10;
+                    }
                 }
-#endif // TARGET_64BIT
 
                 // Fallback loop:
                 // go back to slower code path and do comparison on 4 bytes at a time.
@@ -160,27 +163,46 @@ namespace System
                 // The longer string will be larger.
                 return strA.Length - strB.Length;
 
-#if TARGET_64BIT
-            DiffOffset8: a += 4; b += 4;
-            DiffOffset4: a += 4; b += 4;
-#else // TARGET_64BIT
-                // Use jumps instead of falling through, since
-                // otherwise going to DiffOffset8 will involve
-                // 8 add instructions before getting to DiffNextInt
-                DiffOffset8: a += 8; b += 8; goto DiffOffset0;
-                DiffOffset6: a += 6; b += 6; goto DiffOffset0;
-                DiffOffset4: a += 2; b += 2;
-                DiffOffset2: a += 2; b += 2;
-#endif // TARGET_64BIT
+            // Use jumps instead of falling through, since
+            // otherwise going to DiffOffset8 will involve
+            // 8 add instructions before getting to DiffNextInt
+            DiffOffset8:
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    a += 4;
+                    b += 4;
+                    goto DiffOffset4;
+                }
+                else
+                {
+                    a += 8;
+                    b += 8;
+                    goto DiffOffset0;
+                }
+            DiffOffset6: a += 6; b += 6; goto DiffOffset0;
+            DiffOffset4:
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    a += 4;
+                    b += 4;
+                    goto DiffOffset0;
+                }
+                else
+                {
+                    a += 2;
+                    b += 2;
+                }
+            DiffOffset2: a += 2; b += 2;
 
             DiffOffset0:
                 // If we reached here, we already see a difference in the unrolled loop above
-#if TARGET_64BIT
-                if (*(int*)a == *(int*)b)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    a += 2; b += 2;
+                    if (*(int*)a == *(int*)b)
+                    {
+                        a += 2; b += 2;
+                    }
                 }
-#endif // TARGET_64BIT
 
             DiffNextInt:
                 if (*a != *b) return *a - *b;

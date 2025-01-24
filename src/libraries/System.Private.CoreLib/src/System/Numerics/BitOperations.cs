@@ -98,12 +98,10 @@ namespace System.Numerics
         {
             if (X86Base.IsSupported || ArmBase.IsSupported || WasmBase.IsSupported)
             {
-#if TARGET_64BIT
-                return (uint)(0x1_0000_0000ul >> LeadingZeroCount(value - 1));
-#else
+                if (RuntimeHelpers.TargetIs64Bit)
+                    return (uint)(0x1_0000_0000ul >> LeadingZeroCount(value - 1));
                 int shift = 32 - LeadingZeroCount(value - 1);
                 return (1u ^ (uint)(shift >> 5)) << shift;
-#endif
             }
 
             // Based on https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
@@ -157,11 +155,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static nuint RoundUpToPowerOf2(nuint value)
         {
-#if TARGET_64BIT
-            return (nuint)RoundUpToPowerOf2((ulong)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (nuint)RoundUpToPowerOf2((ulong)value);
             return (nuint)RoundUpToPowerOf2((uint)value);
-#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -283,11 +279,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static int LeadingZeroCount(nuint value)
         {
-#if TARGET_64BIT
-            return LeadingZeroCount((ulong)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return LeadingZeroCount((ulong)value);
             return LeadingZeroCount((uint)value);
-#endif
         }
 
         /// <summary>
@@ -388,11 +382,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static int Log2(nuint value)
         {
-#if TARGET_64BIT
-            return Log2((ulong)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return Log2((ulong)value);
             return Log2((uint)value);
-#endif
         }
 
         /// <summary>
@@ -511,10 +503,11 @@ namespace System.Numerics
                 return aggregated.ToScalar();
             }
 
-#if TARGET_32BIT
-            return PopCount((uint)value) // lo
-                + PopCount((uint)(value >> 32)); // hi
-#else
+            if (RuntimeHelpers.TargetIs32Bit)
+            {
+                return PopCount((uint)value) // lo
+                    + PopCount((uint)(value >> 32)); // hi
+            }
             return SoftwareFallback(value);
 
             static int SoftwareFallback(ulong value)
@@ -530,7 +523,6 @@ namespace System.Numerics
 
                 return (int)value;
             }
-#endif
         }
 
         /// <summary>
@@ -543,11 +535,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static int PopCount(nuint value)
         {
-#if TARGET_64BIT
-            return PopCount((ulong)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return PopCount((ulong)value);
             return PopCount((uint)value);
-#endif
         }
 
         /// <summary>
@@ -665,11 +655,9 @@ namespace System.Numerics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int TrailingZeroCount(nint value)
         {
-#if TARGET_64BIT
-            return TrailingZeroCount((ulong)(nuint)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return TrailingZeroCount((ulong)(nuint)value);
             return TrailingZeroCount((uint)(nuint)value);
-#endif
         }
 
         /// <summary>
@@ -682,11 +670,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static int TrailingZeroCount(nuint value)
         {
-#if TARGET_64BIT
-            return TrailingZeroCount((ulong)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return TrailingZeroCount((ulong)value);
             return TrailingZeroCount((uint)value);
-#endif
         }
 
         /// <summary>
@@ -731,11 +717,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static nuint RotateLeft(nuint value, int offset)
         {
-#if TARGET_64BIT
-            return (nuint)RotateLeft((ulong)value, offset);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (nuint)RotateLeft((ulong)value, offset);
             return (nuint)RotateLeft((uint)value, offset);
-#endif
         }
 
         /// <summary>
@@ -780,11 +764,9 @@ namespace System.Numerics
         [CLSCompliant(false)]
         public static nuint RotateRight(nuint value, int offset)
         {
-#if TARGET_64BIT
-            return (nuint)RotateRight((ulong)value, offset);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (nuint)RotateRight((ulong)value, offset);
             return (nuint)RotateRight((uint)value, offset);
-#endif
         }
 
         /// <summary>

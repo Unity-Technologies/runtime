@@ -38,9 +38,7 @@ namespace System.Collections.Generic
 
         private int[]? _buckets;
         private Entry[]? _entries;
-#if TARGET_64BIT
         private ulong _fastModMultiplier;
-#endif
         private int _count;
         private int _freeList;
         private int _freeCount;
@@ -162,9 +160,9 @@ namespace System.Collections.Generic
                 _freeList = source._freeList;
                 _freeCount = source._freeCount;
                 _count = source._count;
-#if TARGET_64BIT
-                _fastModMultiplier = source._fastModMultiplier;
-#endif
+
+                if (RuntimeHelpers.TargetIs64Bit)
+                    _fastModMultiplier = source._fastModMultiplier;
             }
             else
             {
@@ -279,11 +277,9 @@ namespace System.Collections.Generic
         private ref int GetBucketRef(int hashCode)
         {
             int[] buckets = _buckets!;
-#if TARGET_64BIT
-            return ref buckets[HashHelpers.FastMod((uint)hashCode, (uint)buckets.Length, _fastModMultiplier)];
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return ref buckets[HashHelpers.FastMod((uint)hashCode, (uint)buckets.Length, _fastModMultiplier)];
             return ref buckets[(uint)hashCode % (uint)buckets.Length];
-#endif
         }
 
         public bool Remove(T item)
@@ -416,9 +412,9 @@ namespace System.Collections.Generic
             {
                 _buckets = new int[capacity];
                 _entries = new Entry[capacity];
-#if TARGET_64BIT
-                _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)capacity);
-#endif
+
+                if (RuntimeHelpers.TargetIs64Bit)
+                    _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)capacity);
 
                 T[]? array = (T[]?)siInfo.GetValue(ElementsName, typeof(T[]));
                 if (array == null)
@@ -984,9 +980,8 @@ namespace System.Collections.Generic
 
             // Assign member variables after both arrays allocated to guard against corruption from OOM if second fails
             _buckets = new int[newSize];
-#if TARGET_64BIT
-            _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)newSize);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+                _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)newSize);
             for (int i = 0; i < count; i++)
             {
                 ref Entry entry = ref entries[i];
@@ -1061,9 +1056,9 @@ namespace System.Collections.Generic
             _freeList = -1;
             _buckets = buckets;
             _entries = entries;
-#if TARGET_64BIT
-            _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
-#endif
+
+            if (RuntimeHelpers.TargetIs64Bit)
+                _fastModMultiplier = HashHelpers.GetFastModMultiplier((uint)size);
 
             return size;
         }

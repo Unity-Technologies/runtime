@@ -12,12 +12,6 @@ using System.Runtime.Versioning;
 
 #pragma warning disable SA1121 // explicitly using type aliases instead of built-in types
 
-#if TARGET_64BIT
-using nuint_t = System.UInt64;
-#else
-using nuint_t = System.UInt32;
-#endif
-
 namespace System
 {
     [Serializable]
@@ -49,11 +43,10 @@ namespace System
         [NonVersionable]
         public UIntPtr(ulong value)
         {
-#if TARGET_64BIT
-            _value = (nuint)value;
-#else
-            _value = checked((nuint)value);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+                _value = (nuint)value;
+            else
+                _value = checked((nuint)value);
         }
 
         [NonVersionable]
@@ -66,12 +59,13 @@ namespace System
         {
             ulong value = info.GetUInt64("value");
 
-#if TARGET_32BIT
-            if (value > uint.MaxValue)
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                throw new ArgumentException(SR.Serialization_InvalidPtrValue);
+                if (value > uint.MaxValue)
+                {
+                    throw new ArgumentException(SR.Serialization_InvalidPtrValue);
+                }
             }
-#endif
 
             _value = (nuint)value;
         }
@@ -88,22 +82,20 @@ namespace System
 
         public override int GetHashCode()
         {
-#if TARGET_64BIT
-            ulong value = _value;
-            return value.GetHashCode();
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                ulong value = _value;
+                return value.GetHashCode();
+            }
             return (int)_value;
-#endif
         }
 
         [NonVersionable]
         public uint ToUInt32()
         {
-#if TARGET_64BIT
-            return checked((uint)_value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return checked((uint)_value);
             return (uint)_value;
-#endif
         }
 
         [NonVersionable]
@@ -124,11 +116,9 @@ namespace System
         [NonVersionable]
         public static explicit operator uint(nuint value)
         {
-#if TARGET_64BIT
-            return checked((uint)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return checked((uint)value);
             return (uint)value;
-#endif
         }
 
         [NonVersionable]
@@ -152,10 +142,10 @@ namespace System
         [NonVersionable]
         public static nuint operator -(nuint pointer, int offset) => pointer - (nuint)offset;
 
-        public static int Size
+        public static unsafe int Size
         {
             [NonVersionable]
-            get => sizeof(nuint_t);
+            get => sizeof(void*);
         }
 
         [NonVersionable]
@@ -165,14 +155,14 @@ namespace System
         public static nuint MaxValue
         {
             [NonVersionable]
-            get => unchecked((nuint)nuint_t.MaxValue);
+            get => unchecked(RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.MaxValue : (nuint)UInt32.MaxValue);
         }
 
         /// <inheritdoc cref="IMinMaxValue{TSelf}.MinValue" />
         public static nuint MinValue
         {
             [NonVersionable]
-            get => unchecked((nuint)nuint_t.MinValue);
+            get => unchecked(RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.MinValue : (nuint)UInt32.MinValue);
         }
 
         public int CompareTo(object? value)
@@ -199,29 +189,29 @@ namespace System
         [NonVersionable]
         public bool Equals(nuint other) => _value == other;
 
-        public override string ToString() => ((nuint_t)_value).ToString();
-        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format) => ((nuint_t)_value).ToString(format);
-        public string ToString(IFormatProvider? provider) => ((nuint_t)_value).ToString(provider);
-        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format, IFormatProvider? provider) => ((nuint_t)_value).ToString(format, provider);
+        public override string ToString() => RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).ToString() : ((UInt32)_value).ToString();
+        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format) => RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).ToString(format) : ((UInt32)_value).ToString(format);
+        public string ToString(IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).ToString(provider) : ((UInt32)_value).ToString(provider);
+        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).ToString(format, provider) : ((UInt32)_value).ToString(format, provider);
 
         public bool TryFormat(Span<char> destination, out int charsWritten, [StringSyntax(StringSyntaxAttribute.NumericFormat)] ReadOnlySpan<char> format = default, IFormatProvider? provider = null) =>
-            ((nuint_t)_value).TryFormat(destination, out charsWritten, format, provider);
+            RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).TryFormat(destination, out charsWritten, format, provider) : ((UInt32)_value).TryFormat(destination, out charsWritten, format, provider);
 
         /// <inheritdoc cref="IUtf8SpanFormattable.TryFormat" />
         public bool TryFormat(Span<byte> utf8Destination, out int bytesWritten, [StringSyntax(StringSyntaxAttribute.NumericFormat)] ReadOnlySpan<char> format = default, IFormatProvider? provider = null) =>
-            ((nuint_t)_value).TryFormat(utf8Destination, out bytesWritten, format, provider);
+            RuntimeHelpers.TargetIs64Bit ? ((UInt64)_value).TryFormat(utf8Destination, out bytesWritten, format, provider) : ((UInt32)_value).TryFormat(utf8Destination, out bytesWritten, format, provider);
 
-        public static nuint Parse(string s) => (nuint)nuint_t.Parse(s);
-        public static nuint Parse(string s, NumberStyles style) => (nuint)nuint_t.Parse(s, style);
-        public static nuint Parse(string s, IFormatProvider? provider) => (nuint)nuint_t.Parse(s, provider);
-        public static nuint Parse(string s, NumberStyles style, IFormatProvider? provider) => (nuint)nuint_t.Parse(s, style, provider);
-        public static nuint Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => (nuint)nuint_t.Parse(s, provider);
-        public static nuint Parse(ReadOnlySpan<char> s, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => (nuint)nuint_t.Parse(s, style, provider);
+        public static nuint Parse(string s) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s) : (nuint)UInt32.Parse(s);
+        public static nuint Parse(string s, NumberStyles style) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s, style) : (nuint)UInt32.Parse(s, style);
+        public static nuint Parse(string s, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s, provider) : (nuint)UInt32.Parse(s, provider);
+        public static nuint Parse(string s, NumberStyles style, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s, style, provider) : (nuint)UInt32.Parse(s, style, provider);
+        public static nuint Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s, provider) : (nuint)UInt32.Parse(s, provider);
+        public static nuint Parse(ReadOnlySpan<char> s, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(s, style, provider) : (nuint)UInt32.Parse(s, style, provider);
 
         public static bool TryParse([NotNullWhen(true)] string? s, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         /// <summary>Tries to parse a string into a value.</summary>
@@ -232,19 +222,19 @@ namespace System
         public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         public static bool TryParse([NotNullWhen(true)] string? s, NumberStyles style, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, style, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, style, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, style, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         public static bool TryParse(ReadOnlySpan<char> s, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         /// <summary>Tries to convert a UTF-8 character span containing the string representation of a number to its unsigned integer equivalent.</summary>
@@ -254,20 +244,20 @@ namespace System
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(utf8Text, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(utf8Text, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(utf8Text, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         /// <inheritdoc cref="IParsable{TSelf}.TryParse(string?, IFormatProvider?, out TSelf)" />
         public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         public static bool TryParse(ReadOnlySpan<char> s, NumberStyles style, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(s, style, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(s, style, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(s, style, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         //
@@ -330,7 +320,7 @@ namespace System
                     return false;
                 }
 
-                if ((source.Length > sizeof(nuint_t)) && (source[..^sizeof(nuint_t)].ContainsAnyExcept((byte)0x00)))
+                if ((source.Length > Size) && (source[..^Size].ContainsAnyExcept((byte)0x00)))
                 {
                     // When we have any non-zero leading data, we are a large positive and therefore
                     // definitely out of range
@@ -341,9 +331,9 @@ namespace System
 
                 ref byte sourceRef = ref MemoryMarshal.GetReference(source);
 
-                if (source.Length >= sizeof(nuint_t))
+                if (source.Length >= Size)
                 {
-                    sourceRef = ref Unsafe.Add(ref sourceRef, source.Length - sizeof(nuint_t));
+                    sourceRef = ref Unsafe.Add(ref sourceRef, source.Length - Size);
 
                     // We have at least 4/8 bytes, so just read the ones we need directly
                     result = Unsafe.ReadUnaligned<nuint>(ref sourceRef);
@@ -387,7 +377,7 @@ namespace System
                     return false;
                 }
 
-                if ((source.Length > sizeof(nuint_t)) && (source[sizeof(nuint_t)..].ContainsAnyExcept((byte)0x00)))
+                if ((source.Length > Size) && (source[Size..].ContainsAnyExcept((byte)0x00)))
                 {
                     // When we have any non-zero leading data, we are a large positive and therefore
                     // definitely out of range
@@ -398,7 +388,7 @@ namespace System
 
                 ref byte sourceRef = ref MemoryMarshal.GetReference(source);
 
-                if (source.Length >= sizeof(nuint_t))
+                if (source.Length >= Size)
                 {
                     // We have at least 4/8 bytes, so just read the ones we need directly
                     result = Unsafe.ReadUnaligned<nuint>(ref sourceRef);
@@ -430,25 +420,38 @@ namespace System
         }
 
         /// <inheritdoc cref="IBinaryInteger{TSelf}.GetShortestBitLength()" />
-        int IBinaryInteger<nuint>.GetShortestBitLength() => (sizeof(nuint_t) * 8) - BitOperations.LeadingZeroCount(_value);
+        int IBinaryInteger<nuint>.GetShortestBitLength() => (Size * 8) - BitOperations.LeadingZeroCount(_value);
 
         /// <inheritdoc cref="IBinaryInteger{TSelf}.GetByteCount()" />
-        int IBinaryInteger<nuint>.GetByteCount() => sizeof(nuint_t);
+        int IBinaryInteger<nuint>.GetByteCount() => Size;
 
         /// <inheritdoc cref="IBinaryInteger{TSelf}.TryWriteBigEndian(Span{byte}, out int)" />
         bool IBinaryInteger<nuint>.TryWriteBigEndian(Span<byte> destination, out int bytesWritten)
         {
-            if (destination.Length >= sizeof(nuint_t))
+            if (destination.Length >= Size)
             {
-                nuint_t value = (nuint_t)_value;
-
-                if (BitConverter.IsLittleEndian)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    value = BinaryPrimitives.ReverseEndianness(value);
-                }
-                Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                    UInt64 value = (UInt64)_value;
 
-                bytesWritten = sizeof(nuint_t);
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+                else
+                {
+                    UInt32 value = (UInt32)_value;
+
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+
+                bytesWritten = Size;
                 return true;
             }
             else
@@ -461,17 +464,30 @@ namespace System
         /// <inheritdoc cref="IBinaryInteger{TSelf}.TryWriteLittleEndian(Span{byte}, out int)" />
         bool IBinaryInteger<nuint>.TryWriteLittleEndian(Span<byte> destination, out int bytesWritten)
         {
-            if (destination.Length >= sizeof(nuint_t))
+            if (destination.Length >= Size)
             {
-                nuint_t value = (nuint_t)_value;
-
-                if (!BitConverter.IsLittleEndian)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    value = BinaryPrimitives.ReverseEndianness(value);
-                }
-                Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                    UInt64 value = (UInt64)_value;
 
-                bytesWritten = sizeof(nuint_t);
+                    if (!BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+                else
+                {
+                    UInt32 value = (UInt32)_value;
+
+                    if (!BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+
+                bytesWritten = Size;
                 return true;
             }
             else
@@ -488,13 +504,13 @@ namespace System
         /// <inheritdoc cref="IBinaryNumber{TSelf}.AllBitsSet" />
         static nuint IBinaryNumber<nuint>.AllBitsSet
         {
-#if TARGET_64BIT
             [NonVersionable]
-            get => unchecked((nuint)0xFFFF_FFFF_FFFF_FFFF);
-#else
-            [NonVersionable]
-            get => (nuint)0xFFFF_FFFF;
-#endif
+            get
+            {
+                if (RuntimeHelpers.TargetIs64Bit)
+                    return unchecked((nuint)0xFFFF_FFFF_FFFF_FFFF);
+                return (nuint)0xFFFF_FFFF;
+            }
         }
 
         /// <inheritdoc cref="IBinaryNumber{TSelf}.IsPow2(TSelf)" />
@@ -856,8 +872,8 @@ namespace System
             else if (typeof(TOther) == typeof(decimal))
             {
                 decimal actualValue = (decimal)(object)value;
-                result = (actualValue >= nuint_t.MaxValue) ? unchecked((nuint)nuint_t.MaxValue) :
-                         (actualValue <= nuint_t.MinValue) ? unchecked((nuint)nuint_t.MinValue) : (nuint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked((nuint)MaxValue) :
+                         (actualValue <= MinValue) ? unchecked((nuint)MinValue) : (nuint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(ushort))
@@ -875,13 +891,13 @@ namespace System
             else if (typeof(TOther) == typeof(ulong))
             {
                 ulong actualValue = (ulong)(object)value;
-                result = (actualValue >= nuint_t.MaxValue) ? unchecked((nuint)nuint_t.MaxValue) : (nuint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked((nuint)MaxValue) : (nuint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(UInt128))
             {
                 UInt128 actualValue = (UInt128)(object)value;
-                result = (actualValue >= nuint_t.MaxValue) ? unchecked((nuint)nuint_t.MaxValue) : (nuint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked((nuint)MaxValue) : (nuint)actualValue;
                 return true;
             }
             else
@@ -923,8 +939,8 @@ namespace System
             else if (typeof(TOther) == typeof(decimal))
             {
                 decimal actualValue = (decimal)(object)value;
-                result = (actualValue >= nuint_t.MaxValue) ? unchecked((nuint)nuint_t.MaxValue) :
-                         (actualValue <= nuint_t.MinValue) ? unchecked((nuint)nuint_t.MinValue) : (nuint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked((nuint)MaxValue) :
+                         (actualValue <= MinValue) ? unchecked((nuint)MinValue) : (nuint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(ushort))
@@ -1225,23 +1241,23 @@ namespace System
         //
 
         /// <inheritdoc cref="INumberBase{TSelf}.Parse(ReadOnlySpan{byte}, NumberStyles, IFormatProvider?)" />
-        public static nuint Parse(ReadOnlySpan<byte> utf8Text, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => (nuint)nuint_t.Parse(utf8Text, style, provider);
+        public static nuint Parse(ReadOnlySpan<byte> utf8Text, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(utf8Text, style, provider) : (nuint)UInt32.Parse(utf8Text, style, provider);
 
         /// <inheritdoc cref="INumberBase{TSelf}.TryParse(ReadOnlySpan{byte}, NumberStyles, IFormatProvider?, out TSelf)" />
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, NumberStyles style, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(utf8Text, style, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(utf8Text, style, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(utf8Text, style, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
 
         /// <inheritdoc cref="IUtf8SpanParsable{TSelf}.Parse(ReadOnlySpan{byte}, IFormatProvider?)" />
-        public static nuint Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) => (nuint)nuint_t.Parse(utf8Text, provider);
+        public static nuint Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nuint)UInt64.Parse(utf8Text, provider) : (nuint)UInt32.Parse(utf8Text, provider);
 
         /// <inheritdoc cref="IUtf8SpanParsable{TSelf}.TryParse(ReadOnlySpan{byte}, IFormatProvider?, out TSelf)" />
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider, out nuint result)
         {
             Unsafe.SkipInit(out result);
-            return nuint_t.TryParse(utf8Text, provider, out Unsafe.As<nuint, nuint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? UInt64.TryParse(utf8Text, provider, out Unsafe.As<nuint, UInt64>(ref result)) : UInt32.TryParse(utf8Text, provider, out Unsafe.As<nuint, UInt32>(ref result));
         }
     }
 }

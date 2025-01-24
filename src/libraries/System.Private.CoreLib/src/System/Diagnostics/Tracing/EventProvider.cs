@@ -8,6 +8,8 @@ using System.Globalization;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Runtime.CompilerServices;
+
 
 #if TARGET_WINDOWS
 using Internal.Win32;
@@ -970,7 +972,7 @@ namespace System.Diagnostics.Tracing
             data = null;
 
             string regKey = @"\Microsoft\Windows\CurrentVersion\Winevt\Publishers\{" + _providerId + "}";
-            if (IntPtr.Size == 8)
+            if (RuntimeHelpers.TargetIs64Bit)
             {
                 regKey = @"Software\Wow6432Node" + regKey;
             }

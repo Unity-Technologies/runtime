@@ -2049,14 +2049,17 @@ namespace System
 
         public string Substring(int startIndex, int length)
         {
-#if TARGET_64BIT
-            // See comment in Span<T>.Slice for how this works.
-            if ((ulong)(uint)startIndex + (ulong)(uint)length > (ulong)(uint)Length)
-#else
-            if ((uint)startIndex > (uint)Length || (uint)length > (uint)(Length - startIndex))
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
             {
-                ThrowSubstringArgumentOutOfRange(startIndex, length);
+
+                // See comment in Span<T>.Slice for how this works.
+                if ((ulong)(uint)startIndex + (ulong)(uint)length > (ulong)(uint)Length)
+                    ThrowSubstringArgumentOutOfRange(startIndex, length);
+            }
+            else
+            {
+                if ((uint)startIndex > (uint)Length || (uint)length > (uint)(Length - startIndex))
+                    ThrowSubstringArgumentOutOfRange(startIndex, length);
             }
 
             if (length == 0)

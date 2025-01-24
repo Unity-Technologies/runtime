@@ -176,51 +176,47 @@ namespace System.Globalization
             int length = Math.Min(lengthA, lengthB);
             int range = length;
 
-#if TARGET_64BIT
-            ulong valueAu64 = 0;
-            ulong valueBu64 = 0;
-
-            // Read 8 chars (64 bits) at a time from each string
-            while ((uint)length >= 8)
+            ulong valueAu64;
+            ulong valueBu64;
+            if (RuntimeHelpers.TargetIs64Bit)
             {
-                valueAu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref charA, byteOffset));
-                valueBu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref charB, byteOffset));
-
-                // A 32-bit test - even with the bit-twiddling here - is more efficient than a 64-bit test.
-                ulong temp = valueAu64 | valueBu64;
-
-                if (!Utf8Utility.AllBytesInUInt32AreAscii((uint)temp | (uint)(temp >> 32)))
+                // Read 8 chars (64 bits) at a time from each string
+                while ((uint)length >= 8)
                 {
-                    // one of the inputs contains non-ASCII data
-                    goto NonAscii64;
+                    valueAu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref charA, byteOffset));
+                    valueBu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref charB, byteOffset));
+
+                    // A 32-bit test - even with the bit-twiddling here - is more efficient than a 64-bit test.
+                    ulong temp = valueAu64 | valueBu64;
+
+                    if (!Utf8Utility.AllBytesInUInt32AreAscii((uint)temp | (uint)(temp >> 32)))
+                    {
+                        // one of the inputs contains non-ASCII data
+                        goto NonAscii64;
+                    }
+
+                    // Generally, the caller has likely performed a first-pass check that the input strings
+                    // are likely equal. Consider a dictionary which computes the hash code of its key before
+                    // performing a proper deep equality check of the string contents. We want to optimize for
+                    // the case where the equality check is likely to succeed, which means that we want to avoid
+                    // branching within this loop unless we're about to exit the loop, either due to failure or
+                    // due to us running out of input data.
+
+                    if (!Utf8Utility.UInt64OrdinalIgnoreCaseAscii(valueAu64, valueBu64))
+                    {
+                        return false;
+                    }
+
+                    byteOffset += 8;
+                    length -= 8;
                 }
-
-                // Generally, the caller has likely performed a first-pass check that the input strings
-                // are likely equal. Consider a dictionary which computes the hash code of its key before
-                // performing a proper deep equality check of the string contents. We want to optimize for
-                // the case where the equality check is likely to succeed, which means that we want to avoid
-                // branching within this loop unless we're about to exit the loop, either due to failure or
-                // due to us running out of input data.
-
-                if (!Utf8Utility.UInt64OrdinalIgnoreCaseAscii(valueAu64, valueBu64))
-                {
-                    return false;
-                }
-
-                byteOffset += 8;
-                length -= 8;
             }
-#endif
 
-            uint valueAu32 = 0;
-            uint valueBu32 = 0;
+            uint valueAu32;
+            uint valueBu32;
 
             // Read 4 chars (32 bits) at a time from each string
-#if TARGET_64BIT
-            if ((uint)length >= 4)
-#else
             while ((uint)length >= 4)
-#endif
             {
                 valueAu32 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref charA, byteOffset));
                 valueBu32 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref charB, byteOffset));
@@ -245,6 +241,9 @@ namespace System.Globalization
 
                 byteOffset += 4;
                 length -= 4;
+
+                if (RuntimeHelpers.TargetIs64Bit)
+                    break;
             }
 
             if (length != 0)
@@ -310,14 +309,12 @@ namespace System.Globalization
             }
             goto NonAscii;
 
-#if TARGET_64BIT
         NonAscii64:
             // Both values have to be non-ASCII to use the slow fallback, in case if one of them is not we return false
             if (Utf8Utility.AllBytesInUInt64AreAscii(valueAu64) || Utf8Utility.AllBytesInUInt64AreAscii(valueBu64))
             {
                 return false;
             }
-#endif
         NonAscii:
             range -= length;
 
@@ -486,51 +483,47 @@ namespace System.Globalization
             int length = Math.Min(sourceLength, prefixLength);
             int range = length;
 
-#if TARGET_64BIT
-            ulong valueAu64 = 0;
-            ulong valueBu64 = 0;
-
-            // Read 8 chars (64 bits) at a time from each string
-            while ((uint)length >= 8)
+            ulong valueAu64;
+            ulong valueBu64;
+            if (RuntimeHelpers.TargetIs64Bit)
             {
-                valueAu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref source, byteOffset));
-                valueBu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref prefix, byteOffset));
-
-                // A 32-bit test - even with the bit-twiddling here - is more efficient than a 64-bit test.
-                ulong temp = valueAu64 | valueBu64;
-
-                if (!Utf8Utility.AllBytesInUInt32AreAscii((uint)temp | (uint)(temp >> 32)))
+                // Read 8 chars (64 bits) at a time from each string
+                while ((uint)length >= 8)
                 {
-                    // one of the inputs contains non-ASCII data
-                    goto NonAscii64;
+                    valueAu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref source, byteOffset));
+                    valueBu64 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref prefix, byteOffset));
+
+                    // A 32-bit test - even with the bit-twiddling here - is more efficient than a 64-bit test.
+                    ulong temp = valueAu64 | valueBu64;
+
+                    if (!Utf8Utility.AllBytesInUInt32AreAscii((uint)temp | (uint)(temp >> 32)))
+                    {
+                        // one of the inputs contains non-ASCII data
+                        goto NonAscii64;
+                    }
+
+                    // Generally, the caller has likely performed a first-pass check that the input strings
+                    // are likely equal. Consider a dictionary which computes the hash code of its key before
+                    // performing a proper deep equality check of the string contents. We want to optimize for
+                    // the case where the equality check is likely to succeed, which means that we want to avoid
+                    // branching within this loop unless we're about to exit the loop, either due to failure or
+                    // due to us running out of input data.
+
+                    if (!Utf8Utility.UInt64OrdinalIgnoreCaseAscii(valueAu64, valueBu64))
+                    {
+                        return false;
+                    }
+
+                    byteOffset += 8;
+                    length -= 8;
                 }
-
-                // Generally, the caller has likely performed a first-pass check that the input strings
-                // are likely equal. Consider a dictionary which computes the hash code of its key before
-                // performing a proper deep equality check of the string contents. We want to optimize for
-                // the case where the equality check is likely to succeed, which means that we want to avoid
-                // branching within this loop unless we're about to exit the loop, either due to failure or
-                // due to us running out of input data.
-
-                if (!Utf8Utility.UInt64OrdinalIgnoreCaseAscii(valueAu64, valueBu64))
-                {
-                    return false;
-                }
-
-                byteOffset += 8;
-                length -= 8;
             }
-#endif
 
-            uint valueAu32 = 0;
-            uint valueBu32 = 0;
+            uint valueAu32;
+            uint valueBu32;
 
             // Read 4 chars (32 bits) at a time from each string
-#if TARGET_64BIT
-            if ((uint)length >= 4)
-#else
             while ((uint)length >= 4)
-#endif
             {
                 valueAu32 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref source, byteOffset));
                 valueBu32 = Unsafe.ReadUnaligned<uint>(ref Unsafe.AddByteOffset(ref prefix, byteOffset));
@@ -555,6 +548,9 @@ namespace System.Globalization
 
                 byteOffset += 4;
                 length -= 4;
+
+                if (RuntimeHelpers.TargetIs64Bit)
+                    break;
             }
 
             if (length != 0)
@@ -609,7 +605,9 @@ namespace System.Globalization
                     return false;
                 }
 
+#pragma warning disable IDE0059
                 byteOffset += 4;
+#pragma warning restore IDE0059
                 length -= 4;
             }
 
@@ -624,14 +622,12 @@ namespace System.Globalization
             }
             goto NonAscii;
 
-#if TARGET_64BIT
         NonAscii64:
             // Both values have to be non-ASCII to use the slow fallback, in case if one of them is not we return false
             if (Utf8Utility.AllBytesInUInt64AreAscii(valueAu64) || Utf8Utility.AllBytesInUInt64AreAscii(valueBu64))
             {
                 return false;
             }
-#endif
         NonAscii:
             range -= length;
 

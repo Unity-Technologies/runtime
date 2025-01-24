@@ -87,23 +87,24 @@ namespace System.Threading
         #region Int64
         [Intrinsic]
         [NonVersionable]
-        public static long Read(ref readonly long location) =>
-#if TARGET_64BIT
-            (long)Unsafe.As<long, VolatileIntPtr>(ref Unsafe.AsRef(in location)).Value;
-#else
+        public static long Read(ref readonly long location)
+        {
+            if (RuntimeHelpers.TargetIs64Bit)
+                return (long)Unsafe.As<long, VolatileIntPtr>(ref Unsafe.AsRef(in location)).Value;
             // On 32-bit machines, we use Interlocked, since an ordinary volatile read would not be atomic.
-            Interlocked.CompareExchange(ref Unsafe.AsRef(in location), 0, 0);
-#endif
+            return Interlocked.CompareExchange(ref Unsafe.AsRef(in location), 0, 0);
+        }
 
         [Intrinsic]
         [NonVersionable]
-        public static void Write(ref long location, long value) =>
-#if TARGET_64BIT
-            Unsafe.As<long, VolatileIntPtr>(ref location).Value = (nint)value;
-#else
+        public static void Write(ref long location, long value)
+        {
+            if (RuntimeHelpers.TargetIs64Bit)
+                Unsafe.As<long, VolatileIntPtr>(ref location).Value = (nint)value;
+            else
             // On 32-bit, we use Interlocked, since an ordinary volatile write would not be atomic.
-            Interlocked.Exchange(ref location, value);
-#endif
+                Interlocked.Exchange(ref location, value);
+        }
         #endregion
 
         #region IntPtr

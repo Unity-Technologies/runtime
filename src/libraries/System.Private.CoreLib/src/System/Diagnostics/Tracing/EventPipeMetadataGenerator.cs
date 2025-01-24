@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using EventMetadata = System.Diagnostics.Tracing.EventSource.EventMetadata;
 
 namespace System.Diagnostics.Tracing
@@ -660,10 +661,10 @@ namespace System.Diagnostics.Tracing
 
             // IntPtr and UIntPtr are converted to their non-pointer types.
             if (parameterType == typeof(IntPtr))
-                return IntPtr.Size == 4 ? TypeCode.Int32 : TypeCode.Int64;
+                return RuntimeHelpers.TargetIs32Bit ? TypeCode.Int32 : TypeCode.Int64;
 
             if (parameterType == typeof(UIntPtr))
-                return UIntPtr.Size == 4 ? TypeCode.UInt32 : TypeCode.UInt64;
+                return RuntimeHelpers.TargetIs32Bit ? TypeCode.UInt32 : TypeCode.UInt64;
 
             return Type.GetTypeCode(parameterType);
         }

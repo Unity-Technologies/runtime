@@ -30,11 +30,7 @@ namespace System
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         private static extern string InternalIntern(string str);
 
-#if TARGET_64BIT
-        internal const int OFFSET_TO_STRING = 20;
-#else
-        internal const int OFFSET_TO_STRING = 12;
-#endif
+        internal int OFFSET_TO_STRING => RuntimeHelpers.TargetIs64Bit ? 20 : 12;
 
         // TODO: Should be pointing to Buffer instead
         #region Runtime method-to-ir dependencies
@@ -51,22 +47,32 @@ namespace System
                 }
                 return;
             }
-#if TARGET_64BIT
-            const int word_size = 8;
-            long word_val;
-#else
-            const int word_size = 4;
-            int word_val;
-#endif
-            word_val = val;
-            if (word_val != 0)
+
+            int word_size = sizeof(void*);
+
+            long word_val_long;
+            int word_val_int;
+            Unsafe.SkipInit(out word_val_long);
+            Unsafe.SkipInit(out word_val_int);
+
+            if (RuntimeHelpers.TargetIs64Bit)
             {
-                word_val |= (word_val << 8);
-                word_val |= (word_val << 16);
-#if TARGET_64BIT
-                word_val |= (word_val << 32);
-#endif
+                word_val_long = val;
+                if (word_val_long != 0)
+                {
+                    word_val_long |= (word_val_long << 32);
+                }
             }
+            else
+            {
+                word_val_int = val;
+                if (word_val_int != 0)
+                {
+                    word_val_int |= (word_val_int << 8);
+                    word_val_int |= (word_val_int << 16);
+                }
+            }
+
             // align to word_size
             int rest = (int)dest & (word_size - 1);
             if (rest != 0)
@@ -83,25 +89,27 @@ namespace System
 
             while (len >= 16)
             {
-#if TARGET_64BIT
-                ((long*)dest)[0] = word_val;
-                ((long*)dest)[1] = word_val;
-#else
-                ((int*)dest)[0] = word_val;
-                ((int*)dest)[1] = word_val;
-                ((int*)dest)[2] = word_val;
-                ((int*)dest)[3] = word_val;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    ((long*)dest)[0] = word_val_long;
+                    ((long*)dest)[1] = word_val_long; ;
+                }
+                else
+                {
+                    ((int*)dest)[0] = word_val_int;
+                    ((int*)dest)[1] = word_val_int;
+                    ((int*)dest)[2] = word_val_int;
+                    ((int*)dest)[3] = word_val_int;
+                }
                 dest += 16;
                 len -= 16;
             }
             while (len >= word_size)
             {
-#if TARGET_64BIT
-                ((long*)dest)[0] = word_val;
-#else
-                ((int*)dest)[0] = word_val;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                    ((long*)dest)[0] = word_val_long;
+                else
+                    ((int*)dest)[0] = word_val_int;
                 dest += word_size;
                 len -= word_size;
             }

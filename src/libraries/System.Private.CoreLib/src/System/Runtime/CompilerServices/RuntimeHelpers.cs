@@ -115,5 +115,8 @@ namespace System.Runtime.CompilerServices
         [Intrinsic]
         internal static bool IsKnownConstant(int t) => false;
 #pragma warning restore IDE0060
+
+        internal static bool TargetIs64Bit => IntPtr.Size == 8;
+        internal static bool TargetIs32Bit => IntPtr.Size == 4;
     }
 }

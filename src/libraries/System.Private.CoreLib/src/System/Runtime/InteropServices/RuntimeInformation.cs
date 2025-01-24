@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Reflection;
+using System.Threading;
 
 namespace System.Runtime.InteropServices
 {
@@ -72,6 +73,8 @@ namespace System.Runtime.InteropServices
             => Architecture.Ppc64le
 #elif TARGET_RISCV64
             => (Architecture)9 // TODO-RISCV64: go though API review for RiscV64
+#elif TARGET_ARCH_INDENDENT
+            => throw new PlatformNotSupportedException();
 #else
 #error Unknown Architecture
 #endif

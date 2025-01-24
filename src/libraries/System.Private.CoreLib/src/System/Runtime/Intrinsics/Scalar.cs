@@ -397,23 +397,29 @@ namespace System.Runtime.Intrinsics
             }
             else if (typeof(T) == typeof(nint))
             {
-#if TARGET_64BIT
-                ulong bits = (ulong)(nint)(object)value;
-                return (uint)(bits >> 63);
-#else
-                uint bits = (uint)(nint)(object)value;
-                return bits >> 31;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    ulong bits = (ulong)(nint)(object)value;
+                    return (uint)(bits >> 63);
+                }
+                else
+                {
+                    uint bits = (uint)(nint)(object)value;
+                    return bits >> 31;
+                }
             }
             else if (typeof(T) == typeof(nuint))
             {
-#if TARGET_64BIT
-                ulong bits = (ulong)(nuint)(object)value;
-                return (uint)(bits >> 63);
-#else
-                uint bits = (uint)(nuint)(object)value;
-                return bits >> 31;
-#endif
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    ulong bits = (ulong)(nuint)(object)value;
+                    return (uint)(bits >> 63);
+                }
+                else
+                {
+                    uint bits = (uint)(nuint)(object)value;
+                    return bits >> 31;
+                }
             }
             else if (typeof(T) == typeof(sbyte))
             {

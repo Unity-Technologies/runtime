@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Internal;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -10,14 +11,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Versioning;
+using static System.Array;
 
 #pragma warning disable SA1121 // explicitly using type aliases instead of built-in types
-
-#if TARGET_64BIT
-using nint_t = System.Int64;
-#else
-using nint_t = System.Int32;
-#endif
 
 namespace System
 {
@@ -49,11 +45,10 @@ namespace System
         [NonVersionable]
         public IntPtr(long value)
         {
-#if TARGET_64BIT
-            _value = (nint)value;
-#else
-            _value = checked((nint)value);
-#endif
+            if (RuntimeHelpers.TargetIs64Bit)
+                _value = (nint)value;
+            else
+                _value = checked((nint)value);
         }
 
         [CLSCompliant(false)]
@@ -67,12 +62,13 @@ namespace System
         {
             long value = info.GetInt64("value");
 
-#if TARGET_32BIT
-            if ((value > int.MaxValue) || (value < int.MinValue))
+            if (RuntimeHelpers.TargetIs32Bit)
             {
-                throw new ArgumentException(SR.Serialization_InvalidPtrValue);
+                if ((value > int.MaxValue) || (value < int.MinValue))
+                {
+                    throw new ArgumentException(SR.Serialization_InvalidPtrValue);
+                }
             }
-#endif
 
             _value = (nint)value;
         }
@@ -89,22 +85,20 @@ namespace System
 
         public override int GetHashCode()
         {
-#if TARGET_64BIT
-            long value = _value;
-            return value.GetHashCode();
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+            {
+                long value = _value;
+                return value.GetHashCode();
+            }
             return (int)_value;
-#endif
         }
 
         [NonVersionable]
         public int ToInt32()
         {
-#if TARGET_64BIT
-            return checked((int)_value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return checked((int)_value);
             return (int)_value;
-#endif
         }
 
         [NonVersionable]
@@ -127,11 +121,9 @@ namespace System
         [NonVersionable]
         public static explicit operator int(nint value)
         {
-#if TARGET_64BIT
-            return checked((int)value);
-#else
+            if (RuntimeHelpers.TargetIs64Bit)
+                return checked((int)value);
             return (int)value;
-#endif
         }
 
         [NonVersionable]
@@ -155,10 +147,10 @@ namespace System
         [NonVersionable]
         public static nint operator -(nint pointer, int offset) => pointer - offset;
 
-        public static int Size
+        public static unsafe int Size
         {
             [NonVersionable]
-            get => sizeof(nint_t);
+            get => sizeof(void*);
         }
 
         [CLSCompliant(false)]
@@ -169,14 +161,14 @@ namespace System
         public static nint MaxValue
         {
             [NonVersionable]
-            get => unchecked((nint)nint_t.MaxValue);
+            get => RuntimeHelpers.TargetIs64Bit ? unchecked((nint)Int64.MaxValue) : unchecked((nint)Int32.MaxValue);
         }
 
         /// <inheritdoc cref="IMinMaxValue{TSelf}.MinValue" />
         public static nint MinValue
         {
             [NonVersionable]
-            get => unchecked((nint)nint_t.MinValue);
+            get => RuntimeHelpers.TargetIs64Bit ? unchecked((nint)Int64.MinValue) : unchecked((nint)Int32.MinValue);
         }
 
         public int CompareTo(object? value)
@@ -203,48 +195,48 @@ namespace System
         [NonVersionable]
         public bool Equals(nint other) => _value == other;
 
-        public override string ToString() => ((nint_t)_value).ToString();
-        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format) => ((nint_t)_value).ToString(format);
-        public string ToString(IFormatProvider? provider) => ((nint_t)_value).ToString(provider);
-        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format, IFormatProvider? provider) => ((nint_t)_value).ToString(format, provider);
+        public override string ToString() => RuntimeHelpers.TargetIs64Bit ? ((Int64)_value).ToString() : ((Int32)_value).ToString();
+        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format) => RuntimeHelpers.TargetIs64Bit ? ((Int64)_value).ToString(format) : ((Int32)_value).ToString(format);
+        public string ToString(IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? ((Int64)_value).ToString(provider) : ((Int32)_value).ToString(provider);
+        public string ToString([StringSyntax(StringSyntaxAttribute.NumericFormat)] string? format, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? ((Int64)_value).ToString(format, provider) : ((Int32)_value).ToString(format, provider);
 
         public bool TryFormat(Span<char> destination, out int charsWritten, [StringSyntax(StringSyntaxAttribute.NumericFormat)] ReadOnlySpan<char> format = default, IFormatProvider? provider = null) =>
-            ((nint_t)_value).TryFormat(destination, out charsWritten, format, provider);
+            RuntimeHelpers.TargetIs64Bit ?((Int64)_value).TryFormat(destination, out charsWritten, format, provider): ((Int32)_value).TryFormat(destination, out charsWritten, format, provider);
 
         /// <inheritdoc cref="IUtf8SpanFormattable.TryFormat" />
         public bool TryFormat(Span<byte> utf8Destination, out int bytesWritten, [StringSyntax(StringSyntaxAttribute.NumericFormat)] ReadOnlySpan<char> format = default, IFormatProvider? provider = null) =>
-            ((nint_t)_value).TryFormat(utf8Destination, out bytesWritten, format, provider);
+            RuntimeHelpers.TargetIs64Bit ? ((Int64)_value).TryFormat(utf8Destination, out bytesWritten, format, provider): ((Int32)_value).TryFormat(utf8Destination, out bytesWritten, format, provider);
 
-        public static nint Parse(string s) => (nint)nint_t.Parse(s);
-        public static nint Parse(string s, NumberStyles style) => (nint)nint_t.Parse(s, style);
-        public static nint Parse(string s, IFormatProvider? provider) => (nint)nint_t.Parse(s, provider);
-        public static nint Parse(string s, NumberStyles style, IFormatProvider? provider) => (nint)nint_t.Parse(s, style, provider);
-        public static nint Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => (nint)nint_t.Parse(s, provider);
-        public static nint Parse(ReadOnlySpan<char> s, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => (nint)nint_t.Parse(s, style, provider);
+        public static nint Parse(string s) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s) : (nint)Int32.Parse(s);
+        public static nint Parse(string s, NumberStyles style) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s, style) : (nint)Int32.Parse(s, style);
+        public static nint Parse(string s, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s, provider) : (nint)Int32.Parse(s, provider);
+        public static nint Parse(string s, NumberStyles style, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s, style, provider) : (nint)Int32.Parse(s, style, provider);
+        public static nint Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s, provider) : (nint)Int32.Parse(s, provider);
+        public static nint Parse(ReadOnlySpan<char> s, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(s, style, provider) : (nint)Int32.Parse(s, style, provider);
 
         public static bool TryParse([NotNullWhen(true)] string? s, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, out Unsafe.As<nint, Int32>(ref result));
         }
 
         /// <inheritdoc cref="IParsable{TSelf}.TryParse(string?, IFormatProvider?, out TSelf)" />
         public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, provider, out Unsafe.As<nint, Int32>(ref result));
         }
 
         public static bool TryParse([NotNullWhen(true)] string? s, NumberStyles style, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, style, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, style, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, style, provider, out Unsafe.As<nint, Int32>(ref result));
         }
 
         public static bool TryParse(ReadOnlySpan<char> s, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, out Unsafe.As<nint, Int32>(ref result));
         }
 
         /// <summary>Tries to convert a UTF-8 character span containing the string representation of a number to its signed integer equivalent.</summary>
@@ -254,7 +246,7 @@ namespace System
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(utf8Text, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(utf8Text, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(utf8Text, out Unsafe.As<nint, Int32>(ref result));
         }
 
         /// <summary>Tries to parse a string into a value.</summary>
@@ -265,13 +257,13 @@ namespace System
         public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, provider, out Unsafe.As<nint, Int32>(ref result));
         }
 
         public static bool TryParse(ReadOnlySpan<char> s, NumberStyles style, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(s, style, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(s, style, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(s, style, provider, out Unsafe.As<nint, Int32>(ref result));
         }
 
         //
@@ -333,7 +325,7 @@ namespace System
                 // We need to also track if the input data is unsigned
                 isUnsigned |= (sign == 0);
 
-                if (isUnsigned && sbyte.IsNegative(sign) && (source.Length >= sizeof(nint_t)))
+                if (isUnsigned && sbyte.IsNegative(sign) && (source.Length >= Size))
                 {
                     // When we are unsigned and the most significant bit is set, we are a large positive
                     // and therefore definitely out of range
@@ -342,9 +334,9 @@ namespace System
                     return false;
                 }
 
-                if (source.Length > sizeof(nint_t))
+                if (source.Length > Size)
                 {
-                    if (source[..^sizeof(nint_t)].ContainsAnyExcept((byte)sign))
+                    if (source[..^Size].ContainsAnyExcept((byte)sign))
                     {
                         // When we are unsigned and have any non-zero leading data or signed with any non-set leading
                         // data, we are a large positive/negative, respectively, and therefore definitely out of range
@@ -353,7 +345,7 @@ namespace System
                         return false;
                     }
 
-                    if (isUnsigned == sbyte.IsNegative((sbyte)source[^sizeof(nint_t)]))
+                    if (isUnsigned == sbyte.IsNegative((sbyte)source[^Size]))
                     {
                         // When the most significant bit of the value being set/clear matches whether we are unsigned
                         // or signed then we are a large positive/negative and therefore definitely out of range
@@ -365,9 +357,9 @@ namespace System
 
                 ref byte sourceRef = ref MemoryMarshal.GetReference(source);
 
-                if (source.Length >= sizeof(nint_t))
+                if (source.Length >= Size)
                 {
-                    sourceRef = ref Unsafe.Add(ref sourceRef, source.Length - sizeof(nint_t));
+                    sourceRef = ref Unsafe.Add(ref sourceRef, source.Length - Size);
 
                     // We have at least 4/8 bytes, so just read the ones we need directly
                     result = Unsafe.ReadUnaligned<nint>(ref sourceRef);
@@ -391,7 +383,7 @@ namespace System
 
                     if (!isUnsigned)
                     {
-                        result |= (((nint)1 << ((sizeof(nint_t) * 8) - 1)) >> (((sizeof(nint_t) - source.Length) * 8) - 1));
+                        result |= (((nint)1 << ((Size * 8) - 1)) >> (((Size - source.Length) * 8) - 1));
                     }
                 }
             }
@@ -415,7 +407,7 @@ namespace System
                 // We need to also track if the input data is unsigned
                 isUnsigned |= (sign == 0);
 
-                if (isUnsigned && sbyte.IsNegative(sign) && (source.Length >= sizeof(nint_t)))
+                if (isUnsigned && sbyte.IsNegative(sign) && (source.Length >= Size))
                 {
                     // When we are unsigned and the most significant bit is set, we are a large positive
                     // and therefore definitely out of range
@@ -424,9 +416,9 @@ namespace System
                     return false;
                 }
 
-                if (source.Length > sizeof(nint_t))
+                if (source.Length > Size)
                 {
-                    if (source[sizeof(nint_t)..].ContainsAnyExcept((byte)sign))
+                    if (source[Size..].ContainsAnyExcept((byte)sign))
                     {
                         // When we are unsigned and have any non-zero leading data or signed with any non-set leading
                         // data, we are a large positive/negative, respectively, and therefore definitely out of range
@@ -435,7 +427,7 @@ namespace System
                         return false;
                     }
 
-                    if (isUnsigned == sbyte.IsNegative((sbyte)source[sizeof(nint_t) - 1]))
+                    if (isUnsigned == sbyte.IsNegative((sbyte)source[Size - 1]))
                     {
                         // When the most significant bit of the value being set/clear matches whether we are unsigned
                         // or signed then we are a large positive/negative and therefore definitely out of range
@@ -447,7 +439,7 @@ namespace System
 
                 ref byte sourceRef = ref MemoryMarshal.GetReference(source);
 
-                if (source.Length >= sizeof(nint_t))
+                if (source.Length >= Size)
                 {
                     // We have at least 4/8 bytes, so just read the ones we need directly
                     result = Unsafe.ReadUnaligned<nint>(ref sourceRef);
@@ -471,12 +463,12 @@ namespace System
                         result |= Unsafe.Add(ref sourceRef, i);
                     }
 
-                    result <<= ((sizeof(nint_t) - source.Length) * 8);
+                    result <<= ((Size - source.Length) * 8);
                     result = BinaryPrimitives.ReverseEndianness(result);
 
                     if (!isUnsigned)
                     {
-                        result |= (((nint)1 << ((sizeof(nint_t) * 8) - 1)) >> (((sizeof(nint_t) - source.Length) * 8) - 1));
+                        result |= (((nint)1 << ((Size * 8) - 1)) >> (((Size - source.Length) * 8) - 1));
                     }
                 }
             }
@@ -492,31 +484,45 @@ namespace System
 
             if (value >= 0)
             {
-                return (sizeof(nint_t) * 8) - BitOperations.LeadingZeroCount((nuint)value);
+                return (Size * 8) - BitOperations.LeadingZeroCount((nuint)value);
             }
             else
             {
-                return (sizeof(nint_t) * 8) + 1 - BitOperations.LeadingZeroCount((nuint)(~value));
+                return (Size * 8) + 1 - BitOperations.LeadingZeroCount((nuint)(~value));
             }
         }
 
         /// <inheritdoc cref="IBinaryInteger{TSelf}.GetByteCount()" />
-        int IBinaryInteger<nint>.GetByteCount() => sizeof(nint_t);
+        int IBinaryInteger<nint>.GetByteCount() => Size;
 
         /// <inheritdoc cref="IBinaryInteger{TSelf}.TryWriteBigEndian(Span{byte}, out int)" />
         bool IBinaryInteger<nint>.TryWriteBigEndian(Span<byte> destination, out int bytesWritten)
         {
-            if (destination.Length >= sizeof(nint_t))
+            if (destination.Length >= Size)
             {
-                nint_t value = (nint_t)_value;
-
-                if (BitConverter.IsLittleEndian)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    value = BinaryPrimitives.ReverseEndianness(value);
-                }
-                Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                    Int64 value = (Int64)_value;
 
-                bytesWritten = sizeof(nint_t);
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+                else
+                {
+                    Int32 value = (Int32)_value;
+
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+
+                }
+
+                bytesWritten = Size;
                 return true;
             }
             else
@@ -529,17 +535,30 @@ namespace System
         /// <inheritdoc cref="IBinaryInteger{TSelf}.TryWriteLittleEndian(Span{byte}, out int)" />
         bool IBinaryInteger<nint>.TryWriteLittleEndian(Span<byte> destination, out int bytesWritten)
         {
-            if (destination.Length >= sizeof(nint_t))
+            if (destination.Length >= Size)
             {
-                nint_t value = (nint_t)_value;
-
-                if (!BitConverter.IsLittleEndian)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    value = BinaryPrimitives.ReverseEndianness(value);
-                }
-                Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                    Int64 value = (Int64)_value;
 
-                bytesWritten = sizeof(nint_t);
+                    if (!BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+                else
+                {
+                    Int32 value = (Int32)_value;
+
+                    if (!BitConverter.IsLittleEndian)
+                    {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), value);
+                }
+
+                bytesWritten = Size;
                 return true;
             }
             else
@@ -1011,15 +1030,15 @@ namespace System
             if (typeof(TOther) == typeof(double))
             {
                 double actualValue = (double)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(Half))
             {
                 Half actualValue = (Half)(object)value;
-                result = (actualValue == Half.PositiveInfinity) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue == Half.NegativeInfinity) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue == Half.PositiveInfinity) ? unchecked(MaxValue) :
+                         (actualValue == Half.NegativeInfinity) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(short))
@@ -1037,15 +1056,15 @@ namespace System
             else if (typeof(TOther) == typeof(long))
             {
                 long actualValue = (long)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(Int128))
             {
                 Int128 actualValue = (Int128)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(sbyte))
@@ -1057,8 +1076,8 @@ namespace System
             else if (typeof(TOther) == typeof(float))
             {
                 float actualValue = (float)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else
@@ -1088,15 +1107,15 @@ namespace System
             if (typeof(TOther) == typeof(double))
             {
                 double actualValue = (double)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(Half))
             {
                 Half actualValue = (Half)(object)value;
-                result = (actualValue == Half.PositiveInfinity) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue == Half.NegativeInfinity) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue == Half.PositiveInfinity) ? unchecked(MaxValue) :
+                         (actualValue == Half.NegativeInfinity) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else if (typeof(TOther) == typeof(short))
@@ -1132,8 +1151,8 @@ namespace System
             else if (typeof(TOther) == typeof(float))
             {
                 float actualValue = (float)(object)value;
-                result = (actualValue >= nint_t.MaxValue) ? unchecked((nint)nint_t.MaxValue) :
-                         (actualValue <= nint_t.MinValue) ? unchecked((nint)nint_t.MinValue) : (nint)actualValue;
+                result = (actualValue >= MaxValue) ? unchecked(MaxValue) :
+                         (actualValue <= MinValue) ? unchecked(MinValue) : (nint)actualValue;
                 return true;
             }
             else
@@ -1403,23 +1422,23 @@ namespace System
         //
 
         /// <inheritdoc cref="INumberBase{TSelf}.Parse(ReadOnlySpan{byte}, NumberStyles, IFormatProvider?)" />
-        public static nint Parse(ReadOnlySpan<byte> utf8Text, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => (nint)nint_t.Parse(utf8Text, style, provider);
+        public static nint Parse(ReadOnlySpan<byte> utf8Text, NumberStyles style = NumberStyles.Integer, IFormatProvider? provider = null) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(utf8Text, style, provider) :(nint)Int32.Parse(utf8Text, style, provider);
 
         /// <inheritdoc cref="INumberBase{TSelf}.TryParse(ReadOnlySpan{byte}, NumberStyles, IFormatProvider?, out TSelf)" />
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, NumberStyles style, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(utf8Text, style, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(utf8Text, style, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(utf8Text, style, provider, out Unsafe.As<nint, Int32>(ref result));
         }
 
         /// <inheritdoc cref="IUtf8SpanParsable{TSelf}.Parse(ReadOnlySpan{byte}, IFormatProvider?)" />
-        public static nint Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) => (nint)nint_t.Parse(utf8Text, provider);
+        public static nint Parse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider) => RuntimeHelpers.TargetIs64Bit ? (nint)Int64.Parse(utf8Text, provider) : (nint)Int32.Parse(utf8Text, provider);
 
         /// <inheritdoc cref="IUtf8SpanParsable{TSelf}.TryParse(ReadOnlySpan{byte}, IFormatProvider?, out TSelf)" />
         public static bool TryParse(ReadOnlySpan<byte> utf8Text, IFormatProvider? provider, out nint result)
         {
             Unsafe.SkipInit(out result);
-            return nint_t.TryParse(utf8Text, provider, out Unsafe.As<nint, nint_t>(ref result));
+            return RuntimeHelpers.TargetIs64Bit ? Int64.TryParse(utf8Text, provider, out Unsafe.As<nint, Int64>(ref result)) : Int32.TryParse(utf8Text, provider, out Unsafe.As<nint, Int32>(ref result));
         }
     }
 }

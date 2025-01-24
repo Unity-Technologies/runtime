@@ -235,67 +235,71 @@ namespace System
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static bool Div96ByConst(ref ulong high64, ref uint low, uint pow)
             {
-#if TARGET_64BIT
-                ulong div64 = high64 / pow;
-                uint div = (uint)((((high64 - div64 * pow) << 32) + low) / pow);
-                if (low == div * pow)
+                if (RuntimeHelpers.TargetIs64Bit)
                 {
-                    high64 = div64;
-                    low = div;
-                    return true;
-                }
-#else
-                // 32-bit RyuJIT doesn't convert 64-bit division by constant into multiplication by reciprocal. Do half-width divisions instead.
-                Debug.Assert(pow <= ushort.MaxValue);
-                uint num, mid32, low16, div;
-                if (high64 <= uint.MaxValue)
-                {
-                    num = (uint)high64;
-                    mid32 = num / pow;
-                    num = (num - mid32 * pow) << 16;
-
-                    num += low >> 16;
-                    low16 = num / pow;
-                    num = (num - low16 * pow) << 16;
-
-                    num += (ushort)low;
-                    div = num / pow;
-                    if (num == div * pow)
+                    ulong div64 = high64 / pow;
+                    uint div = (uint)((((high64 - div64 * pow) << 32) + low) / pow);
+                    if (low == div * pow)
                     {
-                        high64 = mid32;
-                        low = (low16 << 16) + div;
+                        high64 = div64;
+                        low = div;
                         return true;
                     }
                 }
                 else
                 {
-                    num = (uint)(high64 >> 32);
-                    uint high32 = num / pow;
-                    num = (num - high32 * pow) << 16;
 
-                    num += (uint)high64 >> 16;
-                    mid32 = num / pow;
-                    num = (num - mid32 * pow) << 16;
-
-                    num += (ushort)high64;
-                    div = num / pow;
-                    num = (num - div * pow) << 16;
-                    mid32 = div + (mid32 << 16);
-
-                    num += low >> 16;
-                    low16 = num / pow;
-                    num = (num - low16 * pow) << 16;
-
-                    num += (ushort)low;
-                    div = num / pow;
-                    if (num == div * pow)
+                    // 32-bit RyuJIT doesn't convert 64-bit division by constant into multiplication by reciprocal. Do half-width divisions instead.
+                    Debug.Assert(pow <= ushort.MaxValue);
+                    uint num, mid32, low16, div;
+                    if (high64 <= uint.MaxValue)
                     {
-                        high64 = ((ulong)high32 << 32) | mid32;
-                        low = (low16 << 16) + div;
-                        return true;
+                        num = (uint)high64;
+                        mid32 = num / pow;
+                        num = (num - mid32 * pow) << 16;
+
+                        num += low >> 16;
+                        low16 = num / pow;
+                        num = (num - low16 * pow) << 16;
+
+                        num += (ushort)low;
+                        div = num / pow;
+                        if (num == div * pow)
+                        {
+                            high64 = mid32;
+                            low = (low16 << 16) + div;
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        num = (uint)(high64 >> 32);
+                        uint high32 = num / pow;
+                        num = (num - high32 * pow) << 16;
+
+                        num += (uint)high64 >> 16;
+                        mid32 = num / pow;
+                        num = (num - mid32 * pow) << 16;
+
+                        num += (ushort)high64;
+                        div = num / pow;
+                        num = (num - div * pow) << 16;
+                        mid32 = div + (mid32 << 16);
+
+                        num += low >> 16;
+                        low16 = num / pow;
+                        num = (num - low16 * pow) << 16;
+
+                        num += (ushort)low;
+                        div = num / pow;
+                        if (num == div * pow)
+                        {
+                            high64 = ((ulong)high32 << 32) | mid32;
+                            low = (low16 << 16) + div;
+                            return true;
+                        }
                     }
                 }
-#endif
                 return false;
             }
 
@@ -309,16 +313,19 @@ namespace System
                 // Since 10 = 2 * 5, there must be a factor of 2 for every power of 10 we can extract.
                 // We use this as a quick test on whether to try a given power.
 
-#if TARGET_64BIT
-                while ((byte)low == 0 && scale >= 8 && Div96ByConst(ref high64, ref low, 100000000))
-                    scale -= 8;
+                if (RuntimeHelpers.TargetIs64Bit)
+                {
+                    while ((byte)low == 0 && scale >= 8 && Div96ByConst(ref high64, ref low, 100000000))
+                        scale -= 8;
 
-                if ((low & 0xF) == 0 && scale >= 4 && Div96ByConst(ref high64, ref low, 10000))
-                    scale -= 4;
-#else
-                while ((low & 0xF) == 0 && scale >= 4 && Div96ByConst(ref high64, ref low, 10000))
-                    scale -= 4;
-#endif
+                    if ((low & 0xF) == 0 && scale >= 4 && Div96ByConst(ref high64, ref low, 10000))
+                        scale -= 4;
+                }
+                else
+                {
+                    while ((low & 0xF) == 0 && scale >= 4 && Div96ByConst(ref high64, ref low, 10000))
+                        scale -= 4;
+                }
 
                 if ((low & 3) == 0 && scale >= 2 && Div96ByConst(ref high64, ref low, 100))
                     scale -= 2;
@@ -599,26 +606,26 @@ PosRem:
                             case 4:
                                 power = DivByConst(result, hiRes, out quotient, out remainder, 10000);
                                 break;
-#if TARGET_64BIT
                             case 5:
+                                if (RuntimeHelpers.TargetIs32Bit) goto case 4;
                                 power = DivByConst(result, hiRes, out quotient, out remainder, 100000);
                                 break;
                             case 6:
+                                if (RuntimeHelpers.TargetIs32Bit) goto case 4;
                                 power = DivByConst(result, hiRes, out quotient, out remainder, 1000000);
                                 break;
                             case 7:
+                                if (RuntimeHelpers.TargetIs32Bit) goto case 4;
                                 power = DivByConst(result, hiRes, out quotient, out remainder, 10000000);
                                 break;
                             case 8:
+                                if (RuntimeHelpers.TargetIs32Bit) goto case 4;
                                 power = DivByConst(result, hiRes, out quotient, out remainder, 100000000);
                                 break;
                             default:
+                                if (RuntimeHelpers.TargetIs32Bit) goto case 4;
                                 power = DivByConst(result, hiRes, out quotient, out remainder, TenToPowerNine);
                                 break;
-#else
-                            default:
-                                goto case 4;
-#endif
                         }
                         result[hiRes] = quotient;
                         // If first quotient was 0, update hiRes.
@@ -626,11 +633,10 @@ PosRem:
                         if (quotient == 0 && hiRes != 0)
                             hiRes--;
 
-#if TARGET_64BIT
-                        newScale -= MaxInt32Scale;
-#else
-                        newScale -= 4;
-#endif
+                        if (RuntimeHelpers.TargetIs64Bit)
+                            newScale -= MaxInt32Scale;
+                        else
+                            newScale -= 4;
                         if (newScale > 0)
                             continue; // scale some more
 
@@ -692,28 +698,31 @@ ThrowOverflow:
                 remainder = high - (quotient = high / power) * power;
                 for (uint i = hiRes - 1; (int)i >= 0; i--)
                 {
-#if TARGET_64BIT
-                    ulong num = result[i] + ((ulong)remainder << 32);
-                    remainder = (uint)num - (result[i] = (uint)(num / power)) * power;
-#else
-                    // 32-bit RyuJIT doesn't convert 64-bit division by constant into multiplication by reciprocal. Do half-width divisions instead.
-                    Debug.Assert(power <= ushort.MaxValue);
+                    if (RuntimeHelpers.TargetIs64Bit)
+                    {
+                        ulong num = result[i] + ((ulong)remainder << 32);
+                        remainder = (uint)num - (result[i] = (uint)(num / power)) * power;
+                    }
+                    else
+                    {
+                        // 32-bit RyuJIT doesn't convert 64-bit division by constant into multiplication by reciprocal. Do half-width divisions instead.
+                        Debug.Assert(power <= ushort.MaxValue);
 #if BIGENDIAN
-                    const int low16 = 2, high16 = 0;
+                        const int low16 = 2, high16 = 0;
 #else
-                    const int low16 = 0, high16 = 2;
+                        const int low16 = 0, high16 = 2;
 #endif
-                    // byte* is used here because Roslyn doesn't do constant propagation for pointer arithmetic
-                    uint num = *(ushort*)((byte*)result + i * 4 + high16) + (remainder << 16);
-                    uint div = num / power;
-                    remainder = num - div * power;
-                    *(ushort*)((byte*)result + i * 4 + high16) = (ushort)div;
+                        // byte* is used here because Roslyn doesn't do constant propagation for pointer arithmetic
+                        uint num = *(ushort*)((byte*)result + i * 4 + high16) + (remainder << 16);
+                        uint div = num / power;
+                        remainder = num - div * power;
+                        *(ushort*)((byte*)result + i * 4 + high16) = (ushort)div;
 
-                    num = *(ushort*)((byte*)result + i * 4 + low16) + (remainder << 16);
-                    div = num / power;
-                    remainder = num - div * power;
-                    *(ushort*)((byte*)result + i * 4 + low16) = (ushort)div;
-#endif
+                        num = *(ushort*)((byte*)result + i * 4 + low16) + (remainder << 16);
+                        div = num / power;
+                        remainder = num - div * power;
+                        *(ushort*)((byte*)result + i * 4 + low16) = (ushort)div;
+                    }
                 }
                 return power;
             }

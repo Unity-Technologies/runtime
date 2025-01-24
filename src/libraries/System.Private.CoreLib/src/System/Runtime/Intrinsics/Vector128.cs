@@ -34,11 +34,7 @@ namespace System.Runtime.Intrinsics
     {
         internal const int Size = 16;
 
-#if TARGET_ARM
-        internal const int Alignment = 8;
-#else
-        internal const int Alignment = 16;
-#endif
+        internal static nuint Alignment => RuntimeInformation.OSArchitecture == Architecture.Arm ? (nuint)8 : (nuint)16;
 
         /// <summary>Gets a value that indicates whether 128-bit vector operations are subject to hardware acceleration through JIT intrinsic support.</summary>
         /// <value><see langword="true" /> if 128-bit vector operations are subject to hardware acceleration; otherwise, <see langword="false" />.</value>
