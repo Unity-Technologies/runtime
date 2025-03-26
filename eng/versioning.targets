@@ -84,6 +84,7 @@
     <SupportedPlatform Condition="'$(TargetPlatformIdentifier)' == 'illumos'" Include="illumos" />
     <SupportedPlatform Condition="'$(TargetPlatformIdentifier)' == 'solaris'" Include="Solaris" />
     <SupportedPlatform Condition="'$(TargetPlatformIdentifier)' == 'haiku'" Include="Haiku" />
+    <SupportedPlatform Condition="'$(TargetPlatformIdentifier)' == 'unity'" Include="Unity" />
     <SupportedPlatform Condition="'$(TargetPlatformIdentifier)' != '' and
                                   '$(TargetPlatformIdentifier)' != 'browser' and
                                   '$(TargetPlatformIdentifier)' != 'wasi' and
