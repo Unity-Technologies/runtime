@@ -761,8 +761,10 @@ extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_class_get_
     if (pAssembly == NULL)
         return NULL;
 
+    // Use binder to get access to the managed AssemblyLoadContext handle.
+    // Note that the binder may be NULL if the assembly is being unloaded.
     AssemblyBinder* pAssemblyBinder = pAssembly->GetPEAssembly()->GetAssemblyBinder();
-    if (pAssemblyBinder->IsDefault())
+    if (pAssemblyBinder == NULL || pAssemblyBinder->IsDefault())
         return NULL;
 
     // ManagedAssemblyLoadContext is a handle to the managed AssemblyLoadContext object
@@ -777,32 +779,47 @@ extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_get_manage
     if (pAssembly == NULL)
         return NULL;
 
+    // Use binder to get access to the managed AssemblyLoadContext handle.
+    // Note that the binder may be NULL if the assembly is being unloaded.
     AssemblyBinder* pAssemblyBinder = pAssembly->GetPEAssembly()->GetAssemblyBinder();
-    if (pAssemblyBinder->IsDefault())
+    if (pAssemblyBinder == NULL || pAssemblyBinder->IsDefault())
         return NULL;
 
     // ManagedAssemblyLoadContext is a handle to the managed AssemblyLoadContext object
     return (ObjectHandleID)pAssemblyBinder->GetManagedAssemblyLoadContext();
 }
 
-extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_assembly_load_context_get_loader_allocator_handle(ObjectID assemblyLoadContextObjectID)
+// Return the AssemblyLoadContext handle for the given LoaderAllocator checking whether or not LoaderAllocator is still alive.
+// LoaderAllocator is the main object that tracks AssemblyLoadContext liveness as AssemblyLoadContext is a simple wrapper around a native 
+// reference to LoaderAllocator.
+extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_loader_allocator_get_assembly_load_context_handle(void* nativeLoaderAllocator)
 {
     STATIC_CONTRACT_NOTHROW;
 
-    ASSEMBLYLOADCONTEXTREF pAssemblyLoadContext = (ASSEMBLYLOADCONTEXTREF)assemblyLoadContextObjectID;
-    if (pAssemblyLoadContext == NULL)
-        return NULL;
-
-    AssemblyBinder* pAssemblyBinder = (AssemblyBinder*)pAssemblyLoadContext->GetNativeAssemblyBinder();
-    if (pAssemblyBinder == NULL)
-        return NULL;
-
-    LoaderAllocator* loaderAllocator = pAssemblyBinder->GetLoaderAllocator();
+    LoaderAllocator* loaderAllocator = (LoaderAllocator*)nativeLoaderAllocator;
     if (loaderAllocator == NULL)
         return NULL;
 
+    // If it is already unloaded there is no need to return the handle
+    if (loaderAllocator->IsUnloaded())
+        return NULL;
+
+    // Ensure that the LoaderAllocator is AssemblyLoaderAllocator
+    LoaderAllocatorID* loaderAllocatorID = loaderAllocator->Id();
+    if (loaderAllocatorID == NULL)
+        return NULL;
+
+    if (loaderAllocatorID->GetType() != LAT_Assembly)
+        return NULL;
+
+    // Use binder to get access to the managed AssemblyLoadContext handle
+    AssemblyLoaderAllocator* assemblyLoaderAllocator = (AssemblyLoaderAllocator*)loaderAllocator;
+    AssemblyBinder* pAssemblyBinder = assemblyLoaderAllocator->GetBinder();
+    if (pAssemblyBinder == NULL)
+        return NULL;
+
     // ManagedAssemblyLoadContext is a handle to the managed AssemblyLoadContext object
-    return (ObjectHandleID)loaderAllocator->GetLoaderAllocatorObjectHandle();
+    return (ObjectHandleID)pAssemblyBinder->GetManagedAssemblyLoadContext();
 }
 
 extern "C" EXPORT_API gboolean EXPORT_CC coreclr_unity_gc_concurrent_mode(gboolean state)
