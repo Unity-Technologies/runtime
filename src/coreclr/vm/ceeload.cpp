@@ -1957,7 +1957,9 @@ void Module::FreeClassTables()
 
         if (pMT != NULL && pMT->IsRestored())
         {
+            EEClass::NotifyUnload(pMT, true);
             pMT->GetClass()->Destruct(pMT);
+            EEClass::NotifyUnload(pMT, false);
         }
     }
 
@@ -1973,17 +1975,25 @@ void Module::FreeClassTables()
             {
                 TypeHandle th = pEntry->GetTypeHandle();
 
+                // If class is not fully loaded there is nothing to destroy or notify about
                 if (!th.IsRestored())
                     continue;
+                
+                // Type desc is handled differently
+                if (th.IsTypeDesc())
+                    continue;
+
+                MethodTable * pMT = th.AsMethodTable();
+                EEClass::NotifyUnload(pMT, true);
 
                 // We need to call destruct on instances of EEClass whose "canonical" dependent lives in this table
                 // There is nothing interesting to destruct on array EEClass
-                if (!th.IsTypeDesc())
+                if (pMT->IsCanonicalMethodTable())
                 {
-                    MethodTable * pMT = th.AsMethodTable();
-                    if (pMT->IsCanonicalMethodTable())
-                        pMT->GetClass()->Destruct(pMT);
+                    pMT->GetClass()->Destruct(pMT);
                 }
+
+                EEClass::NotifyUnload(pMT, false);
             }
         }
     }

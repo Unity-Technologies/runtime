@@ -4,6 +4,7 @@ project(Profiler)
 
 set(SOURCES
     assemblyprofiler/assemblyprofiler.cpp
+    classload/classload.cpp
     eltprofiler/slowpatheltprofiler.cpp
     eventpipeprofiler/eventpipereadingprofiler.cpp
     eventpipeprofiler/eventpipewritingprofiler.cpp

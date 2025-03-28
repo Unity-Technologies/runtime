@@ -20,6 +20,7 @@
 #include "inlining/inlining.h"
 #include "moduleload/moduleload.h"
 #include "assemblyprofiler/assemblyprofiler.h"
+#include "classload/classload.h"
 
 ClassFactory::ClassFactory(REFCLSID clsid) : refCount(0), clsid(clsid)
 {
@@ -138,6 +139,10 @@ HRESULT STDMETHODCALLTYPE ClassFactory::CreateInstance(IUnknown *pUnkOuter, REFI
     else if (clsid == AssemblyProfiler::GetClsid())
     {
         profiler = new AssemblyProfiler();
+    }
+    else if (clsid == ClassLoad::GetClsid())
+    {
+        profiler = new ClassLoad();
     }
     else
     {
