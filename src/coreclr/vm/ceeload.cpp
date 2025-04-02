@@ -1957,9 +1957,9 @@ void Module::FreeClassTables()
 
         if (pMT != NULL && pMT->IsRestored())
         {
-            EEClass::NotifyUnload(pMT, true);
-            pMT->GetClass()->Destruct(pMT);
-            EEClass::NotifyUnload(pMT, false);
+            ClassLoader::NotifyUnload(pMT, true);
+            pMT->GetClass()->Destruct();
+            ClassLoader::NotifyUnload(pMT, false);
         }
     }
 
@@ -1980,15 +1980,15 @@ void Module::FreeClassTables()
                     continue;
 
                 MethodTable * pMT = th.AsMethodTable();
-                EEClass::NotifyUnload(pMT, true);
+                ClassLoader::NotifyUnload(pMT, true);
 
                 // We need to call destruct on instances of EEClass whose "canonical" dependent lives in this table
                 if (pMT->IsCanonicalMethodTable())
                 {
-                    pMT->GetClass()->Destruct(pMT);
+                    pMT->GetClass()->Destruct();
                 }
 
-                EEClass::NotifyUnload(pMT, false);
+                ClassLoader::NotifyUnload(pMT, false);
             }
         }
     }
