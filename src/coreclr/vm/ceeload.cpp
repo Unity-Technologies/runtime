@@ -1975,11 +1975,7 @@ void Module::FreeClassTables()
             {
                 TypeHandle th = pEntry->GetTypeHandle();
 
-                // If class is not fully loaded there is nothing to destroy or notify about
-                if (!th.IsRestored())
-                    continue;
-                
-                // Type desc is handled differently
+                // Array EEClass doesn't need notification and there is no work for Destruct()
                 if (th.IsTypeDesc())
                     continue;
 
@@ -1987,7 +1983,6 @@ void Module::FreeClassTables()
                 EEClass::NotifyUnload(pMT, true);
 
                 // We need to call destruct on instances of EEClass whose "canonical" dependent lives in this table
-                // There is nothing interesting to destruct on array EEClass
                 if (pMT->IsCanonicalMethodTable())
                 {
                     pMT->GetClass()->Destruct(pMT);
