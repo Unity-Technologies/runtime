@@ -705,8 +705,7 @@ void DacDbiInterfaceImpl::GetCompilerFlags (
 
     // Get the underlying module - none of this is AppDomain specific
     Module * pModule = pDomainAssembly->GetModule();
-    DWORD dwBits = pModule->GetDebuggerInfoBits();
-    *pfAllowJITOpts = !CORDisableJITOptimizations(dwBits);
+    *pfAllowJITOpts = !pModule->AreJITOptimizationsDisabled();
     *pfEnableEnC = pModule->IsEditAndContinueEnabled();
 
 
@@ -7424,7 +7423,7 @@ HRESULT DacDbiInterfaceImpl::AreOptimizationsDisabled(VMPTR_Module vmModule, mdM
 #else
     pOptimizationsDisabled->SetDacTargetPtr(0);
 #endif
-    
+
     return S_OK;
 }
 

@@ -511,8 +511,6 @@ class DebuggerModule
 
     AppDomain*     m_pAppDomain;
 
-    bool m_fHasOptimizedCode;
-
     void PickPrimaryModule();
 
     // Can we change jit flags on the module?

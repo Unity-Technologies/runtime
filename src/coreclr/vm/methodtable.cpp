@@ -5227,6 +5227,7 @@ void MethodTable::DoFullyLoad(Generics::RecursionGraph * const pVisited,  const 
         ClassLoader::ValidateMethodsWithCovariantReturnTypes(this);
     }
 
+
     if (IsArray())
     {
         Generics::RecursionGraph newVisited(pVisited, TypeHandle(this));

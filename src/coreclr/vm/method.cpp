@@ -2994,7 +2994,7 @@ bool MethodDesc::DetermineIsEligibleForTieredCompilationInvariantForAllMethodsIn
 #ifndef FEATURE_CODE_VERSIONING
     #error Tiered compilation requires code versioning
 #endif
-    return 
+    return
         // Policy
         g_pConfig->TieredCompilation() &&
 
@@ -3074,7 +3074,7 @@ bool MethodDesc::IsJitOptimizationDisabledForAllMethodsInChunk()
 #ifdef _DEBUG
         g_pConfig->GenDebuggableCode() ||
 #endif
-        CORDisableJITOptimizations(GetModule()->GetDebuggerInfoBits());
+        GetModule()->AreJITOptimizationsDisabled();
 }
 
 #ifndef DACCESS_COMPILE
