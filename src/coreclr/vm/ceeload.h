@@ -632,12 +632,13 @@ private:
         IS_PROFILER_NOTIFIED        = 0x00000010,
         IS_ETW_NOTIFIED             = 0x00000020,
 
+        PROF_DISABLE_OPTIMIZATIONS  = 0x00000080,   // indicates if Profiler disabled JIT optimization event mask was set when loaded
+        PROF_DISABLE_INLINING       = 0x00000100,   // indicates if Profiler disabled JIT Inlining event mask was set when loaded
+
         //
-        // Note: the order of these must match the order defined in
-        // cordbpriv.h for DebuggerAssemblyControlFlags. The three
-        // values below should match the values defined in
-        // DebuggerAssemblyControlFlags when shifted right
-        // DEBUGGER_INFO_SHIFT bits.
+        // Note: The values below must match the ones defined in
+        // cordbpriv.h for DebuggerAssemblyControlFlags when shifted
+        // right DEBUGGER_INFO_SHIFT bits.
         //
         DEBUGGER_USER_OVERRIDE_PRIV = 0x00000400,
         DEBUGGER_ALLOW_JIT_OPTS_PRIV= 0x00000800,
@@ -948,6 +949,39 @@ protected:
         SUPPORTS_DAC;
         _ASSERTE((m_dwTransientFlags & IS_EDIT_AND_CONTINUE) == 0 || IsEditAndContinueCapable());
         return (m_dwTransientFlags & IS_EDIT_AND_CONTINUE) != 0;
+    }
+
+    BOOL IsInliningDisabledByProfiler() const
+    {
+        WRAPPER_NO_CONTRACT;
+        SUPPORTS_DAC;
+
+        return (m_dwTransientFlags & PROF_DISABLE_INLINING) != 0;
+    }
+
+    BOOL AreJITOptimizationsDisabled() const
+    {
+        WRAPPER_NO_CONTRACT;
+        SUPPORTS_DAC;
+
+#ifdef DEBUGGING_SUPPORTED
+        // check if debugger has disallowed JIT optimizations
+        auto dwDebuggerBits = GetDebuggerInfoBits();
+        if (!CORDebuggerAllowJITOpts(dwDebuggerBits))
+        {
+            return TRUE;
+        }
+#endif // DEBUGGING_SUPPORTED
+
+#if defined(PROFILING_SUPPORTED) || defined(PROFILING_SUPPORTED_DATA)
+        // check if profiler had disabled JIT optimizations when module was loaded
+        if (m_dwTransientFlags & PROF_DISABLE_OPTIMIZATIONS)
+        {
+            return TRUE;
+        }
+#endif // defined(PROFILING_SUPPORTED) || defined(PROFILING_SUPPORTED_DATA)
+
+        return FALSE;
     }
 
 #ifdef EnC_SUPPORTED
@@ -1386,7 +1420,7 @@ public:
 
     void SetDebuggerInfoBits(DebuggerAssemblyControlFlags newBits);
 
-    DebuggerAssemblyControlFlags GetDebuggerInfoBits(void)
+    DebuggerAssemblyControlFlags GetDebuggerInfoBits(void) const
     {
         LIMITED_METHOD_CONTRACT;
         SUPPORTS_DAC;
