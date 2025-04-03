@@ -3213,8 +3213,6 @@ void ClassLoader::NotifyUnload(MethodTable* pMT, bool unloadStarted)
             // against that, we will need try/catch blocks around all calls into the
             // profiling API.
             //
-            // (Bug #26467)
-            //
 
             FAULT_NOT_FATAL();
 
