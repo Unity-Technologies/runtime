@@ -789,6 +789,26 @@ extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_get_manage
     return (ObjectHandleID)pAssemblyBinder->GetManagedAssemblyLoadContext();
 }
 
+extern "C" EXPORT_API ObjectHandleID EXPORT_CC coreclr_unity_profiler_assembly_load_context_get_loader_allocator_handle(ObjectID assemblyLoadContextObjectID)
+{
+    STATIC_CONTRACT_NOTHROW;
+
+    ASSEMBLYLOADCONTEXTREF pAssemblyLoadContext = (ASSEMBLYLOADCONTEXTREF)assemblyLoadContextObjectID;
+    if (pAssemblyLoadContext == NULL)
+        return NULL;
+
+    AssemblyBinder* pAssemblyBinder = (AssemblyBinder*)pAssemblyLoadContext->GetNativeAssemblyBinder();
+    if (pAssemblyBinder == NULL)
+        return NULL;
+
+    LoaderAllocator* loaderAllocator = pAssemblyBinder->GetLoaderAllocator();
+    if (loaderAllocator == NULL)
+        return NULL;
+
+    // ManagedAssemblyLoadContext is a handle to the managed AssemblyLoadContext object
+    return (ObjectHandleID)loaderAllocator->GetLoaderAllocatorObjectHandle();
+}
+
 // Return the AssemblyLoadContext handle for the given LoaderAllocator checking whether or not LoaderAllocator is still alive.
 // LoaderAllocator is the main object that tracks AssemblyLoadContext liveness as AssemblyLoadContext is a simple wrapper around a native 
 // reference to LoaderAllocator.
