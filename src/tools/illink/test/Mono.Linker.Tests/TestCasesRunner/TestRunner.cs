@@ -128,15 +128,22 @@ namespace Mono.Linker.Tests.TestCasesRunner
 				if (ext == ".dll" || ext == ".exe")
 					builder.AddReference (inputReference);
 			}
+
+			AddReferenceAndTrimModeActions (builder, caseDefinedOptions, metadataProvider);
+
+			builder.ProcessOptions (caseDefinedOptions);
+
+			builder.ProcessTestInputAssembly (compilationResult.InputAssemblyPath);
+		}
+
+		// Exists for Unity to override
+		protected virtual void AddReferenceAndTrimModeActions (LinkerArgumentBuilder builder, TestCaseLinkerOptions caseDefinedOptions, TestCaseMetadataProvider metadataProvider)
+		{
 			var coreAction = caseDefinedOptions.TrimMode ?? "skip";
 			foreach (var extraReference in metadataProvider.GetExtraLinkerReferences ()) {
 				builder.AddReference (extraReference);
 				builder.AddAssemblyAction (coreAction, extraReference.FileNameWithoutExtension);
 			}
-
-			builder.ProcessOptions (caseDefinedOptions);
-
-			builder.ProcessTestInputAssembly (compilationResult.InputAssemblyPath);
 		}
 
 		protected virtual LinkerCustomizations CustomizeLinker (LinkerDriver linker, TestCaseMetadataProvider metadataProvider)
