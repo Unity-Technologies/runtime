@@ -23,7 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.1.0",
-    "@rollup/plugin-terser": "0.4.3",
+    "@rollup/plugin-terser": "1.0.2",
     "@rollup/plugin-typescript": "11.1.2",
     "@rollup/plugin-virtual": "3.0.1",
     "@typescript-eslint/eslint-plugin": "5.59.1",
